@@ -32,12 +32,12 @@ describe("premium extras", () => {
     const gap = recordWaterGoal(recordWaterGoal(defaultAchievements(), "2026-10-15"), "2026-10-17");
     expect(gap.waterStreak.count).toBe(1);
   });
-  it("achievement unlock pays +10 gems once", () => {
+  it("achievement unlock does not pay until claimed", () => {
     const d = defaultData();
     d.tasks = [makeTask("x", "custom", 0, "2026-10-18")];
     const r = completeTask(d, d.tasks[0]!.id, new Date(2026, 9, 18, 2, 0), () => 0.9);
     expect(r.fresh).toEqual(["nightOwl"]);
-    expect(r.data.game.lizardGems).toBe(10);
+    expect(r.data.game.lizardGems).toBe(0);
     expect(r.data.dailyStats["2026-10-18"]!.tasks).toBe(1);
   });
   it("weather rules", () => {
@@ -45,7 +45,7 @@ describe("premium extras", () => {
     expect(weatherOf({ todayDone: 4, pomodorosToday: 0, overdue: 0, pet })).toBe("sunny");
     expect(weatherOf({ todayDone: 3, pomodorosToday: 1, overdue: 0, pet })).toBe("sunny");
     expect(weatherOf({ todayDone: 3, pomodorosToday: 0, overdue: 1, pet })).toBe("snowy");
-    expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet: { ...pet, hunger: 39 } })).toBe("snowy");
+    expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet: { ...pet, hunger: 39 } })).toBe("rainy");
     expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet })).toBe("foggy");
   });
   it("diary is written for yesterday on a new day", () => {
