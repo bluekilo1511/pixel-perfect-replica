@@ -38,6 +38,7 @@ export function PetShop() {
     update((d) => {
       const inventory = { ...d.inventory, materials: payRecipe(d.inventory.materials, r) };
       if ("freezes" in r.result) return { ...d, inventory: { ...inventory, freezes: inventory.freezes + r.result.freezes } };
+      if (!("accessory" in r.result)) return { ...d, inventory };
       const ac = r.result.accessory;
       return { ...d, inventory, petState: { ...d.petState, ownedAccessories: [...d.petState.ownedAccessories, ac], accessory: ac } };
     });
