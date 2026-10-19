@@ -207,7 +207,7 @@ export function startExpedition(expedition: ExpeditionState, minutes: number, no
     lastTriggerDate: today,
     endAt: new Date(now.getTime() + durationMinutes * 60_000).toISOString(),
   };
-
+}
 export function resolveExpedition(expedition: ExpeditionState, now = new Date(), rng: () => number = Math.random): { expedition: ExpeditionState; drops: MaterialId[] } | null {
   if (!expedition.endAt) return null;
   const endAt = new Date(expedition.endAt).getTime();
