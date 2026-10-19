@@ -1,4 +1,4 @@
-import type React from "react";
+fimport type React from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
@@ -171,7 +171,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       const d0 = ensureDailyPins(dataRef.current, dateStr());
       const { data: dp, pushed } = pushDueSlots(d0);
       const pet = decayPet(dp.petState);
-      const d1 = pet === dp.petState ? dp : { ...dp, petState: pet };
+      let d1 = pet === dp.petState ? dp : { ...dp, petState: pet };
       if (d0.streak !== dataRef.current.streak && d0.streak.lastQualifiedDate !== dataRef.current.streak.lastQualifiedDate) {
         toast("🧊 Bình đóng băng đã cứu chuỗi streak của bạn!");
       }
