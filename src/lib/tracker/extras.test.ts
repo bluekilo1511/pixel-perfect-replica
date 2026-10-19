@@ -44,8 +44,8 @@ describe("premium extras", () => {
     const pet = defaultPet();
     expect(weatherOf({ todayDone: 4, pomodorosToday: 0, overdue: 0, pet })).toBe("sunny");
     expect(weatherOf({ todayDone: 3, pomodorosToday: 1, overdue: 0, pet })).toBe("sunny");
-    expect(weatherOf({ todayDone: 3, pomodorosToday: 0, overdue: 1, pet })).toBe("rainy");
-    expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet: { ...pet, hunger: 39 } })).toBe("rainy");
+    expect(weatherOf({ todayDone: 3, pomodorosToday: 0, overdue: 1, pet })).toBe("snowy");
+    expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet: { ...pet, hunger: 39 } })).toBe("snowy");
     expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet })).toBe("foggy");
   });
   it("diary is written for yesterday on a new day", () => {
