@@ -25,7 +25,7 @@ export function useWeather(): Weather {
   return weatherOf({ todayDone, pomodorosToday: data.dailyStats[today]?.pomodoros ?? 0, overdue, pet: data.petState });
 }
 
-export const WEATHER_LABEL: Record<Weather, string> = { sunny: "☀️ Nắng đẹp", rainy: "🌧️ Mưa buồn", foggy: "🌫️ Sương mờ" };
+export const WEATHER_LABEL: Record<Weather, string> = { sunny: "☀️ Nắng đẹp", rainy: "🌧️ Mưa buồn", snowy: "❄️ Tuyết rơi", foggy: "🌫️ Sương mờ" };
 
 export function WeatherLayer() {
   const w = useWeather();
