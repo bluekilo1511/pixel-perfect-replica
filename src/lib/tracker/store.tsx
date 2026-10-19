@@ -122,13 +122,16 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const download = () => { downloadData(dataRef.current, fileName ?? undefined); setStatus("saved"); setLastSaved(new Date()); };
 
   const finish = useCallback((id: string) => {
+    const prev = dataRef.current;
     const r = completeTask(dataRef.current, id);
     if (!r.rewarded) return; // anti-spam
     setData(r.data);
     void saveSnapshot(r.data);
     setTimer((t) => (t?.taskId === id ? null : t));
     celebrate();
-    toast.success("Hoàn thành! +XP, +1 😺, +1 🎡");
+    toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
+      action: { label: "Hoàn tác", onClick: () => { setData(prev); void saveSnapshot(prev); } },
+    });
     onLevels(r.levelsGained, r.data.game.level);
     announceDrop(r.drop);
     announceAchievements(r.fresh);
