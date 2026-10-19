@@ -145,6 +145,10 @@ export interface AchievementState {
   lifetime: Lifetime;
 }
 export const defaultAchievements = (): AchievementState => ({ unlocked: {}, claimed: {}, waterStreak: { count: 0, lastDate: null }, lifetime: { tasks: 0, focusMin: 0, pomodoros: 0 } });
+export interface ExpeditionState { startedAt: string | null; endAt: string | null }
+export const EXPEDITION_TRIGGER_MINUTES = 50;
+export const EXPEDITION_DURATION_MINUTES = 30;
+export const defaultExpedition = (): ExpeditionState => ({ startedAt: null, endAt: null });
 
 export const isNightOwlHour = (d: Date) => d.getHours() >= 1 && d.getHours() < 4;
 
@@ -195,6 +199,25 @@ export function claimReward(a: AchievementState, id: AchievementId, now = new Da
   return { ...a, claimed: { ...a.claimed, [id]: now.toISOString() } };
 }
 
+export function startExpedition(expedition: ExpeditionState, minutes: number, now = new Date(), durationMinutes = EXPEDITION_DURATION_MINUTES): ExpeditionState {
+  if (expedition.endAt || minutes < EXPEDITION_TRIGGER_MINUTES) return expedition;
+  return {
+    startedAt: now.toISOString(),
+    endAt: new Date(now.getTime() + durationMinutes * 60_000).toISOString(),
+  };
+}
+
+export function resolveExpedition(expedition: ExpeditionState, now = new Date(), rng: () => number = Math.random): { expedition: ExpeditionState; drops: MaterialId[] } | null {
+  if (!expedition.endAt) return null;
+  const endAt = new Date(expedition.endAt).getTime();
+  if (!Number.isFinite(endAt) || endAt > now.getTime()) return null;
+  const count = rng() < 0.5 ? 2 : 3;
+  return {
+    expedition: defaultExpedition(),
+    drops: Array.from({ length: count }, () => pickMaterial(rng)),
+  };
+}
+
 // ---- Adventure diary ----
 export interface DiaryEntry { date: string; text: string; mood: "great" | "ok" | "lonely" }
 
@@ -228,8 +251,10 @@ export function weatherOf(input: { todayDone: number; pomodorosToday: number; ov
 export interface ExtrasState {
   materials: Materials;
   achievements: AchievementState;
+  claimedAchievements: Partial<Record<AchievementId, string>>;
   adventureLog: DiaryEntry[];
   dailyStats: Record<string, DayStats>;
+  expedition: ExpeditionState;
   lastDiaryDate: string | null;
 }
 
@@ -248,8 +273,9 @@ export function normalizeExtras(r: any): ExtrasState {
   if (ra && typeof ra === "object") {
     ACHIEVEMENT_IDS.forEach((id) => { const v = ra.unlocked?.[id]; if (typeof v === "string") ach.unlocked[id] = v; });
     ach.waterStreak = { count: n0(ra.waterStreak?.count), lastDate: typeof ra.waterStreak?.lastDate === "string" ? ra.waterStreak.lastDate : null };
-    if (ra.claimed && typeof ra.claimed === "object") {
-      ACHIEVEMENT_IDS.forEach((id) => { const v = ra.claimed[id]; if (typeof v === "string" && ach.unlocked[id]) ach.claimed[id] = v; });
+    const claimed = r?.claimedAchievements && typeof r.claimedAchievements === "object" ? r.claimedAchievements : ra.claimed;
+    if (claimed && typeof claimed === "object") {
+      ACHIEVEMENT_IDS.forEach((id) => { const v = claimed[id]; if (typeof v === "string" && ach.unlocked[id]) ach.claimed[id] = v; });
     } else {
       // Older files paid the reward on unlock, so those are already claimed.
       ach.claimed = { ...ach.unlocked };
@@ -260,11 +286,18 @@ export function normalizeExtras(r: any): ExtrasState {
   } else {
     Object.values(stats).forEach((s) => { ach.lifetime.tasks += s.tasks; ach.lifetime.focusMin += s.focusMin; ach.lifetime.pomodoros += s.pomodoros; });
   }
+  const expeditionRaw = r?.expedition;
+  const expedition = {
+    startedAt: typeof expeditionRaw?.startedAt === "string" ? expeditionRaw.startedAt : null,
+    endAt: typeof expeditionRaw?.endAt === "string" ? expeditionRaw.endAt : null,
+  };
   return {
     materials: mats,
     achievements: ach,
+    claimedAchievements: { ...ach.claimed },
     adventureLog: Array.isArray(r?.adventureLog) ? r.adventureLog.filter((e: any) => typeof e?.date === "string" && typeof e?.text === "string").slice(0, 60) : [],
     dailyStats: stats,
+    expedition: expedition.startedAt || expedition.endAt ? expedition : defaultExpedition(),
     lastDiaryDate: typeof r?.lastDiaryDate === "string" ? r.lastDiaryDate : null,
   };
 }

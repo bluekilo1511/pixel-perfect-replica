@@ -1,10 +1,10 @@
 import {
-  checkStreak, defaultInventory, defaultPet, defaultStreak, normalizePet, recordCompletion, streakMultiplier, bumpPet,
+  checkStreak, defaultInventory, defaultPet, defaultStreak, normalizePet, recordCompletion, streakMultiplier, bumpPet, POMODORO_MINUTES,
   type Inventory, type PetState, type StreakState,
 } from "./gamify";
 import {
-  addPetXp, bumpStats, checkAchievements, isNightOwlHour, normalizeExtras, recordWaterGoal, rollDrop, writeDiary, ACHIEVEMENT_REWARD,
-  type AchievementId, type AchievementState, type DayStats, type DiaryEntry, type MaterialId,
+  addPetXp, bumpLifetime, bumpStats, checkAchievements, claimReward, isNightOwlHour, normalizeExtras, recordWaterGoal, rollDrop, startExpedition, writeDiary,
+  type AchievementId, type AchievementState, type DayStats, type DiaryEntry, type ExpeditionState, type MaterialId,
 } from "./extras";
 import { shiftDate, SPECIES } from "./gamify";
 
@@ -61,6 +61,12 @@ export interface GameState {
   [extra: string]: unknown;
 }
 
+export type AmbientSettingKind = "rain" | "ocean" | null;
+export interface AppSettings {
+  pomodoroMinutes: number;
+  ambient: { kind: AmbientSettingKind; volume: number };
+}
+
 export interface AppData {
   app: "local-task-tracker-pro";
   version: 3;
@@ -73,9 +79,12 @@ export interface AppData {
   petState: PetState;
   streak: StreakState;
   inventory: Inventory;
+  settings: AppSettings;
   achievements: AchievementState;
+  claimedAchievements: Partial<Record<AchievementId, string>>;
   adventureLog: DiaryEntry[]; // newest first
   dailyStats: Record<string, DayStats>;
+  expedition: ExpeditionState;
   lastDiaryDate: string | null;
   [extra: string]: unknown;
 }
@@ -83,6 +92,7 @@ export interface AppData {
 export const DAY_LABELS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 export const WATER_GOAL = 8;
 export const EXERCISE_SESSIONS = 3;
+export const POMODORO_PRESETS = [15, 25, 50] as const;
 
 export const KIND_META: Record<TaskKind, { emoji: string; label: string; minutes: number }> = {
   water: { emoji: "💧", label: "Uống nước", minutes: 0 },
@@ -114,11 +124,20 @@ export function defaultGame(today = dateStr()): GameState {
   };
 }
 
+const clamp01 = (v: number, d: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : d);
+export function defaultSettings(): AppSettings {
+  return {
+    pomodoroMinutes: POMODORO_MINUTES,
+    ambient: { kind: null, volume: 0.4 },
+  };
+}
+
 export function defaultData(): AppData {
   return {
     app: "local-task-tracker-pro", version: 3, updatedAt: new Date().toISOString(),
     tasks: [], game: defaultGame(), timetable: emptyTimetable(), timetableLog: [],
     avatarBase64: null, petState: defaultPet(), streak: defaultStreak(dateStr()), inventory: defaultInventory(),
+    settings: defaultSettings(),
     ...normalizeExtras(null), lastDiaryDate: dateStr(),
   };
 }
@@ -132,6 +151,10 @@ export function makeTask(title: string, kind: TaskKind, minutes: number, date: s
 
 const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
 const KINDS: TaskKind[] = ["pomodoro", "exercise", "water", "custom"];
+const normalizePomodoroMinutes = (v: unknown) => {
+  const minutes = Math.round(num(v, POMODORO_MINUTES));
+  return POMODORO_PRESETS.includes(minutes as (typeof POMODORO_PRESETS)[number]) ? minutes : POMODORO_MINUTES;
+};
 
 function normalizeSlot(s: any): Slot {
   const kind: TaskKind = KINDS.includes(s?.kind) ? s.kind : "custom";
@@ -198,12 +221,21 @@ export function migrate(raw: unknown): AppData {
   };
 
   const { gameState: _g, ...rest } = r;
+  const rawSettings = r.settings;
+  const settings: AppSettings = {
+    pomodoroMinutes: normalizePomodoroMinutes(rawSettings?.pomodoroMinutes),
+    ambient: {
+      kind: rawSettings?.ambient?.kind === "rain" || rawSettings?.ambient?.kind === "ocean" ? rawSettings.ambient.kind : null,
+      volume: clamp01(num(rawSettings?.ambient?.volume, 0.4), 0.4),
+    },
+  };
   return {
     ...rest, app: "local-task-tracker-pro", version: 3, updatedAt: r.updatedAt ?? base.updatedAt,
     tasks, game, timetable: tt, timetableLog: Array.isArray(r.timetableLog) ? r.timetableLog : [],
     avatarBase64: typeof r.avatarBase64 === "string" ? r.avatarBase64 : null,
     petState: normalizePet(r.petState),
     streak: r.streak && typeof r.streak === "object" ? { ...base.streak, ...r.streak, freezeActive: r.streak.freezeActive === true, today: { ...base.streak.today, ...(r.streak.today ?? {}) } } : { ...base.streak, freezeActive: false },
+    settings,
     ...extrasFrom(r),
     inventory: { items: { ...(r.inventory?.items ?? {}) }, freezes: num(r.inventory?.freezes, 0), materials: normalizeExtras(r).materials },
   };
@@ -248,13 +280,24 @@ export function addMaterial(data: AppData, id: MaterialId | null, n = 1): AppDat
   return { ...data, inventory: { ...data.inventory, materials: { ...m, [id]: (m[id] ?? 0) + n } } };
 }
 
-/** Unlocks hidden achievements (+10 🦎 each). */
+/** Unlocks hidden achievements; rewards are claimed manually from the map. */
 export function applyAchievements(data: AppData, ctx: { nightOwl?: boolean }, now = new Date()): { data: AppData; fresh: AchievementId[] } {
   const r = checkAchievements(data.achievements, { pet: data.petState, nightOwl: !!ctx.nightOwl }, now);
   if (!r.fresh.length) return { data, fresh: [] };
   return {
     fresh: r.fresh,
-    data: { ...data, achievements: r.achievements, game: { ...data.game, lizardGems: data.game.lizardGems + ACHIEVEMENT_REWARD * r.fresh.length } },
+    data: { ...data, achievements: r.achievements, claimedAchievements: { ...r.achievements.claimed } },
+  };
+}
+
+export function claimAchievementReward(data: AppData, id: AchievementId, now = new Date()): AppData | null {
+  const achievements = claimReward(data.achievements, id, now);
+  if (!achievements) return null;
+  return {
+    ...data,
+    achievements,
+    claimedAchievements: { ...achievements.claimed },
+    game: { ...data.game, lizardGems: data.game.lizardGems + 10 },
   };
 }
 
@@ -269,11 +312,15 @@ export function completeTask(data: AppData, taskId: string, now = new Date(), rn
   const { game, levelsGained } = addXp(data.game, earned);
   const pet = addPetXp(bumpPet(data.petState, 0, 5), earned);
   const drop = rollDrop(rng);
+  const pomodoroPatch = task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {};
+  const achievements = bumpLifetime(data.achievements, { tasks: 1, ...pomodoroPatch });
   const base: AppData = {
       ...data,
       streak: recordCompletion(data.streak, today),
       petState: pet.pet,
-      dailyStats: bumpStats(data.dailyStats, today, { tasks: 1, focusMin: task.kind === "pomodoro" ? task.minutes : 0 }),
+      achievements,
+      claimedAchievements: { ...achievements.claimed },
+      dailyStats: bumpStats(data.dailyStats, today, { tasks: 1, ...(task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {}) }),
       game: { ...game, catCoins: game.catCoins + r.cat, lizardGems: game.lizardGems + r.lizard, spinTickets: game.spinTickets + r.spins },
       tasks: data.tasks.map((t) =>
         t.id === taskId ? { ...t, completed: true, rewardClaimed: true, remainingSeconds: 0, completedAt: now.toISOString() } : t,
@@ -285,7 +332,14 @@ export function completeTask(data: AppData, taskId: string, now = new Date(), rn
 
 /** Pet-widget Pomodoro finished: logs focus time and checks Night Owl. */
 export function completePomodoroSession(data: AppData, minutes: number, now = new Date()): { data: AppData; fresh: AchievementId[] } {
-  const d = { ...data, dailyStats: bumpStats(data.dailyStats, dateStr(now), { focusMin: minutes, pomodoros: 1 }) };
+  const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
+  const d = {
+    ...data,
+    achievements,
+    claimedAchievements: { ...achievements.claimed },
+    expedition: startExpedition(data.expedition, minutes, now),
+    dailyStats: bumpStats(data.dailyStats, dateStr(now), { focusMin: minutes, pomodoros: 1 }),
+  };
   return applyAchievements(d, { nightOwl: isNightOwlHour(now) }, now);
 }
 

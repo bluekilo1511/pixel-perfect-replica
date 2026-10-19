@@ -6,6 +6,7 @@ import { ACHIEVEMENTS, petTitle, TIER_BADGE, tierOf, weekSummary, type Achieveme
 import { SPECIES } from "@/lib/tracker/gamify";
 import { Button } from "@/components/ui/button";
 import { useWeather, WEATHER_LABEL } from "./WeatherLayer";
+import { ConstellationMap } from "./ConstellationMap";
 
 const dm = (d: string) => { const [, m, day] = d.split("-"); return `${day}/${m}`; };
 
@@ -98,6 +99,7 @@ export function Chronicle() {
             })}
           </ul>
         </section>
+        <ConstellationMap />
         <section className="glass p-5">
           <h2 className="mb-3 text-lg font-semibold">📔 Nhật ký phiêu lưu của {TIER_BADGE[tierOf(pet.petLevel)]} {SPECIES[pet.species].name}</h2>
           {data.adventureLog.length === 0

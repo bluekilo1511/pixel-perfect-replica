@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/tracker/image";
 import { useTracker } from "@/lib/tracker/store";
@@ -17,9 +17,18 @@ const statusText = {
 export function HeaderHud() {
   const { data, fileName, status, lastSaved, download, update } = useTracker();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const g = data.game;
   const need = xpForLevel(g.level);
   const pct = Math.min(100, (g.xp / need) * 100);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotificationPermission(null);
+      return;
+    }
+    setNotificationPermission(Notification.permission);
+  }, []);
 
   return (
     <header className="glass glass-glow p-4 sm:p-5">
@@ -73,6 +82,24 @@ export function HeaderHud() {
         </span>
         <span className="ml-auto" />
         <TimeCapsuleButton />
+        {notificationPermission === "default" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                const permission = await Notification.requestPermission();
+                setNotificationPermission(permission);
+                if (permission === "granted") toast.success("Đã bật thông báo");
+                else if (permission === "denied") toast.error("Thông báo đã bị chặn. Hãy mở lại trong cài đặt trình duyệt.");
+              } catch {
+                toast.error("Không bật được thông báo");
+              }
+            }}
+          >
+            🔔 Bật thông báo
+          </Button>
+        )}
         <Button size="sm" variant="outline" onClick={download}>⬇️ Tải file JSON</Button>
       </div>
     </header>

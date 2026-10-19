@@ -2,11 +2,11 @@ import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
-  addMaterial, addWaterCup, applyAchievements, applyPrize, completePomodoroSession, completeTask, dateStr, defaultData, ensureDailyPins, migrate, pushDueSlots,
+  addMaterial, addWaterCup, applyAchievements, applyPrize, claimAchievementReward, completePomodoroSession, completeTask, dateStr, defaultData, ensureDailyPins, migrate, pushDueSlots,
   WHEEL_PRIZES, upcomingSlots, type AppData,
 } from "./model";
 import { decayPet } from "./gamify";
-import { ACHIEVEMENT_REWARD, ACHIEVEMENTS, MATERIALS, petTitle, rollDrop, TIER_BADGE, tierOf, type AchievementId, type MaterialId } from "./extras";
+import { ACHIEVEMENT_REWARD, ACHIEVEMENTS, MATERIALS, petTitle, resolveExpedition, rollDrop, TIER_BADGE, tierOf, type AchievementId, type MaterialId } from "./extras";
 import { bossCounterAttack, defeatBoss } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import { celebrate, levelUpFx, ting } from "./effects";
@@ -39,12 +39,13 @@ interface Store {
   restore: (raw: unknown) => void;
   finishPomodoro: (boss: boolean, minutes: number) => void;
   bossCancel: () => void;
+  claimAchievement: (id: AchievementId) => boolean;
 }
 
 function announceAchievements(fresh: AchievementId[]) {
   fresh.forEach((id) => {
     const a = ACHIEVEMENTS[id];
-    toast(`🏆 Hidden Achievement Unlocked! +${ACHIEVEMENT_REWARD} 🦎`, { description: `${a.emoji} ${a.name} — ${a.desc}`, className: "glass-toast", duration: 6000 });
+    toast(`🏆 Đã mở khóa chòm sao ${a.emoji} ${a.name}`, { description: a.desc, className: "glass-toast", duration: 6000 });
   });
   if (fresh.length) levelUpFx();
 }
@@ -188,6 +189,15 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
           }
         } catch { /* ignore */ }
       });
+      const expedition = resolveExpedition(d1.expedition, now);
+      if (expedition) {
+        let next = { ...d1, expedition: expedition.expedition };
+        expedition.drops.forEach((drop) => { next = addMaterial(next, drop); });
+        d1 = next;
+        ting();
+        toast.success(`🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`);
+        expedition.drops.forEach(announceDrop);
+      }
       const ach = applyAchievements(d1, {});
       announceAchievements(ach.fresh);
       if (ach.data !== dataRef.current) setData(ach.data);
@@ -223,6 +233,14 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     announceAchievements(r.fresh);
   };
   const bossCancel = () => setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
+  const claimAchievement = (id: AchievementId) => {
+    const next = claimAchievementReward(dataRef.current, id);
+    if (!next) return false;
+    setData(next);
+    ting();
+    toast.success(`🏆 Đã nhận thưởng +${ACHIEVEMENT_REWARD} 🦎`);
+    return true;
+  };
 
   const drinkWater = () => {
     const r = addWaterCup(dataRef.current);
@@ -256,10 +274,9 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{
       data, ready, fileName, status, lastSaved, timer, levelUp, update, open, create, startOffline, download,
-      startTimer, pauseTimer, finish, drinkWater, spin, dismissLevelUp: () => setLevelUp(null), restore, finishPomodoro, bossCancel,
+      startTimer, pauseTimer, finish, drinkWater, spin, dismissLevelUp: () => setLevelUp(null), restore, finishPomodoro, bossCancel, claimAchievement,
     }}>
       {children}
     </Ctx.Provider>
   );
 }
-
