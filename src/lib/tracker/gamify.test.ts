@@ -53,7 +53,7 @@ describe("gamification rules", () => {
   });
 
   it("freeze saves streak after missing exactly one day", () => {
-    const s = { ...defaultStreak("2026-10-17"), count: 5, lastQualifiedDate: "2026-10-18", lastCheckDate: "2026-10-17" };
+    const s = { ...defaultStreak("2026-10-17"), count: 5, lastQualifiedDate: "2026-10-17", lastCheckDate: "2026-10-17" };
     const saved = checkStreak(s, { ...defaultInventory(), freezes: 1 }, "2026-10-19");
     expect(saved.streak.count).toBe(5);
     expect(saved.inventory.freezes).toBe(0);
