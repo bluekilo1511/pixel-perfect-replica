@@ -123,7 +123,7 @@ export function daysBetween(a: string, b: string): number {
   const db = Date.UTC(pb[0]!, pb[1]! - 1, pb[2]!);
   return Math.round((db - da) / 86_400_000);
 }
-
+const isWeekday = (date: string) => { const d = new Date(`${date}T12:00:00`); return d.getDay() >= 1 && d.getDay() <= 5; };
 /** Record one completed task today. When the 3rd lands, streak +1 (or restarts at 1). */
 export function recordCompletion(s: StreakState, today: string): StreakState {
   const done = (s.today.date === today ? s.today.done : 0) + 1;
@@ -145,6 +145,9 @@ export function checkStreak(s: StreakState, inv: Inventory, today: string): { st
   let broke = false;
   if (s.lastQualifiedDate && s.count > 0) {
     const missed = daysBetween(s.lastQualifiedDate, today) - 1;
+    if (missed === 1 && isWeekday(shiftDate(today, -1))) {
+      streak = { ...streak, lastQualifiedDate: shiftDate(today, -1) };
+    } else if (missed === 1 && inv.freezes > 0) {
     if (missed === 1 && inv.freezes > 0) {
       const yesterday = shiftDate(today, -1);
       streak = { ...streak, lastQualifiedDate: yesterday, freezeActive: true };
