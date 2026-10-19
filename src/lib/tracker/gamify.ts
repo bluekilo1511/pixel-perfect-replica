@@ -146,7 +146,6 @@ export function checkStreak(s: StreakState, inv: Inventory, today: string): { st
   if (s.lastQualifiedDate && s.count > 0) {
     const missed = daysBetween(s.lastQualifiedDate, today) - 1;
     if (missed === 1 && isWeekday(shiftDate(today, -1))) {
-      streak = { ...streak, lastQualifiedDate: shiftDate(today, -1) };
     } else if (missed === 1 && inv.freezes > 0) {
     if (missed === 1 && inv.freezes > 0) {
       const yesterday = shiftDate(today, -1);
