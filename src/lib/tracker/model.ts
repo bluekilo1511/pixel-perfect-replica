@@ -332,12 +332,14 @@ export function completeTask(data: AppData, taskId: string, now = new Date(), rn
 
 /** Pet-widget Pomodoro finished: logs focus time and checks Night Owl. */
 export function completePomodoroSession(data: AppData, minutes: number, now = new Date()): { data: AppData; fresh: AchievementId[] } {
+  const today = dateStr(now);
+  const focusToday = (data.dailyStats[today]?.focusMin ?? 0) + minutes;
   const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
   const d = {
     ...data,
     achievements,
     claimedAchievements: { ...achievements.claimed },
-    expedition: startExpedition(data.expedition, minutes, now),
+        expedition: startExpedition(data.expedition, focusToday, now),
     dailyStats: bumpStats(data.dailyStats, dateStr(now), { focusMin: minutes, pomodoros: 1 }),
   };
   return applyAchievements(d, { nightOwl: isNightOwlHour(now) }, now);
