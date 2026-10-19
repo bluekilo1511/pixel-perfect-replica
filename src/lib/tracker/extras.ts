@@ -145,10 +145,10 @@ export interface AchievementState {
   lifetime: Lifetime;
 }
 export const defaultAchievements = (): AchievementState => ({ unlocked: {}, claimed: {}, waterStreak: { count: 0, lastDate: null }, lifetime: { tasks: 0, focusMin: 0, pomodoros: 0 } });
-export interface ExpeditionState { startedAt: string | null; endAt: string | null }
+export interface ExpeditionState { startedAt: string | null; endAt: string | null; lastTriggerDate?: string | null }
 export const EXPEDITION_TRIGGER_MINUTES = 50;
 export const EXPEDITION_DURATION_MINUTES = 30;
-export const defaultExpedition = (): ExpeditionState => ({ startedAt: null, endAt: null });
+export const defaultExpedition = (): ExpeditionState => ({ startedAt: null, endAt: null, lastTriggerDate: null });
 
 export const isNightOwlHour = (d: Date) => d.getHours() >= 1 && d.getHours() < 4;
 
@@ -200,12 +200,13 @@ export function claimReward(a: AchievementState, id: AchievementId, now = new Da
 }
 
 export function startExpedition(expedition: ExpeditionState, minutes: number, now = new Date(), durationMinutes = EXPEDITION_DURATION_MINUTES): ExpeditionState {
-  if (expedition.endAt || minutes < EXPEDITION_TRIGGER_MINUTES) return expedition;
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (expedition.endAt || expedition.lastTriggerDate === today || minutes < EXPEDITION_TRIGGER_MINUTES) return expedition;
   return {
     startedAt: now.toISOString(),
+    lastTriggerDate: today,
     endAt: new Date(now.getTime() + durationMinutes * 60_000).toISOString(),
   };
-}
 
 export function resolveExpedition(expedition: ExpeditionState, now = new Date(), rng: () => number = Math.random): { expedition: ExpeditionState; drops: MaterialId[] } | null {
   if (!expedition.endAt) return null;
