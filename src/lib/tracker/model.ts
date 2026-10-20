@@ -7,6 +7,7 @@ import {
   type AchievementId, type AchievementState, type DayStats, type DiaryEntry, type ExpeditionState, type MaterialId,
 } from "./extras";
 import { shiftDate, SPECIES } from "./gamify";
+import { dailyQuests, defaultQuests, defaultRaid, questProgress, RAID_REWARD, raidStatus, type QuestsState, type RaidState } from "./quests";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -87,6 +88,8 @@ export interface AppData {
   expedition: ExpeditionState;
   lastDiaryDate: string | null;
   backup: { lastBackupAt: string | null; lastReminderAt: string | null };
+  quests: QuestsState;
+  raid: RaidState;
   [extra: string]: unknown;
 }
 
@@ -141,6 +144,7 @@ export function defaultData(): AppData {
     settings: defaultSettings(),
     ...normalizeExtras(null), lastDiaryDate: dateStr(),
     backup: { lastBackupAt: null, lastReminderAt: null },
+    quests: defaultQuests(), raid: defaultRaid(),
   };
 }
 
@@ -243,6 +247,14 @@ export function migrate(raw: unknown): AppData {
     backup: {
       lastBackupAt: typeof r.backup?.lastBackupAt === "string" ? r.backup.lastBackupAt : null,
       lastReminderAt: typeof r.backup?.lastReminderAt === "string" ? r.backup.lastReminderAt : null,
+    },
+    quests: {
+      date: typeof r.quests?.date === "string" ? r.quests.date : null,
+      claimed: Array.isArray(r.quests?.claimed) ? r.quests.claimed.filter((x: unknown) => typeof x === "string") : [],
+    },
+    raid: {
+      weekStart: typeof r.raid?.weekStart === "string" ? r.raid.weekStart : null,
+      claimed: r.raid?.claimed === true,
     },
   };
 }
