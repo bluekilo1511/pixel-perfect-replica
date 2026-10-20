@@ -248,6 +248,33 @@ export function weatherOf(input: { todayDone: number; pomodorosToday: number; ov
   return "foggy";
 }
 
+/** Derives the weather straight from app data (same rules the sky uses). */
+export function weatherFromData(
+  d: { tasks: { date: string; completed: boolean; pinned?: boolean; timeRange?: string }[]; dailyStats: Record<string, DayStats>; petState: PetState },
+  now = new Date(),
+): Weather {
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const toMin = (hm: string) => { const [h, m] = hm.split(":").map(Number); return (h ?? 0) * 60 + (m ?? 0); };
+  const todayDone = d.tasks.filter((t) => t.date === today && t.completed).length;
+  const overdue = d.tasks.filter((t) => {
+    if (t.completed) return false;
+    if (t.date < today && !t.pinned) return true;
+    const end = t.timeRange?.split(" - ")[1];
+    return t.date === today && !!end && toMin(end) < nowMin;
+  }).length;
+  return weatherOf({ todayDone, pomodorosToday: d.dailyStats[today]?.pomodoros ?? 0, overdue, pet: d.petState });
+}
+
+/** Daily weather buff/debuff: snowy +10% XP, sunny +5% XP, rainy = pet decays at half speed. */
+export interface WeatherEffect { xpMult: number; petDecayMult: number; label: string }
+export function weatherEffect(w: Weather): WeatherEffect {
+  if (w === "snowy") return { xpMult: 1.1, petDecayMult: 1, label: "❄️ Tuyết rơi: +10% XP khi hoàn thành nhiệm vụ" };
+  if (w === "sunny") return { xpMult: 1.05, petDecayMult: 1, label: "☀️ Nắng đẹp: +5% XP khi hoàn thành nhiệm vụ" };
+  if (w === "rainy") return { xpMult: 1, petDecayMult: 0.5, label: "🌧️ Mưa buồn: thú cưng đói và buồn chậm hơn" };
+  return { xpMult: 1, petDecayMult: 1, label: "🌫️ Sương mờ: một ngày bình thường" };
+}
+
 // ---- Extras container (stored at top level of the JSON) ----
 export interface ExtrasState {
   materials: Materials;

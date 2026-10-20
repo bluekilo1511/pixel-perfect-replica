@@ -7,6 +7,7 @@ import {
   type AchievementId, type AchievementState, type DayStats, type DiaryEntry, type ExpeditionState, type MaterialId,
 } from "./extras";
 import { shiftDate, SPECIES } from "./gamify";
+import { dailyQuests, defaultQuests, defaultRaid, questProgress, RAID_REWARD, raidStatus, type QuestsState, type RaidState } from "./quests";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -86,6 +87,9 @@ export interface AppData {
   dailyStats: Record<string, DayStats>;
   expedition: ExpeditionState;
   lastDiaryDate: string | null;
+  backup: { lastBackupAt: string | null; lastReminderAt: string | null };
+  quests: QuestsState;
+  raid: RaidState;
   [extra: string]: unknown;
 }
 
@@ -139,6 +143,8 @@ export function defaultData(): AppData {
     avatarBase64: null, petState: defaultPet(), streak: defaultStreak(dateStr()), inventory: defaultInventory(),
     settings: defaultSettings(),
     ...normalizeExtras(null), lastDiaryDate: dateStr(),
+    backup: { lastBackupAt: null, lastReminderAt: null },
+    quests: defaultQuests(), raid: defaultRaid(),
   };
 }
 
@@ -238,6 +244,18 @@ export function migrate(raw: unknown): AppData {
     settings,
     ...extrasFrom(r),
     inventory: { items: { ...(r.inventory?.items ?? {}) }, freezes: num(r.inventory?.freezes, 0), materials: normalizeExtras(r).materials },
+    backup: {
+      lastBackupAt: typeof r.backup?.lastBackupAt === "string" ? r.backup.lastBackupAt : null,
+      lastReminderAt: typeof r.backup?.lastReminderAt === "string" ? r.backup.lastReminderAt : null,
+    },
+    quests: {
+      date: typeof r.quests?.date === "string" ? r.quests.date : null,
+      claimed: Array.isArray(r.quests?.claimed) ? r.quests.claimed.filter((x: unknown) => typeof x === "string") : [],
+    },
+    raid: {
+      weekStart: typeof r.raid?.weekStart === "string" ? r.raid.weekStart : null,
+      claimed: r.raid?.claimed === true,
+    },
   };
 }
 
@@ -302,13 +320,13 @@ export function claimAchievementReward(data: AppData, id: AchievementId, now = n
 }
 
 /** Completes a task once. Second call is a no-op (anti-spam). */
-export function completeTask(data: AppData, taskId: string, now = new Date(), rng: () => number = Math.random): CompleteResult {
+export function completeTask(data: AppData, taskId: string, now = new Date(), rng: () => number = Math.random, xpMult = 1): CompleteResult {
   const task = data.tasks.find((t) => t.id === taskId);
   if (!task || task.completed || task.rewardClaimed) return { data, rewarded: false, levelsGained: 0, drop: null, petEvolved: false, petLevels: 0, fresh: [] };
   const r = rewardFor(task.kind);
   const today = dateStr(now);
   const mult = streakMultiplier(data.streak.count);
-  const earned = Math.round(r.xp * mult);
+  const earned = Math.round(r.xp * mult * xpMult);
   const { game, levelsGained } = addXp(data.game, earned);
   const pet = addPetXp(bumpPet(data.petState, 0, 5), earned);
   const drop = rollDrop(rng);
@@ -330,19 +348,69 @@ export function completeTask(data: AppData, taskId: string, now = new Date(), rn
   return { rewarded: true, levelsGained, drop, petEvolved: pet.evolved, petLevels: pet.levelsGained, fresh: ach.fresh, data: ach.data };
 }
 
-/** Pet-widget Pomodoro finished: logs focus time and checks Night Owl. */
+/** Pet-widget Pomodoro finished: logs focus time, records a completed "Pomodoro focus" entry (no extra reward), checks Night Owl. */
 export function completePomodoroSession(data: AppData, minutes: number, now = new Date()): { data: AppData; fresh: AchievementId[] } {
   const today = dateStr(now);
   const focusToday = (data.dailyStats[today]?.focusMin ?? 0) + minutes;
   const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
+  const record = makeTask(`Pomodoro tập trung (${minutes} phút)`, "pomodoro", minutes, today, {
+    completed: true, rewardClaimed: true, remainingSeconds: 0, completedAt: now.toISOString(),
+  });
   const d = {
     ...data,
     achievements,
     claimedAchievements: { ...achievements.claimed },
-        expedition: startExpedition(data.expedition, focusToday, now),
+    expedition: startExpedition(data.expedition, focusToday, now),
     dailyStats: bumpStats(data.dailyStats, dateStr(now), { focusMin: minutes, pomodoros: 1 }),
+    tasks: [...data.tasks, record],
   };
   return applyAchievements(d, { nightOwl: isNightOwlHour(now) }, now);
+}
+
+// ---- Daily quests & weekly raid ----
+/** Claims a daily quest reward when its target is met. Resets automatically on a new day. */
+export function claimQuest(data: AppData, questId: string, now = new Date()): { data: AppData; ok: boolean } {
+  const today = dateStr(now);
+  const quest = dailyQuests(today).find((q) => q.id === questId);
+  if (!quest) return { data, ok: false };
+  const claimed = data.quests.date === today ? data.quests.claimed : [];
+  if (claimed.includes(questId)) return { data, ok: false };
+  if (questProgress(data.dailyStats[today], quest) < quest.target) return { data, ok: false };
+  return {
+    ok: true,
+    data: {
+      ...data,
+      quests: { date: today, claimed: [...claimed, questId] },
+      game: { ...data.game, catCoins: data.game.catCoins + quest.reward.catCoins, lizardGems: data.game.lizardGems + quest.reward.lizardGems },
+    },
+  };
+}
+
+/** Claims the weekly raid reward once the boss is defeated. */
+export function claimRaid(data: AppData, now = new Date()): { data: AppData; ok: boolean } {
+  const st = raidStatus(data.dailyStats, dateStr(now), data.raid);
+  if (!st.claimable) return { data, ok: false };
+  return {
+    ok: true,
+    data: {
+      ...data,
+      raid: { weekStart: st.weekStart, claimed: true },
+      game: { ...data.game, catCoins: data.game.catCoins + RAID_REWARD.catCoins, lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems },
+    },
+  };
+}
+
+// ---- Backup reminder ----
+export const BACKUP_REMINDER_DAYS = 7;
+const REMINDER_SNOOZE_MS = 24 * 60 * 60 * 1000;
+/** True when the last backup is older than 7 days (or never) and the banner was not snoozed in the last 24h. */
+export function needsBackupReminder(data: AppData, now = new Date()): boolean {
+  const { lastBackupAt, lastReminderAt } = data.backup;
+  const backupMs = lastBackupAt ? new Date(lastBackupAt).getTime() : NaN;
+  const stale = !Number.isFinite(backupMs) || now.getTime() - backupMs >= BACKUP_REMINDER_DAYS * 24 * 60 * 60 * 1000;
+  if (!stale) return false;
+  const remMs = lastReminderAt ? new Date(lastReminderAt).getTime() : NaN;
+  return !Number.isFinite(remMs) || now.getTime() - remMs >= REMINDER_SNOOZE_MS;
 }
 
 /** Once per day: reset water, carry pinned tasks into today (uncompleted), check streak, pin exercise sessions. */

@@ -10,6 +10,7 @@ import { WeatherLayer } from "@/components/tracker/WeatherLayer";
 import { LevelUpOverlay, Welcome } from "@/components/tracker/Overlays";
 import { TabsContent } from "@/components/ui/tabs";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
+import { BackupReminder } from "@/components/tracker/BackupReminder";
 import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -37,6 +38,7 @@ function AppInner() {
   return (
     <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <HeaderHud />
+      <BackupReminder />
       <ConstellationTabs>
         <TabsContent value="today" className="mt-5"><TodayPanel /></TabsContent>
         <TabsContent value="week" className="mt-5"><Timetable /></TabsContent>

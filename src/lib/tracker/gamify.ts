@@ -71,16 +71,16 @@ export function defaultStreak(today: string): StreakState {
 }
 export const defaultInventory = (): Inventory => ({ items: {}, freezes: 0, materials: { magicFeather: 0, starShard: 0, mysticHerb: 0 } });
 
-/** -5% no, -3% vui for every full hour elapsed since lastDecayAt. */
-export function decayPet(pet: PetState, now = new Date()): PetState {
+/** -5% no, -3% vui for every full hour elapsed since lastDecayAt. `mult` scales the decay (weather debuff). */
+export function decayPet(pet: PetState, now = new Date(), mult = 1): PetState {
   const last = new Date(pet.lastDecayAt).getTime();
   if (!Number.isFinite(last)) return { ...pet, lastDecayAt: now.toISOString() };
   const hours = Math.floor((now.getTime() - last) / 3_600_000);
   if (hours <= 0) return pet;
   return {
     ...pet,
-    hunger: clamp(pet.hunger - HUNGER_DECAY * hours),
-    happiness: clamp(pet.happiness - HAPPY_DECAY * hours),
+    hunger: clamp(pet.hunger - HUNGER_DECAY * hours * mult),
+    happiness: clamp(pet.happiness - HAPPY_DECAY * hours * mult),
     lastDecayAt: new Date(last + hours * 3_600_000).toISOString(),
   };
 }
@@ -124,6 +124,9 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((db - da) / 86_400_000);
 }
 const isWeekday = (date: string) => { const d = new Date(`${date}T12:00:00`); return d.getDay() >= 1 && d.getDay() <= 5; };
+/** Fixed Vietnamese holidays (MM-DD): Tết Dương lịch, 30/4, 1/5, Quốc khánh 2/9. */
+export const VN_HOLIDAYS = ["01-01", "04-30", "05-01", "09-02"];
+export const isHoliday = (date: string) => VN_HOLIDAYS.includes(date.slice(5));
 /** Record one completed task today. When the 3rd lands, streak +1 (or restarts at 1). */
 export function recordCompletion(s: StreakState, today: string): StreakState {
   const done = (s.today.date === today ? s.today.done : 0) + 1;
@@ -145,7 +148,7 @@ export function checkStreak(s: StreakState, inv: Inventory, today: string): { st
   let broke = false;
   if (s.lastQualifiedDate && s.count > 0) {
     const missed = daysBetween(s.lastQualifiedDate, today) - 1;
-    if (missed === 1 && isWeekday(shiftDate(today, -1))) {
+    if (missed === 1 && (isWeekday(shiftDate(today, -1)) || isHoliday(shiftDate(today, -1)))) {
       streak = { ...streak, lastQualifiedDate: shiftDate(today, -1) };
     } else if (missed === 1 && inv.freezes > 0) {
       const yesterday = shiftDate(today, -1);
