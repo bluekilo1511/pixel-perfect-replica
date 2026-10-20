@@ -125,6 +125,8 @@ export function TodayPanel() {
           {!tasks.length && <p className="py-6 text-center text-sm text-muted-foreground">Chưa có nhiệm vụ nào.</p>}
         </ul>
       </section>
+      <DailyQuestsCard />
+      <RaidBossCard />
       </div>
     </div>
   );
