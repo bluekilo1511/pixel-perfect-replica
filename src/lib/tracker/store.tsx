@@ -6,7 +6,8 @@ import {
   WHEEL_PRIZES, upcomingSlots, type AppData,
 } from "./model";
 import { decayPet } from "./gamify";
-import { ACHIEVEMENT_REWARD, ACHIEVEMENTS, MATERIALS, petTitle, resolveExpedition, rollDrop, TIER_BADGE, tierOf, type AchievementId, type MaterialId } from "./extras";
+import { ACHIEVEMENT_REWARD, ACHIEVEMENTS, MATERIALS, petTitle, resolveExpedition, rollDrop, TIER_BADGE, tierOf, weatherEffect, weatherFromData, type AchievementId, type MaterialId } from "./extras";
+import { claimQuest as claimQuestRule, claimRaid as claimRaidRule } from "./model";
 import { bossCounterAttack, defeatBoss } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import { celebrate, levelUpFx, ting } from "./effects";
@@ -41,6 +42,8 @@ interface Store {
   bossCancel: () => void;
   claimAchievement: (id: AchievementId) => boolean;
   dismissBackupReminder: () => void;
+  claimQuest: (id: string) => boolean;
+  claimRaid: () => boolean;
 }
 
 function announceAchievements(fresh: AchievementId[]) {
@@ -132,7 +135,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
 
   const finish = useCallback((id: string) => {
     const prev = dataRef.current;
-    const r = completeTask(dataRef.current, id);
+    const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
+    const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
     if (!r.rewarded) return; // anti-spam
     setData(r.data);
     void saveSnapshot(r.data);
@@ -182,7 +186,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const check = () => {
       const d0 = ensureDailyPins(dataRef.current, dateStr());
       const { data: dp, pushed } = pushDueSlots(d0);
-      const pet = decayPet(dp.petState);
+      const pet = decayPet(dp.petState, new Date(), weatherEffect(weatherFromData(dp)).petDecayMult);
       let d1 = pet === dp.petState ? dp : { ...dp, petState: pet };
       if (d0.streak !== dataRef.current.streak && d0.streak.lastQualifiedDate !== dataRef.current.streak.lastQualifiedDate) {
         toast("🧊 Bình đóng băng đã cứu chuỗi streak của bạn!");
