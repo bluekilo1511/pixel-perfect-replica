@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
+import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import { dateStr, KIND_META, makeTask, syncTodaySlots, WATER_GOAL, type Task, type TaskKind } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
