@@ -3,7 +3,8 @@ import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
 import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
-import { dateStr, KIND_META, makeTask, syncTodaySlots, WATER_GOAL, type Task, type TaskKind } from "@/lib/tracker/model";
+import { addExam, dateStr, KIND_META, makeTask, removeExam, syncTodaySlots, WATER_GOAL, type Task, type TaskKind } from "@/lib/tracker/model";
+import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -31,13 +32,16 @@ function WaterCard() {
 }
 
 function TaskRow({ task }: { task: Task }) {
-  const { timer, startTimer, pauseTimer, finish, update } = useTracker();
+  const { data, timer, startTimer, pauseTimer, finish, update } = useTracker();
   const running = timer?.taskId === task.id;
   const secs = running ? timer.remaining : task.remainingSeconds || task.minutes * 60;
   const locked = task.completed || task.rewardClaimed;
 
+  const exam = task.examId ? data.exams.find((e) => e.id === task.examId) : undefined;
   return (
-    <li className={`flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 transition ${running ? "bg-secondary glass-glow" : "bg-muted"} ${locked ? "opacity-60" : ""}`}>
+    <li className={`flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 transition ${running ? "bg-secondary glass-glow" : "bg-muted"} ${locked ? "opacity-60" : ""}`}>{exam && (
+      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">📝 {exam.name} · {examLabel(daysUntil(exam.date, dateStr()))}</span>
+    )}
       <span className="text-xl">{KIND_META[task.kind].emoji}</span>
       <div className="min-w-0 flex-1">
         <p className={`truncate font-medium ${locked ? "line-through" : ""}`}>{task.title}</p>
@@ -73,14 +77,57 @@ function TaskRow({ task }: { task: Task }) {
   );
 }
 
+function ExamCard() {
+  const { data, update } = useTracker();
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const today = dateStr();
+  const upcoming = upcomingExams(data.exams, today);
+  const add = () => {
+    if (!name.trim() || !date) return;
+    update((d) => addExam(d, name, date));
+    setName("");
+    setDate("");
+  };
+  return (
+    <section className="glass p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">📝 Kỳ thi sắp tới</h2>
+        <span className="text-sm text-muted-foreground">{upcoming.length}</span>
+      </div>
+      {upcoming.length ? (
+        <ul className="mb-3 space-y-2">
+          {upcoming.map((e) => (
+            <li key={e.id} className={`flex items-center gap-2 rounded-xl border border-border p-3 ${e.daysLeft <= 3 ? "bg-destructive/10" : "bg-muted"}`}>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{e.name}</p>
+                <p className="text-xs text-muted-foreground">{e.date} · {examLabel(e.daysLeft)}</p>
+              </div>
+              <Button size="sm" variant="ghost" aria-label={`Xóa ${e.name}`} onClick={() => update((d) => removeExam(d, e.id))}>✕</Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mb-3 text-sm text-muted-foreground">Chưa có kỳ thi nào. Thêm để thấy đếm ngược nhé!</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Input className="min-w-[140px] flex-1" placeholder="Tên kỳ thi…" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input type="date" className="w-40" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Ngày thi" />
+        <Button onClick={add}>+ Thêm</Button>
+      </div>
+    </section>
+  );
+}
+
 function AddTask() {
-  const { update } = useTracker();
+  const { data, update } = useTracker();
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<TaskKind>("pomodoro");
   const [minutes, setMinutes] = useState(25);
+  const [examId, setExamId] = useState<string>("");
   const add = () => {
     const name = title.trim() || KIND_META[kind].label;
-    update((d) => ({ ...d, tasks: [...d.tasks, makeTask(name, kind, minutes, dateStr())] }));
+    update((d) => ({ ...d, tasks: [...d.tasks, makeTask(name, kind, minutes, dateStr(), examId ? { examId } : {})] }));
     setTitle("");
   };
   return (
@@ -91,6 +138,12 @@ function AddTask() {
         {(Object.keys(KIND_META) as TaskKind[]).filter((k) => k !== "water").map((k) => <option key={k} value={k}>{KIND_META[k].emoji} {KIND_META[k].label}</option>)}
       </select>
       <Input type="number" min={0} className="w-20" value={minutes} onChange={(e) => setMinutes(Math.max(0, +e.target.value))} aria-label="Số phút" />
+      {data.exams.length > 0 && (
+        <select className="h-9 rounded-md border border-input bg-popover px-2 text-sm" value={examId} onChange={(e) => setExamId(e.target.value)} aria-label="Gắn kỳ thi">
+          <option value="">Không gắn thi</option>
+          {data.exams.map((e) => <option key={e.id} value={e.id}>📝 {e.name}</option>)}
+        </select>
+      )}
       <Button onClick={add}>+ Thêm</Button>
     </div>
   );
@@ -125,6 +178,7 @@ export function TodayPanel() {
           {!tasks.length && <p className="py-6 text-center text-sm text-muted-foreground">Chưa có nhiệm vụ nào.</p>}
         </ul>
       </section>
+      <ExamCard />
       <DailyQuestsCard />
       <RaidBossCard />
       </div>

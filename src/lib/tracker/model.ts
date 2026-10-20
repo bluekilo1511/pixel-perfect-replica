@@ -8,6 +8,7 @@ import {
 } from "./extras";
 import { shiftDate, SPECIES } from "./gamify";
 import { dailyQuests, defaultQuests, defaultRaid, questProgress, RAID_REWARD, raidStatus, type QuestsState, type RaidState } from "./quests";
+import { defaultExams, newExamId, normalizeExams, type ExamEvent } from "./exams";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -26,6 +27,7 @@ export interface Task {
   pinned?: boolean;
   timeRange?: string; // "07:30 - 08:15" badge from timetable
   fromSlotId?: string;
+  examId?: string | undefined; // linked exam countdown
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
 }
@@ -90,6 +92,7 @@ export interface AppData {
   backup: { lastBackupAt: string | null; lastReminderAt: string | null };
   quests: QuestsState;
   raid: RaidState;
+  exams: ExamEvent[];
   [extra: string]: unknown;
 }
 
@@ -145,6 +148,7 @@ export function defaultData(): AppData {
     ...normalizeExtras(null), lastDiaryDate: dateStr(),
     backup: { lastBackupAt: null, lastReminderAt: null },
     quests: defaultQuests(), raid: defaultRaid(),
+    exams: defaultExams(),
   };
 }
 
@@ -256,6 +260,7 @@ export function migrate(raw: unknown): AppData {
       weekStart: typeof r.raid?.weekStart === "string" ? r.raid.weekStart : null,
       claimed: r.raid?.claimed === true,
     },
+    exams: normalizeExams(r.exams),
   };
 }
 
@@ -401,6 +406,36 @@ export function claimRaid(data: AppData, now = new Date()): { data: AppData; ok:
 }
 
 // ---- Backup reminder ----
+// ---- Exam countdown ----
+/** Adds an exam event. No-op when the name or date is invalid. */
+export function addExam(data: AppData, name: string, date: string, now = new Date()): AppData {
+  const clean = name.trim();
+  if (!clean || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return data;
+  const exam: ExamEvent = { id: newExamId(), name: clean, date };
+  return { ...data, exams: [...data.exams, exam], updatedAt: now.toISOString() };
+}
+
+/** Removes an exam event and untags its tasks. No-op for unknown ids. */
+export function removeExam(data: AppData, examId: string, now = new Date()): AppData {
+  if (!data.exams.some((e) => e.id === examId)) return data;
+  return {
+    ...data,
+    exams: data.exams.filter((e) => e.id !== examId),
+    tasks: data.tasks.map((t) => (t.examId === examId ? { ...t, examId: undefined } : t)),
+    updatedAt: now.toISOString(),
+  };
+}
+
+/** Links/unlinks a task to an exam. No-op when examId does not exist. */
+export function setTaskExam(data: AppData, taskId: string, examId: string | null, now = new Date()): AppData {
+  if (examId && !data.exams.some((e) => e.id === examId)) return data;
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => (t.id === taskId ? { ...t, examId: examId ?? undefined } : t)),
+    updatedAt: now.toISOString(),
+  };
+}
+
 export const BACKUP_REMINDER_DAYS = 7;
 const REMINDER_SNOOZE_MS = 24 * 60 * 60 * 1000;
 /** True when the last backup is older than 7 days (or never) and the banner was not snoozed in the last 24h. */
