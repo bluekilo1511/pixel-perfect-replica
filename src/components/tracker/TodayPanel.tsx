@@ -3,7 +3,7 @@ import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
 import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
-import { addExam, dateStr, KIND_META, makeTask, removeExam, syncTodaySlots, WATER_GOAL, type Task, type TaskKind } from "@/lib/tracker/model";
+import { addExam, dateStr, KIND_META, makeTask, removeExam, removeTemplate, saveTaskAsTemplate, syncTodaySlots, taskFromTemplate, WATER_GOAL, type Task, type TaskKind } from "@/lib/tracker/model";
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,26 @@ function ExamCard() {
   );
 }
 
+function TemplatesCard() {
+  const { data, update } = useTracker();
+  if (!data.templates.length) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <span className="text-xs font-medium text-muted-foreground">⭐ Mẫu có sẵn:</span>
+      {data.templates.map((tpl) => (
+        <span key={tpl.id} className="flex items-center gap-1 rounded-full border border-border bg-muted py-1 pl-3 pr-1 text-sm">
+          <span className="max-w-[160px] truncate">{KIND_META[tpl.kind].emoji} {tpl.title}{tpl.minutes > 0 ? ` · ${tpl.minutes}p` : ""}</span>
+          <Button size="sm" variant="ghost" aria-label={`Thêm "${tpl.title}"`} title="Thêm nhiệm vụ từ mẫu này" className="h-6 px-2" onClick={() => {
+            update((d) => taskFromTemplate(d, tpl.id, dateStr())?.data ?? d);
+            toast.success(`Đã thêm "${tpl.title}" ✅`);
+          }}>+</Button>
+          <Button size="sm" variant="ghost" aria-label={`Xóa mẫu ${tpl.title}`} title="Xóa mẫu này" className="h-6 px-1 opacity-60 hover:opacity-100" onClick={() => update((d) => removeTemplate(d, tpl.id))}>✕</Button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function AddTask() {
   const { data, update } = useTracker();
   const [title, setTitle] = useState("");
@@ -145,6 +165,11 @@ function AddTask() {
         </select>
       )}
       <Button onClick={add}>+ Thêm</Button>
+      <Button variant="ghost" aria-label="Lưu làm mẫu" title="Lưu cấu hình này làm mẫu để thêm nhanh lần sau" onClick={() => {
+        const name = title.trim() || KIND_META[kind].label;
+        update((d) => saveTaskAsTemplate(d, { title: name, kind, minutes }));
+        toast.success(`Đã lưu mẫu "${name}" ⭐`);
+      }}>⭐</Button>
     </div>
   );
 }
@@ -173,6 +198,7 @@ export function TodayPanel() {
           toast.success(`Đã nạp ${r.added} tiết học hôm nay 🗓️`, { description: "Sẽ nhắc bạn trước mỗi tiết 5 phút 🔔" });
         }}>⚡ Đồng bộ nhanh lịch hôm nay</Button>
         <AddTask />
+        <TemplatesCard />
         <ul className="mt-4 space-y-2">
           {tasks.map((t) => <TaskRow key={t.id} task={t} />)}
           {!tasks.length && <p className="py-6 text-center text-sm text-muted-foreground">Chưa có nhiệm vụ nào.</p>}

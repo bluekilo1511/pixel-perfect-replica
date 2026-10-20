@@ -9,6 +9,7 @@ import {
 import { shiftDate, SPECIES } from "./gamify";
 import { dailyQuests, defaultQuests, defaultRaid, questProgress, RAID_REWARD, raidStatus, type QuestsState, type RaidState } from "./quests";
 import { defaultExams, newExamId, normalizeExams, type ExamEvent } from "./exams";
+import { defaultTemplates, newTemplateId, normalizeTemplates, type TaskTemplate } from "./templates";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -93,6 +94,7 @@ export interface AppData {
   quests: QuestsState;
   raid: RaidState;
   exams: ExamEvent[];
+  templates: TaskTemplate[];
   [extra: string]: unknown;
 }
 
@@ -149,6 +151,7 @@ export function defaultData(): AppData {
     backup: { lastBackupAt: null, lastReminderAt: null },
     quests: defaultQuests(), raid: defaultRaid(),
     exams: defaultExams(),
+    templates: defaultTemplates(),
   };
 }
 
@@ -261,6 +264,7 @@ export function migrate(raw: unknown): AppData {
       claimed: r.raid?.claimed === true,
     },
     exams: normalizeExams(r.exams),
+    templates: normalizeTemplates(r.templates),
   };
 }
 
@@ -434,6 +438,29 @@ export function setTaskExam(data: AppData, taskId: string, examId: string | null
     tasks: data.tasks.map((t) => (t.id === taskId ? { ...t, examId: examId ?? undefined } : t)),
     updatedAt: now.toISOString(),
   };
+}
+
+/** Saves a task's shape as a reusable template. No-op for blank titles or exact duplicates. */
+export function saveTaskAsTemplate(data: AppData, shape: Pick<Task, "title" | "kind" | "minutes">, now = new Date()): AppData {
+  const title = shape.title.trim();
+  if (!title) return data;
+  if (data.templates.some((t) => t.title === title && t.kind === shape.kind && t.minutes === shape.minutes)) return data;
+  const template: TaskTemplate = { id: newTemplateId(), title, kind: shape.kind, minutes: shape.minutes };
+  return { ...data, templates: [...data.templates, template], updatedAt: now.toISOString() };
+}
+
+/** Creates a task from a template for the given date. Returns null for unknown template ids. */
+export function taskFromTemplate(data: AppData, templateId: string, date: string, now = new Date()): { data: AppData; task: Task } | null {
+  const tpl = data.templates.find((t) => t.id === templateId);
+  if (!tpl) return null;
+  const task = makeTask(tpl.title, tpl.kind, tpl.minutes, date);
+  return { data: { ...data, tasks: [...data.tasks, task], updatedAt: now.toISOString() }, task };
+}
+
+/** Removes a template. Existing tasks stay untouched. */
+export function removeTemplate(data: AppData, templateId: string, now = new Date()): AppData {
+  if (!data.templates.some((t) => t.id === templateId)) return data;
+  return { ...data, templates: data.templates.filter((t) => t.id !== templateId), updatedAt: now.toISOString() };
 }
 
 export const BACKUP_REMINDER_DAYS = 7;
