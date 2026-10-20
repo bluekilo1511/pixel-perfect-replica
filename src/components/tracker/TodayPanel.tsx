@@ -6,6 +6,7 @@ import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import {
   addExam,
   dateStr,
+  editTask,
   KIND_META,
   makeTask,
   removeExam,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/tracker/model";
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
 import { MonthlyReportCard } from "./MonthlyReport";
+import { WeeklyReportCard } from "./WeeklyReport";
 import { FriendViewCard } from "./FriendView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,8 +59,74 @@ function TaskRow({ task }: { task: Task }) {
   const running = timer?.taskId === task.id;
   const secs = running ? timer.remaining : task.remainingSeconds || task.minutes * 60;
   const locked = task.completed || task.rewardClaimed;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    title: task.title,
+    kind: task.kind,
+    minutes: task.minutes,
+    date: task.date,
+  });
+  const openEditor = () => {
+    setDraft({ title: task.title, kind: task.kind, minutes: task.minutes, date: task.date });
+    setEditing(true);
+  };
+  const saveEdit = () => {
+    if (running) pauseTimer();
+    update((d) => editTask(d, task.id, draft) ?? d);
+    setEditing(false);
+    toast.success("Đã cập nhật nhiệm vụ ✏️");
+  };
 
   const exam = task.examId ? data.exams.find((e) => e.id === task.examId) : undefined;
+  if (editing) {
+    return (
+      <li className="rounded-xl border border-primary/40 bg-muted p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            className="min-w-[160px] flex-1"
+            value={draft.title}
+            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+            aria-label="Tên nhiệm vụ"
+          />
+          <select
+            className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
+            value={draft.kind}
+            onChange={(e) => setDraft({ ...draft, kind: e.target.value as TaskKind })}
+            aria-label="Loại nhiệm vụ"
+          >
+            {(Object.keys(KIND_META) as TaskKind[])
+              .filter((k) => k !== "water")
+              .map((k) => (
+                <option key={k} value={k}>
+                  {KIND_META[k].emoji} {KIND_META[k].label}
+                </option>
+              ))}
+          </select>
+          <Input
+            type="number"
+            min={0}
+            className="w-20"
+            value={draft.minutes}
+            onChange={(e) => setDraft({ ...draft, minutes: Math.max(0, +e.target.value) })}
+            aria-label="Số phút"
+          />
+          <Input
+            type="date"
+            className="w-36"
+            value={draft.date}
+            onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+            aria-label="Ngày"
+          />
+          <Button size="sm" onClick={saveEdit}>
+            💾 Lưu
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            Hủy
+          </Button>
+        </div>
+      </li>
+    );
+  }
   return (
     <li
       className={`flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 transition ${running ? "bg-secondary glass-glow" : "bg-muted"} ${locked ? "opacity-60" : ""}`}
@@ -106,6 +174,15 @@ function TaskRow({ task }: { task: Task }) {
         </span>
       ) : (
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label="Sửa nhiệm vụ"
+            title="Sửa tên, thời lượng hoặc ngày"
+            onClick={openEditor}
+          >
+            ✎
+          </Button>
           {task.minutes > 0 &&
             (running ? (
               <Button size="sm" variant="secondary" onClick={pauseTimer}>
@@ -394,6 +471,7 @@ export function TodayPanel() {
         <ExamCard />
         <DailyQuestsCard />
         <RaidBossCard />
+        <WeeklyReportCard />
         <MonthlyReportCard />
         <FriendViewCard />
       </div>

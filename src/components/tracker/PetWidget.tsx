@@ -14,8 +14,9 @@ import {
   STREAK_GOAL,
 } from "@/lib/tracker/gamify";
 import { celebrate } from "@/lib/tracker/effects";
-import { dateStr } from "@/lib/tracker/model";
+import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { BOSS_MAX_HP, BOSS_REWARD, bossHp } from "@/lib/tracker/boss";
 import { ADVANCED_LINES, petTitle, petXpForLevel, TIER_BADGE, tierOf } from "@/lib/tracker/extras";
 import {
@@ -72,6 +73,29 @@ export function PetWidget() {
   const pet = data.petState;
   const mood = moodOf(pet);
   const pomodoroMinutes = data.settings.pomodoroMinutes;
+  const presetOptions = [...POMODORO_PRESETS, ...data.settings.customPresets];
+  const [customMin, setCustomMin] = useState("");
+  const applyCustomPreset = () => {
+    const m = Math.round(Number(customMin));
+    if (!Number.isFinite(m) || m < 1 || m > 180) {
+      toast.error("Nhập số phút từ 1 đến 180 nhé!");
+      return;
+    }
+    update((d) => ({
+      ...d,
+      settings: {
+        ...d.settings,
+        pomodoroMinutes: m,
+        customPresets:
+          POMODORO_PRESETS.includes(m as (typeof POMODORO_PRESETS)[number]) ||
+          d.settings.customPresets.includes(m)
+            ? d.settings.customPresets
+            : [...d.settings.customPresets, m].slice(0, 4),
+      },
+    }));
+    setCustomMin("");
+    toast.success(`Đã lưu Pomodoro ${m} phút 🍅`);
+  };
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const say = (text: string) => {
@@ -259,11 +283,39 @@ export function PetWidget() {
                 <SelectValue placeholder="Thời lượng" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="15">15 phút</SelectItem>
-                <SelectItem value="25">25 phút</SelectItem>
-                <SelectItem value="50">50 phút</SelectItem>
+                {[
+                  ...presetOptions,
+                  ...(presetOptions.includes(pomodoroMinutes) ? [] : [pomodoroMinutes]),
+                ]
+                  .sort((a, b) => a - b)
+                  .map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {m} phút
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
+            <Input
+              type="number"
+              min={1}
+              max={180}
+              className="h-8 w-20"
+              placeholder="Tuỳ ý"
+              aria-label="Phút tuỳ chỉnh"
+              value={customMin}
+              disabled={!!endAt}
+              onChange={(e) => setCustomMin(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applyCustomPreset()}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2"
+              disabled={!!endAt}
+              onClick={applyCustomPreset}
+            >
+              Lưu
+            </Button>
             <label className="ml-1 inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium">
               <input
                 type="checkbox"

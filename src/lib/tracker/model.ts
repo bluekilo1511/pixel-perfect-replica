@@ -1,15 +1,54 @@
 import {
-  checkStreak, defaultInventory, defaultPet, defaultStreak, normalizePet, recordCompletion, streakMultiplier, bumpPet, POMODORO_MINUTES,
-  type Inventory, type PetState, type StreakState,
+  checkStreak,
+  defaultInventory,
+  defaultPet,
+  defaultStreak,
+  normalizePet,
+  recordCompletion,
+  streakMultiplier,
+  bumpPet,
+  POMODORO_MINUTES,
+  type Inventory,
+  type PetState,
+  type StreakState,
 } from "./gamify";
 import {
-  addPetXp, bumpLifetime, bumpStats, checkAchievements, claimReward, isNightOwlHour, normalizeExtras, recordWaterGoal, rollDrop, startExpedition, writeDiary,
-  type AchievementId, type AchievementState, type DayStats, type DiaryEntry, type ExpeditionState, type MaterialId,
+  addPetXp,
+  bumpLifetime,
+  bumpStats,
+  checkAchievements,
+  claimReward,
+  isNightOwlHour,
+  normalizeExtras,
+  recordWaterGoal,
+  rollDrop,
+  startExpedition,
+  writeDiary,
+  type AchievementId,
+  type AchievementState,
+  type DayStats,
+  type DiaryEntry,
+  type ExpeditionState,
+  type MaterialId,
 } from "./extras";
 import { shiftDate, SPECIES } from "./gamify";
-import { dailyQuests, defaultQuests, defaultRaid, questProgress, RAID_REWARD, raidStatus, type QuestsState, type RaidState } from "./quests";
+import {
+  dailyQuests,
+  defaultQuests,
+  defaultRaid,
+  questProgress,
+  RAID_REWARD,
+  raidStatus,
+  type QuestsState,
+  type RaidState,
+} from "./quests";
 import { defaultExams, newExamId, normalizeExams, type ExamEvent } from "./exams";
-import { defaultTemplates, newTemplateId, normalizeTemplates, type TaskTemplate } from "./templates";
+import {
+  defaultTemplates,
+  newTemplateId,
+  normalizeTemplates,
+  type TaskTemplate,
+} from "./templates";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -60,7 +99,7 @@ export interface GameState {
   lizardGems: number;
   spinTickets: number;
   spinHistory: { at: string; prize: string }[];
-  water: { date: string; cups: number; rewarded: boolean };
+  water: { date: string; cups: number; rewarded: boolean; lastNudgePomodoros?: number };
   lastDailyPinDate: string | null;
   [extra: string]: unknown;
 }
@@ -68,6 +107,7 @@ export interface GameState {
 export type AmbientSettingKind = "rain" | "ocean" | null;
 export interface AppSettings {
   pomodoroMinutes: number;
+  customPresets: number[]; // user-saved durations (outside the built-in 15/25/50)
   ambient: { kind: AmbientSettingKind; volume: number };
 }
 
@@ -98,7 +138,15 @@ export interface AppData {
   [extra: string]: unknown;
 }
 
-export const DAY_LABELS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+export const DAY_LABELS = [
+  "Chủ Nhật",
+  "Thứ Hai",
+  "Thứ Ba",
+  "Thứ Tư",
+  "Thứ Năm",
+  "Thứ Sáu",
+  "Thứ Bảy",
+];
 export const WATER_GOAL = 8;
 export const EXERCISE_SESSIONS = 3;
 export const POMODORO_PRESETS = [15, 25, 50] as const;
@@ -110,7 +158,8 @@ export const KIND_META: Record<TaskKind, { emoji: string; label: string; minutes
   custom: { emoji: "✍️", label: "Việc tự nhập", minutes: 0 },
 };
 
-export const uid = (p = "id") => `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+export const uid = (p = "id") =>
+  `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 export function dateStr(d = new Date()) {
   const y = d.getFullYear();
@@ -122,12 +171,20 @@ export function dateStr(d = new Date()) {
 export const xpForLevel = (level: number) => level * 100;
 
 export function emptyTimetable(): Timetable {
-  return { weekStartsOn: 0, days: DAY_LABELS.map((label, dayIndex) => ({ dayIndex, label, slots: [] })) };
+  return {
+    weekStartsOn: 0,
+    days: DAY_LABELS.map((label, dayIndex) => ({ dayIndex, label, slots: [] })),
+  };
 }
 
 export function defaultGame(today = dateStr()): GameState {
   return {
-    level: 1, xp: 0, catCoins: 0, lizardGems: 0, spinTickets: 0, spinHistory: [],
+    level: 1,
+    xp: 0,
+    catCoins: 0,
+    lizardGems: 0,
+    spinTickets: 0,
+    spinHistory: [],
     water: { date: today, cups: 0, rewarded: false },
     lastDailyPinDate: null,
   };
@@ -137,36 +194,72 @@ const clamp01 = (v: number, d: number) => (Number.isFinite(v) ? Math.max(0, Math
 export function defaultSettings(): AppSettings {
   return {
     pomodoroMinutes: POMODORO_MINUTES,
+    customPresets: [],
     ambient: { kind: null, volume: 0.4 },
   };
 }
 
 export function defaultData(): AppData {
   return {
-    app: "local-task-tracker-pro", version: 3, updatedAt: new Date().toISOString(),
-    tasks: [], game: defaultGame(), timetable: emptyTimetable(), timetableLog: [],
-    avatarBase64: null, petState: defaultPet(), streak: defaultStreak(dateStr()), inventory: defaultInventory(),
+    app: "local-task-tracker-pro",
+    version: 3,
+    updatedAt: new Date().toISOString(),
+    tasks: [],
+    game: defaultGame(),
+    timetable: emptyTimetable(),
+    timetableLog: [],
+    avatarBase64: null,
+    petState: defaultPet(),
+    streak: defaultStreak(dateStr()),
+    inventory: defaultInventory(),
     settings: defaultSettings(),
-    ...normalizeExtras(null), lastDiaryDate: dateStr(),
+    ...normalizeExtras(null),
+    lastDiaryDate: dateStr(),
     backup: { lastBackupAt: null, lastReminderAt: null },
-    quests: defaultQuests(), raid: defaultRaid(),
+    quests: defaultQuests(),
+    raid: defaultRaid(),
     exams: defaultExams(),
     templates: defaultTemplates(),
   };
 }
 
-export function makeTask(title: string, kind: TaskKind, minutes: number, date: string, extra: Partial<Task> = {}): Task {
+export function makeTask(
+  title: string,
+  kind: TaskKind,
+  minutes: number,
+  date: string,
+  extra: Partial<Task> = {},
+): Task {
   return {
-    id: uid("task"), title, kind, minutes, remainingSeconds: minutes * 60, date,
-    completed: false, completedAt: null, rewardClaimed: false, createdAt: new Date().toISOString(), ...extra,
+    id: uid("task"),
+    title,
+    kind,
+    minutes,
+    remainingSeconds: minutes * 60,
+    date,
+    completed: false,
+    completedAt: null,
+    rewardClaimed: false,
+    createdAt: new Date().toISOString(),
+    ...extra,
   };
 }
 
 const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
 const KINDS: TaskKind[] = ["pomodoro", "exercise", "water", "custom"];
-const normalizePomodoroMinutes = (v: unknown) => {
+const clampPomodoroMinutes = (v: unknown) => {
   const minutes = Math.round(num(v, POMODORO_MINUTES));
-  return POMODORO_PRESETS.includes(minutes as (typeof POMODORO_PRESETS)[number]) ? minutes : POMODORO_MINUTES;
+  return minutes >= 1 && minutes <= 180 ? minutes : POMODORO_MINUTES;
+};
+const normalizeCustomPresets = (v: unknown): number[] => {
+  const toMin = (x: unknown) => {
+    const n = Math.round(Number(x));
+    return Number.isFinite(n) && n >= 1 && n <= 180 ? n : null;
+  };
+  return [...new Set((Array.isArray(v) ? v : []).map(toMin).filter((n): n is number => n !== null))]
+    .filter((m) => !POMODORO_PRESETS.includes(m as (typeof POMODORO_PRESETS)[number]))
+    .sort((a, b) => a - b)
+    .slice(0, 4);
 };
 
 function normalizeSlot(s: any): Slot {
@@ -223,7 +316,8 @@ export function migrate(raw: unknown): AppData {
 
   const { timetable: _old, ...gameRest } = oldGame;
   const game: GameState = {
-    ...base.game, ...gameRest,
+    ...base.game,
+    ...gameRest,
     level: Math.max(1, num(oldGame.level, 1)),
     xp: Math.max(0, num(oldGame.xp, 0)),
     catCoins: num(oldGame.catCoins, 0),
@@ -236,28 +330,52 @@ export function migrate(raw: unknown): AppData {
   const { gameState: _g, ...rest } = r;
   const rawSettings = r.settings;
   const settings: AppSettings = {
-    pomodoroMinutes: normalizePomodoroMinutes(rawSettings?.pomodoroMinutes),
+    pomodoroMinutes: clampPomodoroMinutes(rawSettings?.pomodoroMinutes),
+    customPresets: normalizeCustomPresets(rawSettings?.customPresets),
     ambient: {
-      kind: rawSettings?.ambient?.kind === "rain" || rawSettings?.ambient?.kind === "ocean" ? rawSettings.ambient.kind : null,
+      kind:
+        rawSettings?.ambient?.kind === "rain" || rawSettings?.ambient?.kind === "ocean"
+          ? rawSettings.ambient.kind
+          : null,
       volume: clamp01(num(rawSettings?.ambient?.volume, 0.4), 0.4),
     },
   };
   return {
-    ...rest, app: "local-task-tracker-pro", version: 3, updatedAt: r.updatedAt ?? base.updatedAt,
-    tasks, game, timetable: tt, timetableLog: Array.isArray(r.timetableLog) ? r.timetableLog : [],
+    ...rest,
+    app: "local-task-tracker-pro",
+    version: 3,
+    updatedAt: r.updatedAt ?? base.updatedAt,
+    tasks,
+    game,
+    timetable: tt,
+    timetableLog: Array.isArray(r.timetableLog) ? r.timetableLog : [],
     avatarBase64: typeof r.avatarBase64 === "string" ? r.avatarBase64 : null,
     petState: normalizePet(r.petState),
-    streak: r.streak && typeof r.streak === "object" ? { ...base.streak, ...r.streak, freezeActive: r.streak.freezeActive === true, today: { ...base.streak.today, ...(r.streak.today ?? {}) } } : { ...base.streak, freezeActive: false },
+    streak:
+      r.streak && typeof r.streak === "object"
+        ? {
+            ...base.streak,
+            ...r.streak,
+            freezeActive: r.streak.freezeActive === true,
+            today: { ...base.streak.today, ...(r.streak.today ?? {}) },
+          }
+        : { ...base.streak, freezeActive: false },
     settings,
     ...extrasFrom(r),
-    inventory: { items: { ...(r.inventory?.items ?? {}) }, freezes: num(r.inventory?.freezes, 0), materials: normalizeExtras(r).materials },
+    inventory: {
+      items: { ...(r.inventory?.items ?? {}) },
+      freezes: num(r.inventory?.freezes, 0),
+      materials: normalizeExtras(r).materials,
+    },
     backup: {
       lastBackupAt: typeof r.backup?.lastBackupAt === "string" ? r.backup.lastBackupAt : null,
       lastReminderAt: typeof r.backup?.lastReminderAt === "string" ? r.backup.lastReminderAt : null,
     },
     quests: {
       date: typeof r.quests?.date === "string" ? r.quests.date : null,
-      claimed: Array.isArray(r.quests?.claimed) ? r.quests.claimed.filter((x: unknown) => typeof x === "string") : [],
+      claimed: Array.isArray(r.quests?.claimed)
+        ? r.quests.claimed.filter((x: unknown) => typeof x === "string")
+        : [],
     },
     raid: {
       weekStart: typeof r.raid?.weekStart === "string" ? r.raid.weekStart : null,
@@ -297,8 +415,13 @@ export function rewardFor(kind: TaskKind) {
 
 /** Completes a task once. Second call is a no-op (anti-spam). */
 export interface CompleteResult {
-  data: AppData; rewarded: boolean; levelsGained: number;
-  drop: MaterialId | null; petEvolved: boolean; petLevels: number; fresh: AchievementId[];
+  data: AppData;
+  rewarded: boolean;
+  levelsGained: number;
+  drop: MaterialId | null;
+  petEvolved: boolean;
+  petLevels: number;
+  fresh: AchievementId[];
 }
 
 export function addMaterial(data: AppData, id: MaterialId | null, n = 1): AppData {
@@ -308,16 +431,32 @@ export function addMaterial(data: AppData, id: MaterialId | null, n = 1): AppDat
 }
 
 /** Unlocks hidden achievements; rewards are claimed manually from the map. */
-export function applyAchievements(data: AppData, ctx: { nightOwl?: boolean }, now = new Date()): { data: AppData; fresh: AchievementId[] } {
-  const r = checkAchievements(data.achievements, { pet: data.petState, nightOwl: !!ctx.nightOwl }, now);
+export function applyAchievements(
+  data: AppData,
+  ctx: { nightOwl?: boolean },
+  now = new Date(),
+): { data: AppData; fresh: AchievementId[] } {
+  const r = checkAchievements(
+    data.achievements,
+    { pet: data.petState, nightOwl: !!ctx.nightOwl },
+    now,
+  );
   if (!r.fresh.length) return { data, fresh: [] };
   return {
     fresh: r.fresh,
-    data: { ...data, achievements: r.achievements, claimedAchievements: { ...r.achievements.claimed } },
+    data: {
+      ...data,
+      achievements: r.achievements,
+      claimedAchievements: { ...r.achievements.claimed },
+    },
   };
 }
 
-export function claimAchievementReward(data: AppData, id: AchievementId, now = new Date()): AppData | null {
+export function claimAchievementReward(
+  data: AppData,
+  id: AchievementId,
+  now = new Date(),
+): AppData | null {
   const achievements = claimReward(data.achievements, id, now);
   if (!achievements) return null;
   return {
@@ -329,9 +468,24 @@ export function claimAchievementReward(data: AppData, id: AchievementId, now = n
 }
 
 /** Completes a task once. Second call is a no-op (anti-spam). */
-export function completeTask(data: AppData, taskId: string, now = new Date(), rng: () => number = Math.random, xpMult = 1): CompleteResult {
+export function completeTask(
+  data: AppData,
+  taskId: string,
+  now = new Date(),
+  rng: () => number = Math.random,
+  xpMult = 1,
+): CompleteResult {
   const task = data.tasks.find((t) => t.id === taskId);
-  if (!task || task.completed || task.rewardClaimed) return { data, rewarded: false, levelsGained: 0, drop: null, petEvolved: false, petLevels: 0, fresh: [] };
+  if (!task || task.completed || task.rewardClaimed)
+    return {
+      data,
+      rewarded: false,
+      levelsGained: 0,
+      drop: null,
+      petEvolved: false,
+      petLevels: 0,
+      fresh: [],
+    };
   const r = rewardFor(task.kind);
   const today = dateStr(now);
   const mult = streakMultiplier(data.streak.count);
@@ -342,28 +496,129 @@ export function completeTask(data: AppData, taskId: string, now = new Date(), rn
   const pomodoroPatch = task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {};
   const achievements = bumpLifetime(data.achievements, { tasks: 1, ...pomodoroPatch });
   const base: AppData = {
-      ...data,
-      streak: recordCompletion(data.streak, today),
-      petState: pet.pet,
-      achievements,
-      claimedAchievements: { ...achievements.claimed },
-      dailyStats: bumpStats(data.dailyStats, today, { tasks: 1, ...(task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {}) }),
-      game: { ...game, catCoins: game.catCoins + r.cat, lizardGems: game.lizardGems + r.lizard, spinTickets: game.spinTickets + r.spins },
-      tasks: data.tasks.map((t) =>
-        t.id === taskId ? { ...t, completed: true, rewardClaimed: true, remainingSeconds: 0, completedAt: now.toISOString() } : t,
-      ),
+    ...data,
+    streak: recordCompletion(data.streak, today),
+    petState: pet.pet,
+    achievements,
+    claimedAchievements: { ...achievements.claimed },
+    dailyStats: bumpStats(data.dailyStats, today, {
+      tasks: 1,
+      ...(task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {}),
+    }),
+    game: {
+      ...game,
+      catCoins: game.catCoins + r.cat,
+      lizardGems: game.lizardGems + r.lizard,
+      spinTickets: game.spinTickets + r.spins,
+    },
+    tasks: data.tasks.map((t) =>
+      t.id === taskId
+        ? {
+            ...t,
+            completed: true,
+            rewardClaimed: true,
+            remainingSeconds: 0,
+            completedAt: now.toISOString(),
+          }
+        : t,
+    ),
   };
   const ach = applyAchievements(addMaterial(base, drop), { nightOwl: isNightOwlHour(now) }, now);
-  return { rewarded: true, levelsGained, drop, petEvolved: pet.evolved, petLevels: pet.levelsGained, fresh: ach.fresh, data: ach.data };
+  return {
+    rewarded: true,
+    levelsGained,
+    drop,
+    petEvolved: pet.evolved,
+    petLevels: pet.levelsGained,
+    fresh: ach.fresh,
+    data: ach.data,
+  };
+}
+
+// ---- Edit task ----
+export interface TaskEdit {
+  title?: string;
+  kind?: TaskKind;
+  minutes?: number;
+  date?: string;
+}
+
+/** Edits an unfinished task. Completed or already-rewarded tasks are locked. Returns null when not editable. */
+export function editTask(
+  data: AppData,
+  taskId: string,
+  patch: TaskEdit,
+  now = new Date(),
+): AppData | null {
+  const task = data.tasks.find((t) => t.id === taskId);
+  if (!task || task.completed || task.rewardClaimed) return null;
+  const minutes =
+    patch.minutes !== undefined
+      ? Math.max(0, Math.round(num(patch.minutes, task.minutes)))
+      : task.minutes;
+  const kind = patch.kind && KINDS.includes(patch.kind) ? patch.kind : task.kind;
+  const title =
+    patch.title !== undefined ? patch.title.trim() || KIND_META[kind].label : task.title;
+  const date =
+    typeof patch.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(patch.date)
+      ? patch.date
+      : task.date;
+  const moved = date !== task.date;
+  const retimed = minutes !== task.minutes || kind !== task.kind;
+  return {
+    ...data,
+    updatedAt: now.toISOString(),
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      const next = { ...t, title, kind, minutes, date };
+      // New duration or kind → restart the countdown; moving days drops the old timetable badge.
+      if (retimed) next.remainingSeconds = minutes * 60;
+      if (moved) {
+        delete next.timeRange;
+        delete next.fromSlotId;
+      }
+      return next;
+    }),
+  };
+}
+
+// ---- Water nudge (every 2 Pomodoro sessions) ----
+/** True right after every 2nd finished Pomodoro of the day while the water goal is not reached (once per count). */
+export function shouldNudgeWater(data: AppData, now = new Date()): boolean {
+  const today = dateStr(now);
+  const pomodoros = data.dailyStats[today]?.pomodoros ?? 0;
+  if (pomodoros < 2 || pomodoros % 2 !== 0) return false;
+  const w = data.game.water;
+  const cups = w.date === today ? w.cups : 0;
+  if (cups >= WATER_GOAL) return false;
+  return w.lastNudgePomodoros !== pomodoros;
+}
+
+/** Marks the current Pomodoro count as already nudged so the reminder does not repeat this session. */
+export function markWaterNudged(data: AppData, now = new Date()): AppData {
+  const today = dateStr(now);
+  const pomodoros = data.dailyStats[today]?.pomodoros ?? 0;
+  const water =
+    data.game.water.date === today
+      ? { ...data.game.water, lastNudgePomodoros: pomodoros }
+      : { date: today, cups: 0, rewarded: false, lastNudgePomodoros: pomodoros };
+  return { ...data, game: { ...data.game, water } };
 }
 
 /** Pet-widget Pomodoro finished: logs focus time, records a completed "Pomodoro focus" entry (no extra reward), checks Night Owl. */
-export function completePomodoroSession(data: AppData, minutes: number, now = new Date()): { data: AppData; fresh: AchievementId[] } {
+export function completePomodoroSession(
+  data: AppData,
+  minutes: number,
+  now = new Date(),
+): { data: AppData; fresh: AchievementId[] } {
   const today = dateStr(now);
   const focusToday = (data.dailyStats[today]?.focusMin ?? 0) + minutes;
   const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
   const record = makeTask(`Pomodoro tập trung (${minutes} phút)`, "pomodoro", minutes, today, {
-    completed: true, rewardClaimed: true, remainingSeconds: 0, completedAt: now.toISOString(),
+    completed: true,
+    rewardClaimed: true,
+    remainingSeconds: 0,
+    completedAt: now.toISOString(),
   });
   const d = {
     ...data,
@@ -378,7 +633,11 @@ export function completePomodoroSession(data: AppData, minutes: number, now = ne
 
 // ---- Daily quests & weekly raid ----
 /** Claims a daily quest reward when its target is met. Resets automatically on a new day. */
-export function claimQuest(data: AppData, questId: string, now = new Date()): { data: AppData; ok: boolean } {
+export function claimQuest(
+  data: AppData,
+  questId: string,
+  now = new Date(),
+): { data: AppData; ok: boolean } {
   const today = dateStr(now);
   const quest = dailyQuests(today).find((q) => q.id === questId);
   if (!quest) return { data, ok: false };
@@ -390,7 +649,11 @@ export function claimQuest(data: AppData, questId: string, now = new Date()): { 
     data: {
       ...data,
       quests: { date: today, claimed: [...claimed, questId] },
-      game: { ...data.game, catCoins: data.game.catCoins + quest.reward.catCoins, lizardGems: data.game.lizardGems + quest.reward.lizardGems },
+      game: {
+        ...data.game,
+        catCoins: data.game.catCoins + quest.reward.catCoins,
+        lizardGems: data.game.lizardGems + quest.reward.lizardGems,
+      },
     },
   };
 }
@@ -404,7 +667,11 @@ export function claimRaid(data: AppData, now = new Date()): { data: AppData; ok:
     data: {
       ...data,
       raid: { weekStart: st.weekStart, claimed: true },
-      game: { ...data.game, catCoins: data.game.catCoins + RAID_REWARD.catCoins, lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems },
+      game: {
+        ...data.game,
+        catCoins: data.game.catCoins + RAID_REWARD.catCoins,
+        lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems,
+      },
     },
   };
 }
@@ -431,7 +698,12 @@ export function removeExam(data: AppData, examId: string, now = new Date()): App
 }
 
 /** Links/unlinks a task to an exam. No-op when examId does not exist. */
-export function setTaskExam(data: AppData, taskId: string, examId: string | null, now = new Date()): AppData {
+export function setTaskExam(
+  data: AppData,
+  taskId: string,
+  examId: string | null,
+  now = new Date(),
+): AppData {
   if (examId && !data.exams.some((e) => e.id === examId)) return data;
   return {
     ...data,
@@ -441,16 +713,35 @@ export function setTaskExam(data: AppData, taskId: string, examId: string | null
 }
 
 /** Saves a task's shape as a reusable template. No-op for blank titles or exact duplicates. */
-export function saveTaskAsTemplate(data: AppData, shape: Pick<Task, "title" | "kind" | "minutes">, now = new Date()): AppData {
+export function saveTaskAsTemplate(
+  data: AppData,
+  shape: Pick<Task, "title" | "kind" | "minutes">,
+  now = new Date(),
+): AppData {
   const title = shape.title.trim();
   if (!title) return data;
-  if (data.templates.some((t) => t.title === title && t.kind === shape.kind && t.minutes === shape.minutes)) return data;
-  const template: TaskTemplate = { id: newTemplateId(), title, kind: shape.kind, minutes: shape.minutes };
+  if (
+    data.templates.some(
+      (t) => t.title === title && t.kind === shape.kind && t.minutes === shape.minutes,
+    )
+  )
+    return data;
+  const template: TaskTemplate = {
+    id: newTemplateId(),
+    title,
+    kind: shape.kind,
+    minutes: shape.minutes,
+  };
   return { ...data, templates: [...data.templates, template], updatedAt: now.toISOString() };
 }
 
 /** Creates a task from a template for the given date. Returns null for unknown template ids. */
-export function taskFromTemplate(data: AppData, templateId: string, date: string, now = new Date()): { data: AppData; task: Task } | null {
+export function taskFromTemplate(
+  data: AppData,
+  templateId: string,
+  date: string,
+  now = new Date(),
+): { data: AppData; task: Task } | null {
   const tpl = data.templates.find((t) => t.id === templateId);
   if (!tpl) return null;
   const task = makeTask(tpl.title, tpl.kind, tpl.minutes, date);
@@ -460,7 +751,11 @@ export function taskFromTemplate(data: AppData, templateId: string, date: string
 /** Removes a template. Existing tasks stay untouched. */
 export function removeTemplate(data: AppData, templateId: string, now = new Date()): AppData {
   if (!data.templates.some((t) => t.id === templateId)) return data;
-  return { ...data, templates: data.templates.filter((t) => t.id !== templateId), updatedAt: now.toISOString() };
+  return {
+    ...data,
+    templates: data.templates.filter((t) => t.id !== templateId),
+    updatedAt: now.toISOString(),
+  };
 }
 
 export const BACKUP_REMINDER_DAYS = 7;
@@ -469,7 +764,9 @@ const REMINDER_SNOOZE_MS = 24 * 60 * 60 * 1000;
 export function needsBackupReminder(data: AppData, now = new Date()): boolean {
   const { lastBackupAt, lastReminderAt } = data.backup;
   const backupMs = lastBackupAt ? new Date(lastBackupAt).getTime() : NaN;
-  const stale = !Number.isFinite(backupMs) || now.getTime() - backupMs >= BACKUP_REMINDER_DAYS * 24 * 60 * 60 * 1000;
+  const stale =
+    !Number.isFinite(backupMs) ||
+    now.getTime() - backupMs >= BACKUP_REMINDER_DAYS * 24 * 60 * 60 * 1000;
   if (!stale) return false;
   const remMs = lastReminderAt ? new Date(lastReminderAt).getTime() : NaN;
   return !Number.isFinite(remMs) || now.getTime() - remMs >= REMINDER_SNOOZE_MS;
@@ -484,19 +781,35 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
   // Pinned tasks from earlier days move to today with completed = false (dedupe by title+kind, keep newest).
   const old = next.tasks.filter((t) => t.pinned && t.date < today);
   if (old.length) {
-    const keys = new Set(next.tasks.filter((t) => t.pinned && t.date === today).map((t) => `${t.kind}|${t.title}`));
+    const keys = new Set(
+      next.tasks.filter((t) => t.pinned && t.date === today).map((t) => `${t.kind}|${t.title}`),
+    );
     const keep = new Set<string>();
-    [...old].sort((a, b) => b.date.localeCompare(a.date)).forEach((t) => {
-      const k = `${t.kind}|${t.title}`;
-      if (!keys.has(k)) { keys.add(k); keep.add(t.id); }
-    });
+    [...old]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .forEach((t) => {
+        const k = `${t.kind}|${t.title}`;
+        if (!keys.has(k)) {
+          keys.add(k);
+          keep.add(t.id);
+        }
+      });
     next = {
       ...next,
       tasks: next.tasks
         .filter((t) => !(t.pinned && t.date < today) || keep.has(t.id))
-        .map((t) => keep.has(t.id)
-          ? { ...t, date: today, completed: false, completedAt: null, rewardClaimed: false, remainingSeconds: t.minutes * 60 }
-          : t),
+        .map((t) =>
+          keep.has(t.id)
+            ? {
+                ...t,
+                date: today,
+                completed: false,
+                completedAt: null,
+                rewardClaimed: false,
+                remainingSeconds: t.minutes * 60,
+              }
+            : t,
+        ),
     };
   }
   const sc = checkStreak(next.streak, next.inventory, today);
@@ -505,22 +818,42 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
   if (next.lastDiaryDate !== today) {
     if (next.lastDiaryDate) {
       const y = shiftDate(today, -1);
-      const entry = writeDiary(y, next.dailyStats[y], { petName: SPECIES[next.petState.species].name, freezeUsed: sc.usedFreeze, streakBroke: sc.broke });
-      next = { ...next, adventureLog: [entry, ...next.adventureLog.filter((e) => e.date !== y)].slice(0, 60) };
+      const entry = writeDiary(y, next.dailyStats[y], {
+        petName: SPECIES[next.petState.species].name,
+        freezeUsed: sc.usedFreeze,
+        streakBroke: sc.broke,
+      });
+      next = {
+        ...next,
+        adventureLog: [entry, ...next.adventureLog.filter((e) => e.date !== y)].slice(0, 60),
+      };
     }
     next = { ...next, lastDiaryDate: today };
   }
   if (next.game.lastDailyPinDate !== today) {
-    const hasExercise = next.tasks.some((t) => t.pinned && t.kind === "exercise" && t.date === today);
-    const pins = hasExercise ? [] : Array.from({ length: EXERCISE_SESSIONS }, (_, i) =>
-      makeTask(`Tập thể dục giãn cơ (5 phút) #${i + 1}`, "exercise", 5, today, { pinned: true }),
+    const hasExercise = next.tasks.some(
+      (t) => t.pinned && t.kind === "exercise" && t.date === today,
     );
-    next = { ...next, tasks: [...next.tasks, ...pins], game: { ...next.game, lastDailyPinDate: today } };
+    const pins = hasExercise
+      ? []
+      : Array.from({ length: EXERCISE_SESSIONS }, (_, i) =>
+          makeTask(`Tập thể dục giãn cơ (5 phút) #${i + 1}`, "exercise", 5, today, {
+            pinned: true,
+          }),
+        );
+    next = {
+      ...next,
+      tasks: [...next.tasks, ...pins],
+      game: { ...next.game, lastDailyPinDate: today },
+    };
   }
   return next;
 }
 
-export function addWaterCup(data: AppData, now = new Date()): { data: AppData; goalReached: boolean; levelsGained: number; fresh: AchievementId[] } {
+export function addWaterCup(
+  data: AppData,
+  now = new Date(),
+): { data: AppData; goalReached: boolean; levelsGained: number; fresh: AchievementId[] } {
   const w = data.game.water;
   if (w.cups >= WATER_GOAL) return { data, goalReached: false, levelsGained: 0, fresh: [] };
   const today = dateStr(now);
@@ -533,11 +866,20 @@ export function addWaterCup(data: AppData, now = new Date()): { data: AppData; g
   let goalReached = false;
   if (cups >= WATER_GOAL && !w.rewarded) {
     const bonus = addXp(game, 20);
-    game = { ...bonus.game, catCoins: bonus.game.catCoins + 1, spinTickets: bonus.game.spinTickets + 1, water: { ...game.water, rewarded: true } };
+    game = {
+      ...bonus.game,
+      catCoins: bonus.game.catCoins + 1,
+      spinTickets: bonus.game.spinTickets + 1,
+      water: { ...game.water, rewarded: true },
+    };
     levelsGained += bonus.levelsGained;
     goalReached = true;
   }
-  let next: AppData = { ...data, game, dailyStats: bumpStats(data.dailyStats, today, { water: 1 }) };
+  let next: AppData = {
+    ...data,
+    game,
+    dailyStats: bumpStats(data.dailyStats, today, { water: 1 }),
+  };
   if (goalReached) next = { ...next, achievements: recordWaterGoal(next.achievements, today) };
   const ach = applyAchievements(next, {}, now);
   return { data: ach.data, goalReached, levelsGained, fresh: ach.fresh };
@@ -554,20 +896,35 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
   const day = data.timetable.days[now.getDay()];
   if (!day) return { data, pushed: [] };
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const due = day.slots.filter((s) => toMin(s.start) <= nowMin && !data.timetableLog.includes(`${today}:${s.id}`));
+  const due = day.slots.filter(
+    (s) => toMin(s.start) <= nowMin && !data.timetableLog.includes(`${today}:${s.id}`),
+  );
   if (!due.length) return { data, pushed: [] };
-  const newTasks = due.map((s) => makeTask(s.title, s.kind, s.minutes, today, { fromSlotId: s.id, timeRange: `${s.start} - ${s.end}` }));
-  const log = [...data.timetableLog.filter((k) => k >= today.slice(0, 10)), ...due.map((s) => `${today}:${s.id}`)];
+  const newTasks = due.map((s) =>
+    makeTask(s.title, s.kind, s.minutes, today, {
+      fromSlotId: s.id,
+      timeRange: `${s.start} - ${s.end}`,
+    }),
+  );
+  const log = [
+    ...data.timetableLog.filter((k) => k >= today.slice(0, 10)),
+    ...due.map((s) => `${today}:${s.id}`),
+  ];
   return { data: { ...data, tasks: [...data.tasks, ...newTasks], timetableLog: log }, pushed: due };
 }
 
 export const WHEEL_PRIZES = ["+10 XP", "+2 😺", "+1 🦎", "+30 XP", "+1 🎡", "+5 😺"];
 
-export function applyPrize(game: GameState, prize: string): { game: GameState; levelsGained: number } {
+export function applyPrize(
+  game: GameState,
+  prize: string,
+): { game: GameState; levelsGained: number } {
   const n = parseInt(prize.replace(/[^0-9]/g, ""), 10) || 0;
   if (prize.includes("XP")) return addXp(game, n);
-  if (prize.includes("😺")) return { game: { ...game, catCoins: game.catCoins + n }, levelsGained: 0 };
-  if (prize.includes("🦎")) return { game: { ...game, lizardGems: game.lizardGems + n }, levelsGained: 0 };
+  if (prize.includes("😺"))
+    return { game: { ...game, catCoins: game.catCoins + n }, levelsGained: 0 };
+  if (prize.includes("🦎"))
+    return { game: { ...game, lizardGems: game.lizardGems + n }, levelsGained: 0 };
   return { game: { ...game, spinTickets: game.spinTickets + n }, levelsGained: 0 };
 }
 
@@ -576,11 +933,24 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
   const today = dateStr(now);
   const day = data.timetable.days[now.getDay()];
   if (!day) return { data, added: 0 };
-  const todo = day.slots.filter((s) => !data.timetableLog.includes(`${today}:${s.id}`) && !data.tasks.some((t) => t.date === today && t.fromSlotId === s.id));
+  const todo = day.slots.filter(
+    (s) =>
+      !data.timetableLog.includes(`${today}:${s.id}`) &&
+      !data.tasks.some((t) => t.date === today && t.fromSlotId === s.id),
+  );
   if (!todo.length) return { data, added: 0 };
-  const newTasks = todo.map((s) => makeTask(s.title, s.kind, s.minutes, today, { fromSlotId: s.id, timeRange: `${s.start} - ${s.end}` }));
+  const newTasks = todo.map((s) =>
+    makeTask(s.title, s.kind, s.minutes, today, {
+      fromSlotId: s.id,
+      timeRange: `${s.start} - ${s.end}`,
+    }),
+  );
   return {
-    data: { ...data, tasks: [...data.tasks, ...newTasks], timetableLog: [...data.timetableLog, ...todo.map((s) => `${today}:${s.id}`)] },
+    data: {
+      ...data,
+      tasks: [...data.tasks, ...newTasks],
+      timetableLog: [...data.timetableLog, ...todo.map((s) => `${today}:${s.id}`)],
+    },
     added: todo.length,
   };
 }
@@ -590,5 +960,8 @@ export function upcomingSlots(data: AppData, now = new Date(), leadMin = 5): Slo
   const day = data.timetable.days[now.getDay()];
   if (!day) return [];
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  return day.slots.filter((s) => { const d = toMin(s.start) - nowMin; return d > 0 && d <= leadMin; });
+  return day.slots.filter((s) => {
+    const d = toMin(s.start) - nowMin;
+    return d > 0 && d <= leadMin;
+  });
 }
