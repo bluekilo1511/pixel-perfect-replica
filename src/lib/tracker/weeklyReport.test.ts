@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultData } from "./model";
+import { makeTask } from "./model";
 import { mondayOf, weekSummary } from "./weeklyReport";
 import { bumpStats } from "./extras";
 
@@ -29,6 +30,33 @@ describe("weekly report", () => {
     expect(s.lastWeek.focusMin).toBe(100);
     expect(s.diffMin).toBe(-25);
     expect(s.bestDay).toEqual({ date: "2026-10-19", focusMin: 50 });
+  });
+
+  it("ranks the top subjects by focus minutes this week", () => {
+    let d = defaultData();
+    const mk = (title: string, date: string, minutes: number) => ({
+      ...makeTask(title, "pomodoro", minutes, date),
+      completed: true,
+      minutes,
+    });
+    d = {
+      ...d,
+      tasks: [
+        mk("Học Toán", "2026-10-19", 50),
+        mk("Học Toán", "2026-10-20", 25),
+        mk("Pomodoro tập trung (25 phút)", "2026-10-20", 25),
+        mk("Học Văn", "2026-10-19", 40),
+        mk("Việc nhà", "2026-10-20", 10),
+        mk("Học Sử", "2026-10-12", 999), // last week — must be ignored
+        { ...makeTask("Chưa xong", "pomodoro", 30, "2026-10-20") }, // not completed — ignored
+      ],
+    };
+    const s = weekSummary(d, now);
+    expect(s.topSubjects).toEqual([
+      { label: "Học Toán", minutes: 75 },
+      { label: "Học Văn", minutes: 40 },
+      { label: "Pomodoro tập trung", minutes: 25 },
+    ]);
   });
 
   it("is safe on empty data", () => {

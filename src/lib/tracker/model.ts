@@ -68,6 +68,7 @@ export interface Task {
   timeRange?: string; // "07:30 - 08:15" badge from timetable
   fromSlotId?: string;
   examId?: string | undefined; // linked exam countdown
+  mood?: number; // 1..4 feeling after finishing a timed task (1 = tuyệt vời)
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
 }
@@ -389,6 +390,12 @@ export function migrate(raw: unknown): AppData {
 function extrasFrom(r: any) {
   const { materials: _m, ...e } = normalizeExtras(r);
   return e;
+}
+
+/** Saves the 1..4 mood the user felt right after finishing a timed task. */
+export function setTaskMood(data: AppData, taskId: string, mood: number): AppData {
+  const m = Math.min(4, Math.max(1, Math.round(mood)));
+  return { ...data, tasks: data.tasks.map((t) => (t.id === taskId ? { ...t, mood: m } : t)) };
 }
 
 /** Adds XP and handles multiple level-ups. Returns number of levels gained. */

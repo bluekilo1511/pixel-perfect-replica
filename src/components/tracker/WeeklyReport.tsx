@@ -44,6 +44,12 @@ export function WeeklyReportCard() {
           </span>
         )}
       </div>
+      {s.topSubjects.length > 0 && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          📚 Tập trung nhiều nhất:{" "}
+          {s.topSubjects.map((x) => `${x.label} (${fmtMin(x.minutes)})`).join(" · ")}
+        </p>
+      )}
     </section>
   );
 }

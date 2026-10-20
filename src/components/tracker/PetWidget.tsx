@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AmbientControl } from "./AmbientControl";
+import { FocusMode } from "./FocusMode";
 import { useFocusSky } from "./SkyExperience";
 import { ting } from "@/lib/tracker/effects";
 
@@ -116,6 +117,7 @@ export function PetWidget() {
   const [endAt, setEndAt] = useState<number | null>(null);
   const [left, setLeft] = useState(pomodoroMinutes * 60);
   const [bossActive, setBossActive] = useState(false);
+  const [zen, setZen] = useState(false);
   useEffect(() => {
     if (!endAt) setLeft(pomodoroMinutes * 60);
   }, [endAt, pomodoroMinutes]);
@@ -242,6 +244,17 @@ export function PetWidget() {
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="font-display text-2xl tabular-nums">{fmt(left)}</span>
+            {endAt && (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Vào chế độ tập trung toàn màn hình"
+                title="Ẩn mọi thứ, chỉ còn đồng hồ và thú cưng"
+                onClick={() => setZen(true)}
+              >
+                🧘 Zen
+              </Button>
+            )}
             {endAt ? (
               <Button
                 size="sm"
@@ -368,6 +381,15 @@ export function PetWidget() {
           </div>
         </div>
       </div>
+      <FocusMode
+        open={zen}
+        left={left}
+        running={!!endAt}
+        pet={pet}
+        bossActive={bossActive}
+        bossHpPct={hp}
+        onClose={() => setZen(false)}
+      />
     </section>
   );
 }

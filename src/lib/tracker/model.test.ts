@@ -12,6 +12,7 @@ import {
   migrate,
   needsBackupReminder,
   pushDueSlots,
+  setTaskMood,
   shouldNudgeWater,
 } from "./model";
 
@@ -232,5 +233,25 @@ describe("pomodoro presets", () => {
     const d = migrate({ settings: { pomodoroMinutes: 9999, customPresets: "nope" } });
     expect(d.settings.pomodoroMinutes).toBe(25);
     expect(d.settings.customPresets).toEqual([]);
+  });
+});
+
+describe("task mood", () => {
+  it("records a 1..4 mood on the finished task without touching others", () => {
+    const base = defaultData();
+    const a = makeTask("Học Toán", "pomodoro", 25, "2026-10-20");
+    const b = makeTask("Học Văn", "pomodoro", 25, "2026-10-20");
+    const d = { ...base, tasks: [a, b] };
+    const next = setTaskMood(d, a.id, 3);
+    expect(next.tasks.find((t) => t.id === a.id)?.mood).toBe(3);
+    expect(next.tasks.find((t) => t.id === b.id)?.mood).toBeUndefined();
+  });
+
+  it("clamps out-of-range moods", () => {
+    const base = defaultData();
+    const a = makeTask("Học Toán", "pomodoro", 25, "2026-10-20");
+    const d = { ...base, tasks: [a] };
+    expect(setTaskMood(d, a.id, 99).tasks[0]?.mood).toBe(4);
+    expect(setTaskMood(d, a.id, 0).tasks[0]?.mood).toBe(1);
   });
 });

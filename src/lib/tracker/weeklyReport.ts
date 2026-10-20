@@ -9,6 +9,11 @@ export interface WeekTotals {
   activeDays: number;
 }
 
+export interface SubjectTotal {
+  label: string;
+  minutes: number;
+}
+
 export interface WeekSummary {
   weekStart: string; // Monday, YYYY-MM-DD
   label: string;
@@ -16,6 +21,7 @@ export interface WeekSummary {
   lastWeek: WeekTotals;
   diffMin: number; // thisWeek.focusMin - lastWeek.focusMin
   bestDay: { date: string; focusMin: number } | null;
+  topSubjects: SubjectTotal[]; // up to 3 subjects by focus minutes this week
 }
 
 const fmtDate = (d: Date) =>
@@ -63,6 +69,20 @@ export function weekSummary(data: AppData, now = new Date()): WeekSummary {
     if (focusMin > 0 && (!bestDay || focusMin > bestDay.focusMin)) bestDay = { date, focusMin };
   }
   const label = `Tuần ${weekStart.slice(5)} → ${shiftDays(weekStart, 6).slice(5)}`;
+
+  // Focus minutes per subject: completed timed tasks this week, grouped by title.
+  const weekDates = new Set<string>(Array.from({ length: 7 }, (_, i) => shiftDays(weekStart, i)));
+  const byLabel = new Map<string, number>();
+  for (const t of data.tasks) {
+    if (!t.completed || !(t.minutes > 0) || !weekDates.has(t.date)) continue;
+    const label = t.title.replace(/\s*\(\d+\s*phút\)\s*$/, "").trim() || "Việc hoàn thành";
+    byLabel.set(label, (byLabel.get(label) ?? 0) + t.minutes);
+  }
+  const topSubjects: SubjectTotal[] = [...byLabel.entries()]
+    .map(([subj, minutes]) => ({ label: subj, minutes }))
+    .sort((a, b) => b.minutes - a.minutes || a.label.localeCompare(b.label))
+    .slice(0, 3);
+
   return {
     weekStart,
     label,
@@ -70,5 +90,6 @@ export function weekSummary(data: AppData, now = new Date()): WeekSummary {
     lastWeek,
     diffMin: thisWeek.focusMin - lastWeek.focusMin,
     bestDay,
+    topSubjects,
   };
 }

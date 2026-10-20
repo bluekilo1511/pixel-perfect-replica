@@ -12,6 +12,7 @@ import {
   removeExam,
   removeTemplate,
   saveTaskAsTemplate,
+  setTaskMood,
   syncTodaySlots,
   taskFromTemplate,
   WATER_GOAL,
@@ -27,6 +28,13 @@ import { Input } from "@/components/ui/input";
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+const MOODS = [
+  { v: 1, emoji: "😄", label: "Đã hăng!" },
+  { v: 2, emoji: "🙂", label: "Ổn áp" },
+  { v: 3, emoji: "😐", label: "Hơi mệt" },
+  { v: 4, emoji: "😪", label: "Kiệt sức" },
+] as const;
 
 function WaterCard() {
   const { data, drinkWater } = useTracker();
@@ -169,9 +177,32 @@ function TaskRow({ task }: { task: Task }) {
         📌
       </Button>
       {locked ? (
-        <span className="rounded-full bg-success px-3 py-1 text-xs font-semibold text-primary-foreground">
-          ✓ Đã hoàn thành
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-success px-3 py-1 text-xs font-semibold text-primary-foreground">
+            ✓ Đã hoàn thành
+          </span>
+          {task.minutes > 0 && (
+            <span
+              className="flex items-center gap-0.5"
+              role="group"
+              aria-label="Cảm xúc sau khi hoàn thành"
+            >
+              {MOODS.map((m) => (
+                <button
+                  key={m.v}
+                  type="button"
+                  title={m.label}
+                  aria-label={m.label}
+                  aria-pressed={task.mood === m.v}
+                  onClick={() => update((d) => setTaskMood(d, task.id, m.v))}
+                  className={`rounded-full px-1 text-base transition ${task.mood === m.v ? "bg-secondary" : "opacity-40 hover:opacity-100"}`}
+                >
+                  {m.emoji}
+                </button>
+              ))}
+            </span>
+          )}
+        </div>
       ) : (
         <div className="flex gap-2">
           <Button
