@@ -133,6 +133,23 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const dismissBackupReminder = () =>
     setData((d) => ({ ...d, backup: { ...d.backup, lastReminderAt: new Date().toISOString() } }));
 
+  const claimQuest = (id: string) => {
+    const r = claimQuestRule(dataRef.current, id);
+    if (!r.ok) return false;
+    setData(r.data);
+    ting();
+    toast.success("🎯 Hoàn thành nhiệm vụ ngày! Đã nhận thưởng.");
+    return true;
+  };
+  const claimRaid = () => {
+    const r = claimRaidRule(dataRef.current);
+    if (!r.ok) return false;
+    setData(r.data);
+    celebrate();
+    toast.success("⚔️ Hạ Boss tuần! +10 😺 +3 🦎");
+    return true;
+  };
+
   const finish = useCallback((id: string) => {
     const prev = dataRef.current;
     const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
@@ -290,7 +307,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{
       data, ready, fileName, status, lastSaved, timer, levelUp, update, open, create, startOffline, download,
-      startTimer, pauseTimer, finish, drinkWater, spin, dismissLevelUp: () => setLevelUp(null), restore, finishPomodoro, bossCancel, claimAchievement, dismissBackupReminder,
+      startTimer, pauseTimer, finish, drinkWater, spin, dismissLevelUp: () => setLevelUp(null), restore, finishPomodoro, bossCancel, claimAchievement, dismissBackupReminder, claimQuest, claimRaid,
     }}>
       {children}
     </Ctx.Provider>
