@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
-import { ACCESSORIES, MOOD_META, moodOf, POMODORO_MINUTES, POMODORO_REWARD, randomLine as baseLine, type PetState, SPECIES, streakMultiplier, STREAK_GOAL } from "@/lib/tracker/gamify";
+import { ACCESSORIES, MOOD_META, moodOf, POMODORO_REWARD, randomLine as baseLine, type PetState, SPECIES, streakMultiplier, STREAK_GOAL } from "@/lib/tracker/gamify";
 import { celebrate } from "@/lib/tracker/effects";
 import { dateStr } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
-import { BOSS_REWARD, bossHp } from "@/lib/tracker/boss";
+import { BOSS_MAX_HP, BOSS_REWARD, bossHp } from "@/lib/tracker/boss";
 import { ADVANCED_LINES, petTitle, petXpForLevel, TIER_BADGE, tierOf } from "@/lib/tracker/extras";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AmbientControl } from "./AmbientControl";
 import { useFocusSky } from "./SkyExperience";
 import { ting } from "@/lib/tracker/effects";
@@ -29,9 +30,10 @@ const randomLine = (pet: PetState) =>
 
 export function PetWidget() {
   const setFocus = useFocusSky();
-  const { data, finishPomodoro, bossCancel } = useTracker();
+  const { data, finishPomodoro, bossCancel, update } = useTracker();
   const pet = data.petState;
   const mood = moodOf(pet);
+  const pomodoroMinutes = data.settings.pomodoroMinutes;
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const say = (text: string) => {
@@ -50,8 +52,11 @@ export function PetWidget() {
 
   // Pomodoro with the pet (wall-clock based).
   const [endAt, setEndAt] = useState<number | null>(null);
-  const [left, setLeft] = useState(POMODORO_MINUTES * 60);
+  const [left, setLeft] = useState(pomodoroMinutes * 60);
   const [bossActive, setBossActive] = useState(false);
+  useEffect(() => {
+    if (!endAt) setLeft(pomodoroMinutes * 60);
+  }, [endAt, pomodoroMinutes]);
   useEffect(() => {
     setFocus(endAt ? left : null);
   }, [endAt, left, setFocus]);
@@ -59,7 +64,7 @@ export function PetWidget() {
   const bossRef = useRef(false);
   bossRef.current = bossActive;
   const [hit, setHit] = useState(false);
-  const hp = bossHp(left, POMODORO_MINUTES * 60);
+  const hp = bossHp(left, pomodoroMinutes * 60);
   useEffect(() => {
     if (!endAt) return;
     const iv = setInterval(() => {
@@ -68,9 +73,9 @@ export function PetWidget() {
       if (r <= 0) {
         clearInterval(iv);
         setEndAt(null);
-        setLeft(POMODORO_MINUTES * 60);
+        setLeft(pomodoroMinutes * 60);
         const boss = bossRef.current;
-        finishPomodoro(boss, POMODORO_MINUTES);
+        finishPomodoro(boss, pomodoroMinutes);
         celebrate();
         if (boss) { celebrate(); ting(true); toast.success(`⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`); }
         else toast.success(`🍅 Xong Pomodoro cùng thú cưng! +${POMODORO_REWARD} 😺`);
@@ -78,7 +83,7 @@ export function PetWidget() {
       }
     }, 500);
     return () => clearInterval(iv);
-  }, [endAt, finishPomodoro]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endAt, finishPomodoro, pomodoroMinutes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const s = data.streak;
   const todayDone = s.today.date === dateStr() ? s.today.done : 0;
@@ -106,6 +111,7 @@ export function PetWidget() {
             <h2 className="text-lg font-semibold">{TIER_BADGE[tierOf(pet.petLevel)]} {petTitle(pet)}</h2>
             <span className="rounded-full bg-xp px-2 py-0.5 text-xs font-bold text-primary-foreground">Lv {pet.petLevel}</span>
             <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{MOOD_META[mood].label}</span>
+            {data.expedition.endAt && <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">🧭 {SPECIES[pet.species].name} đang thám hiểm…</span>}
           </div>
           <Bar icon="🍖" label="Độ no" value={pet.hunger} tone="hunger" />
           <Bar icon="💖" label="Hạnh phúc" value={pet.happiness} tone="happy" />
@@ -123,9 +129,23 @@ export function PetWidget() {
                     toast.error("👹 Boss phản đòn! Thú cưng mất 15% hạnh phúc");
                     say("Huhu, bị Boss đánh rồi 😢");
                   }
-                  setEndAt(null); setLeft(POMODORO_MINUTES * 60);
+                  setEndAt(null); setLeft(pomodoroMinutes * 60);
                 }}>⏹ Hủy</Button>
-              : <Button size="sm" onClick={() => { setEndAt(Date.now() + left * 1000); say("Cùng tập trung 25 phút nhé! 📚"); }}>🍅 Pomodoro 25p</Button>}
+              : <Button size="sm" onClick={() => { setEndAt(Date.now() + left * 1000); say(`Cùng tập trung ${pomodoroMinutes} phút nhé! 📚`); }}>{`🍅 Pomodoro ${pomodoroMinutes}p`}</Button>}
+            <Select
+              value={String(pomodoroMinutes)}
+              onValueChange={(value) => update((d) => ({ ...d, settings: { ...d.settings, pomodoroMinutes: Number(value) } }))}
+              disabled={!!endAt}
+            >
+              <SelectTrigger className="h-8 w-[110px]">
+                <SelectValue placeholder="Thời lượng" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 phút</SelectItem>
+                <SelectItem value="25">25 phút</SelectItem>
+                <SelectItem value="50">50 phút</SelectItem>
+              </SelectContent>
+            </Select>
             <label className="ml-1 inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium">
               <input type="checkbox" className="accent-[var(--destructive)]" checked={bossActive} disabled={!!endAt}
                 onChange={(e) => setBossActive(e.target.checked)} />
@@ -137,7 +157,7 @@ export function PetWidget() {
             <div className={`boss-panel rounded-xl p-3 ${hit ? "animate-boss-hit" : ""}`}>
               <div className="mb-1.5 flex items-center justify-between font-mono text-xs uppercase tracking-wider">
                 <span><span className={`inline-block text-2xl ${endAt ? "animate-pet-idle" : ""}`}>{hp > 0 ? "👹" : "💀"}</span> Quái Vật Xao Nhãng</span>
-                <span>HP {hp}/100</span>
+                <span>HP {hp}/{BOSS_MAX_HP}</span>
               </div>
               <div className="boss-hp-track h-4 overflow-hidden">
                 <div className="boss-hp-fill h-full transition-all duration-500" style={{ width: `${hp}%` }} />

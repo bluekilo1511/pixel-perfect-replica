@@ -4,8 +4,8 @@ import { defaultData, ensureDailyPins, makeTask, migrate, syncTodaySlots, upcomi
 
 describe("gamification rules", () => {
   it("first completion removes active frost without prematurely increasing the streak", () => {
-    const s = { ...defaultStreak("2026-10-18"), count: 5, lastQualifiedDate: "2026-10-18" };
-    const saved = checkStreak(s, { ...defaultInventory(), freezes: 1 }, "2026-10-20");
+    const s = { ...defaultStreak("2026-10-18"), count: 5, lastQualifiedDate: "2026-10-17" };
+    const saved = checkStreak(s, { ...defaultInventory(), freezes: 1 }, "2026-10-19");
     expect(saved.streak.freezeActive).toBe(true);
     const reclaimed = recordCompletion(saved.streak, "2026-10-20");
     expect(reclaimed.freezeActive).toBe(false);
@@ -53,8 +53,8 @@ describe("gamification rules", () => {
   });
 
   it("freeze saves streak after missing exactly one day", () => {
-    const s = { ...defaultStreak("2026-10-18"), count: 5, lastQualifiedDate: "2026-10-18", lastCheckDate: "2026-10-18" };
-    const saved = checkStreak(s, { ...defaultInventory(), freezes: 1 }, "2026-10-20");
+    const s = { ...defaultStreak("2026-10-17"), count: 5, lastQualifiedDate: "2026-10-17", lastCheckDate: "2026-10-17" };
+    const saved = checkStreak(s, { ...defaultInventory(), freezes: 1 }, "2026-10-19");
     expect(saved.streak.count).toBe(5);
     expect(saved.inventory.freezes).toBe(0);
     const broken = checkStreak(s, defaultInventory(), "2026-10-20");

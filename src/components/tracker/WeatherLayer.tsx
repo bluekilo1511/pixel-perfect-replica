@@ -34,6 +34,7 @@ export function WeatherLayer() {
       <div className="aurora" />
       {w === "sunny" && <><div className="sun-glow" /><div className="stars" /></>}
       {w === "rainy" && <><div className="rain rain-a" /><div className="rain rain-b" /></>}
+      {w === "snowy" && <><div className="snow snow-a" /><div className="snow snow-b" /></>}
       {w === "foggy" && <><div className="fog fog-a" /><div className="fog fog-b" /></>}
     </div>
   );
