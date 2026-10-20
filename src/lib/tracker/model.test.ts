@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addWaterCup, addXp, completeTask, defaultData, ensureDailyPins, makeTask, migrate, pushDueSlots } from "./model";
+import { addWaterCup, addXp, completePomodoroSession, completeTask, defaultData, ensureDailyPins, makeTask, migrate, needsBackupReminder, pushDueSlots } from "./model";
 
 describe("tracker rules", () => {
   it("timetable starts on Sunday with 7 days", () => {

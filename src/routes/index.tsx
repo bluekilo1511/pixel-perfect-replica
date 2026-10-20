@@ -38,6 +38,7 @@ function AppInner() {
   return (
     <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <HeaderHud />
+      <BackupReminder />
       <ConstellationTabs>
         <TabsContent value="today" className="mt-5"><TodayPanel /></TabsContent>
         <TabsContent value="week" className="mt-5"><Timetable /></TabsContent>
