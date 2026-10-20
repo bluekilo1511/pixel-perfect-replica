@@ -40,6 +40,7 @@ interface Store {
   finishPomodoro: (boss: boolean, minutes: number) => void;
   bossCancel: () => void;
   claimAchievement: (id: AchievementId) => boolean;
+  dismissBackupReminder: () => void;
 }
 
 function announceAchievements(fresh: AchievementId[]) {
@@ -119,7 +120,15 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     } catch (e: any) { if (e?.name !== "AbortError") toast.error("Không tạo được file"); }
   };
   const startOffline = () => boot(null, null, null);
-  const download = () => { downloadData(dataRef.current, fileName ?? undefined); setStatus("saved"); setLastSaved(new Date()); };
+  const download = () => {
+    const now = new Date();
+    setData((d) => ({ ...d, backup: { ...d.backup, lastBackupAt: now.toISOString() } }));
+    downloadData(dataRef.current, fileName ?? undefined);
+    setStatus("saved");
+    setLastSaved(now);
+  };
+  const dismissBackupReminder = () =>
+    setData((d) => ({ ...d, backup: { ...d.backup, lastReminderAt: new Date().toISOString() } }));
 
   const finish = useCallback((id: string) => {
     const prev = dataRef.current;
