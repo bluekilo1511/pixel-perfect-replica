@@ -286,7 +286,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{
       data, ready, fileName, status, lastSaved, timer, levelUp, update, open, create, startOffline, download,
-      startTimer, pauseTimer, finish, drinkWater, spin, dismissLevelUp: () => setLevelUp(null), restore, finishPomodoro, bossCancel, claimAchievement,
+      startTimer, pauseTimer, finish, drinkWater, spin, dismissLevelUp: () => setLevelUp(null), restore, finishPomodoro, bossCancel, claimAchievement, dismissBackupReminder,
     }}>
       {children}
     </Ctx.Provider>

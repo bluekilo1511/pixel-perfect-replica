@@ -10,6 +10,7 @@ import { WeatherLayer } from "@/components/tracker/WeatherLayer";
 import { LevelUpOverlay, Welcome } from "@/components/tracker/Overlays";
 import { TabsContent } from "@/components/ui/tabs";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
+import { BackupReminder } from "@/components/tracker/BackupReminder";
 import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
 
