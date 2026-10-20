@@ -86,6 +86,7 @@ export interface AppData {
   dailyStats: Record<string, DayStats>;
   expedition: ExpeditionState;
   lastDiaryDate: string | null;
+  backup: { lastBackupAt: string | null; lastReminderAt: string | null };
   [extra: string]: unknown;
 }
 
@@ -139,6 +140,7 @@ export function defaultData(): AppData {
     avatarBase64: null, petState: defaultPet(), streak: defaultStreak(dateStr()), inventory: defaultInventory(),
     settings: defaultSettings(),
     ...normalizeExtras(null), lastDiaryDate: dateStr(),
+    backup: { lastBackupAt: null, lastReminderAt: null },
   };
 }
 
