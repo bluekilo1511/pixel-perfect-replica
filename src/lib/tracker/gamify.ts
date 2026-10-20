@@ -3,6 +3,7 @@ import type { Materials } from "./extras";
 
 export type Species = "cat" | "lizard" | "dog" | "owl";
 export type Accessory = "gradcap" | "sunglasses" | "crown" | "wings";
+export type DecorId = "lamp" | "plant" | "shelf" | "poster" | "teddy" | "fairy";
 export type Mood = "excited" | "normal" | "hungry" | "sulky";
 
 export interface PetState {
@@ -10,6 +11,8 @@ export interface PetState {
   ownedSpecies: Species[];
   accessory: Accessory | null;
   ownedAccessories: Accessory[];
+  decorOwned: DecorId[]; // decorations bought for the pet room
+  decorActive: DecorId[]; // placed in the room (max MAX_ACTIVE_DECOR)
   hunger: number; // 0-100 (Độ no)
   happiness: number; // 0-100
   lastDecayAt: string; // ISO
@@ -45,16 +48,49 @@ export const SPECIES: Record<Species, { emoji: string; name: string; price: numb
   owl: { emoji: "🦉", name: "Cú", price: 15 },
 };
 
-export const ACCESSORIES: Record<Accessory, { emoji: string; name: string; price: number; craftOnly?: boolean }> = {
+export const ACCESSORIES: Record<
+  Accessory,
+  { emoji: string; name: string; price: number; craftOnly?: boolean }
+> = {
   gradcap: { emoji: "🎓", name: "Mũ cử nhân", price: 5 },
   sunglasses: { emoji: "🕶️", name: "Kính râm", price: 6 },
   crown: { emoji: "👑", name: "Vương miện", price: 12 },
   wings: { emoji: "🪽", name: "Cánh Thiên Thần", price: 0, craftOnly: true },
 };
 
+export const MAX_ACTIVE_DECOR = 3;
+
+/** Pet-room decorations, bought with 🦎 like head accessories. Purely cosmetic. */
+export const DECORATIONS: Record<DecorId, { emoji: string; name: string; price: number }> = {
+  lamp: { emoji: "💡", name: "Đèn học", price: 4 },
+  plant: { emoji: "🪴", name: "Cây xanh", price: 5 },
+  shelf: { emoji: "📚", name: "Kệ sách mini", price: 6 },
+  poster: { emoji: "🖼️", name: "Poster động lực", price: 5 },
+  teddy: { emoji: "🧸", name: "Gấu bông", price: 8 },
+  fairy: { emoji: "🧚", name: "Đèn sao treo", price: 10 },
+};
+
+/** Buys a room decoration; returns null when it is already owned. Payment stays in the caller. */
+export function buyDecor(pet: PetState, id: DecorId): PetState | null {
+  if (pet.decorOwned.includes(id)) return null;
+  return { ...pet, decorOwned: [...pet.decorOwned, id] };
+}
+
+/** Places or removes a decoration; null when not owned, placed=false when the room is full. */
+export function toggleDecor(pet: PetState, id: DecorId): { pet: PetState; placed: boolean } | null {
+  if (!pet.decorOwned.includes(id)) return null;
+  if (pet.decorActive.includes(id))
+    return { pet: { ...pet, decorActive: pet.decorActive.filter((x) => x !== id) }, placed: false };
+  if (pet.decorActive.length >= MAX_ACTIVE_DECOR) return { pet, placed: false };
+  return { pet: { ...pet, decorActive: [...pet.decorActive, id] }, placed: true };
+}
+
 export const FREEZE_PRICE = 15;
 
-export const CONSUMABLES: Record<string, { emoji: string; name: string; price: number; hunger: number; happiness: number }> = {
+export const CONSUMABLES: Record<
+  string,
+  { emoji: string; name: string; price: number; hunger: number; happiness: number }
+> = {
   fish: { emoji: "🐟", name: "Cá khô", price: 3, hunger: 25, happiness: 0 },
   cake: { emoji: "🍰", name: "Bánh thưởng", price: 5, hunger: 40, happiness: 5 },
   yarn: { emoji: "🧶", name: "Cuộn len", price: 4, hunger: 0, happiness: 20 },
@@ -64,12 +100,34 @@ export const CONSUMABLES: Record<string, { emoji: string; name: string; price: n
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 export function defaultPet(now = new Date()): PetState {
-  return { species: "cat", ownedSpecies: ["cat"], accessory: null, ownedAccessories: [], hunger: 80, happiness: 80, lastDecayAt: now.toISOString(), petLevel: 1, petXp: 0 };
+  return {
+    species: "cat",
+    ownedSpecies: ["cat"],
+    accessory: null,
+    ownedAccessories: [],
+    decorOwned: [],
+    decorActive: [],
+    hunger: 80,
+    happiness: 80,
+    lastDecayAt: now.toISOString(),
+    petLevel: 1,
+    petXp: 0,
+  };
 }
 export function defaultStreak(today: string): StreakState {
-  return { count: 0, best: 0, lastQualifiedDate: null, today: { date: today, done: 0 }, lastCheckDate: today };
+  return {
+    count: 0,
+    best: 0,
+    lastQualifiedDate: null,
+    today: { date: today, done: 0 },
+    lastCheckDate: today,
+  };
 }
-export const defaultInventory = (): Inventory => ({ items: {}, freezes: 0, materials: { magicFeather: 0, starShard: 0, mysticHerb: 0 } });
+export const defaultInventory = (): Inventory => ({
+  items: {},
+  freezes: 0,
+  materials: { magicFeather: 0, starShard: 0, mysticHerb: 0 },
+});
 
 /** -5% no, -3% vui for every full hour elapsed since lastDecayAt. `mult` scales the decay (weather debuff). */
 export function decayPet(pet: PetState, now = new Date(), mult = 1): PetState {
@@ -93,10 +151,40 @@ export function moodOf(pet: PetState): Mood {
 }
 
 export const MOOD_META: Record<Mood, { face: string; label: string; lines: string[] }> = {
-  excited: { face: "🤩", label: "Hưng phấn", lines: ["Yeah! Mình đang tràn năng lượng!", "Làm thêm task nữa đi, vui quá!", "Bạn là số 1! 🎉", "Nhảy nhót cùng mình nào~"] },
-  normal: { face: "🙂", label: "Bình thường", lines: ["Hôm nay mình học gì nhỉ?", "Cố lên nhé, mình ở đây!", "Uống nước chưa đó? 💧", "Một Pomodoro nữa thôi!"] },
-  hungry: { face: "🥺", label: "Đói lả", lines: ["Bụng mình kêu ọt ọt…", "Cho mình ăn chút gì đi 🍖", "Đói quá không học nổi…"] },
-  sulky: { face: "😤", label: "Hờn dỗi", lines: ["Hứ! Bỏ rơi mình lâu quá!", "Không chơi với bạn nữa đâu…", "Chơi với mình chút đi mà 😢"] },
+  excited: {
+    face: "🤩",
+    label: "Hưng phấn",
+    lines: [
+      "Yeah! Mình đang tràn năng lượng!",
+      "Làm thêm task nữa đi, vui quá!",
+      "Bạn là số 1! 🎉",
+      "Nhảy nhót cùng mình nào~",
+    ],
+  },
+  normal: {
+    face: "🙂",
+    label: "Bình thường",
+    lines: [
+      "Hôm nay mình học gì nhỉ?",
+      "Cố lên nhé, mình ở đây!",
+      "Uống nước chưa đó? 💧",
+      "Một Pomodoro nữa thôi!",
+    ],
+  },
+  hungry: {
+    face: "🥺",
+    label: "Đói lả",
+    lines: ["Bụng mình kêu ọt ọt…", "Cho mình ăn chút gì đi 🍖", "Đói quá không học nổi…"],
+  },
+  sulky: {
+    face: "😤",
+    label: "Hờn dỗi",
+    lines: [
+      "Hứ! Bỏ rơi mình lâu quá!",
+      "Không chơi với bạn nữa đâu…",
+      "Chơi với mình chút đi mà 😢",
+    ],
+  },
 };
 
 export const randomLine = (pet: PetState) => {
@@ -105,7 +193,9 @@ export const randomLine = (pet: PetState) => {
 };
 
 export const bumpPet = (pet: PetState, hunger: number, happiness: number): PetState => ({
-  ...pet, hunger: clamp(pet.hunger + hunger), happiness: clamp(pet.happiness + happiness),
+  ...pet,
+  hunger: clamp(pet.hunger + hunger),
+  happiness: clamp(pet.happiness + happiness),
 });
 
 /** Streak multiplier: 2-3 days x1.2, 4-6 x1.5, >=7 x2.0 (max). */
@@ -123,7 +213,10 @@ export function daysBetween(a: string, b: string): number {
   const db = Date.UTC(pb[0]!, pb[1]! - 1, pb[2]!);
   return Math.round((db - da) / 86_400_000);
 }
-const isWeekday = (date: string) => { const d = new Date(`${date}T12:00:00`); return d.getDay() >= 1 && d.getDay() <= 5; };
+const isWeekday = (date: string) => {
+  const d = new Date(`${date}T12:00:00`);
+  return d.getDay() >= 1 && d.getDay() <= 5;
+};
 /** Fixed Vietnamese holidays (MM-DD): Tết Dương lịch, 30/4, 1/5, Quốc khánh 2/9. */
 export const VN_HOLIDAYS = ["01-01", "04-30", "05-01", "09-02"];
 export const isHoliday = (date: string) => VN_HOLIDAYS.includes(date.slice(5));
@@ -140,9 +233,18 @@ export function recordCompletion(s: StreakState, today: string): StreakState {
 }
 
 /** On a new day: break the streak if a day was missed, unless exactly 1 day was missed and a 🧊 is available. */
-export function checkStreak(s: StreakState, inv: Inventory, today: string): { streak: StreakState; inventory: Inventory; usedFreeze: boolean; broke: boolean } {
-  if (s.lastCheckDate === today) return { streak: s, inventory: inv, usedFreeze: false, broke: false };
-  let streak: StreakState = { ...s, lastCheckDate: today, today: s.today.date === today ? s.today : { date: today, done: 0 } };
+export function checkStreak(
+  s: StreakState,
+  inv: Inventory,
+  today: string,
+): { streak: StreakState; inventory: Inventory; usedFreeze: boolean; broke: boolean } {
+  if (s.lastCheckDate === today)
+    return { streak: s, inventory: inv, usedFreeze: false, broke: false };
+  let streak: StreakState = {
+    ...s,
+    lastCheckDate: today,
+    today: s.today.date === today ? s.today : { date: today, done: 0 },
+  };
   let inventory = inv;
   let usedFreeze = false;
   let broke = false;
@@ -159,7 +261,6 @@ export function checkStreak(s: StreakState, inv: Inventory, today: string): { st
       streak = { ...streak, count: 0, freezeActive: false };
       broke = true;
     }
-
   }
   return { streak, inventory, usedFreeze, broke };
 }
@@ -175,12 +276,27 @@ export function normalizePet(raw: any, now = new Date()): PetState {
   if (!raw || typeof raw !== "object") return b;
   const sp = Object.keys(SPECIES) as Species[];
   const ac = Object.keys(ACCESSORIES) as Accessory[];
-  const owned = Array.isArray(raw.ownedSpecies) ? raw.ownedSpecies.filter((x: any) => sp.includes(x)) : [];
+  const dec = Object.keys(DECORATIONS) as DecorId[];
+  const owned = Array.isArray(raw.ownedSpecies)
+    ? raw.ownedSpecies.filter((x: any) => sp.includes(x))
+    : [];
+  const decorOwned = Array.isArray(raw.decorOwned)
+    ? raw.decorOwned.filter((x: unknown) => dec.includes(x as DecorId))
+    : [];
+  const decorActive = Array.from(
+    new Set<DecorId>(Array.isArray(raw.decorActive) ? raw.decorActive : []),
+  )
+    .filter((x) => dec.includes(x) && decorOwned.includes(x))
+    .slice(0, MAX_ACTIVE_DECOR);
   return {
     species: sp.includes(raw.species) ? raw.species : "cat",
     ownedSpecies: Array.from(new Set<Species>(["cat", ...owned])),
     accessory: ac.includes(raw.accessory) ? raw.accessory : null,
-    ownedAccessories: Array.isArray(raw.ownedAccessories) ? raw.ownedAccessories.filter((x: any) => ac.includes(x)) : [],
+    ownedAccessories: Array.isArray(raw.ownedAccessories)
+      ? raw.ownedAccessories.filter((x: any) => ac.includes(x))
+      : [],
+    decorOwned,
+    decorActive,
     hunger: typeof raw.hunger === "number" ? clamp(raw.hunger) : b.hunger,
     happiness: typeof raw.happiness === "number" ? clamp(raw.happiness) : b.happiness,
     lastDecayAt: typeof raw.lastDecayAt === "string" ? raw.lastDecayAt : b.lastDecayAt,

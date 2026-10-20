@@ -171,7 +171,13 @@
 
 /* Full sky bands, animated with compositor transforms. */
 .sky-experience { min-height: 100vh; isolation: isolate; }
-.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: var(--background); pointer-events: none; }
+.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: var(--sky-bg, var(--background)); transition: background 90s ease; pointer-events: none; }
+
+/* Time-of-day sky: each band recolors the aurora behind the glass cards. */
+.sky-night { --sky-bg: oklch(0.16 0.05 265); --aurora-1: oklch(0.34 0.10 250); --aurora-2: oklch(0.40 0.09 230); --aurora-3: oklch(0.22 0.11 267); --aurora-4: oklch(0.30 0.10 250); --aurora-cosmic-1: oklch(0.36 0.15 280); --aurora-cosmic-2: oklch(0.42 0.14 295); --aurora-cosmic-3: oklch(0.22 0.11 270); }
+.sky-dawn { --sky-bg: oklch(0.34 0.07 35); --aurora-1: oklch(0.60 0.14 35); --aurora-2: oklch(0.55 0.11 60); --aurora-3: oklch(0.36 0.13 290); --aurora-4: oklch(0.48 0.12 320); --aurora-cosmic-1: oklch(0.42 0.14 320); --aurora-cosmic-2: oklch(0.46 0.13 340); --aurora-cosmic-3: oklch(0.28 0.10 300); }
+.sky-day { --sky-bg: oklch(0.30 0.06 230); --aurora-1: oklch(0.60 0.15 240); --aurora-2: oklch(0.68 0.12 200); --aurora-3: oklch(0.44 0.16 267); --aurora-4: oklch(0.54 0.14 250); --aurora-cosmic-1: oklch(0.44 0.16 280); --aurora-cosmic-2: oklch(0.50 0.15 295); --aurora-cosmic-3: oklch(0.28 0.11 270); }
+.sky-dusk { --sky-bg: oklch(0.28 0.07 300); --aurora-1: oklch(0.55 0.16 320); --aurora-2: oklch(0.50 0.14 25); --aurora-3: oklch(0.36 0.15 285); --aurora-4: oklch(0.46 0.14 310); --aurora-cosmic-1: oklch(0.44 0.16 300); --aurora-cosmic-2: oklch(0.50 0.15 320); --aurora-cosmic-3: oklch(0.26 0.11 290); }
 .aurora::before, .aurora::after {
   content: ""; position: absolute; inset: -25%;
   background: linear-gradient(125deg, var(--aurora-3) 5%, var(--aurora-1) 30%, var(--aurora-2) 47%, var(--aurora-4) 63%, var(--background) 85%);

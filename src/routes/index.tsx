@@ -11,6 +11,7 @@ import { LevelUpOverlay, Welcome } from "@/components/tracker/Overlays";
 import { TabsContent } from "@/components/ui/tabs";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
 import { BackupReminder } from "@/components/tracker/BackupReminder";
+import { QuickAdd } from "@/components/tracker/QuickAdd";
 import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -18,9 +19,16 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Task Tracker Pro — Thời khóa biểu & nhiệm vụ offline" },
-      { name: "description", content: "Quản lý nhiệm vụ, thời khóa biểu tuần từ Chủ Nhật, Pomodoro, uống nước và level XP — chạy offline, lưu vào file của bạn." },
+      {
+        name: "description",
+        content:
+          "Quản lý nhiệm vụ, thời khóa biểu tuần từ Chủ Nhật, Pomodoro, uống nước và level XP — chạy offline, lưu vào file của bạn.",
+      },
       { property: "og:title", content: "Task Tracker Pro" },
-      { property: "og:description", content: "Thời khóa biểu tuần, Pomodoro, XP và vòng quay — 100% offline." },
+      {
+        property: "og:description",
+        content: "Thời khóa biểu tuần, Pomodoro, XP và vòng quay — 100% offline.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -29,7 +37,12 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
-  return <SkyExperience><WeatherLayer /><AppInner /></SkyExperience>;
+  return (
+    <SkyExperience>
+      <WeatherLayer />
+      <AppInner />
+    </SkyExperience>
+  );
 }
 
 function AppInner() {
@@ -39,12 +52,23 @@ function AppInner() {
     <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
       <HeaderHud />
       <BackupReminder />
+      <QuickAdd />
       <ConstellationTabs>
-        <TabsContent value="today" className="mt-5"><TodayPanel /></TabsContent>
-        <TabsContent value="week" className="mt-5"><Timetable /></TabsContent>
-        <TabsContent value="shop" className="mt-5"><PetShop /></TabsContent>
-        <TabsContent value="wheel" className="mt-5"><Wheel /></TabsContent>
-        <TabsContent value="chronicle" className="mt-5"><Chronicle /></TabsContent>
+        <TabsContent value="today" className="mt-5">
+          <TodayPanel />
+        </TabsContent>
+        <TabsContent value="week" className="mt-5">
+          <Timetable />
+        </TabsContent>
+        <TabsContent value="shop" className="mt-5">
+          <PetShop />
+        </TabsContent>
+        <TabsContent value="wheel" className="mt-5">
+          <Wheel />
+        </TabsContent>
+        <TabsContent value="chronicle" className="mt-5">
+          <Chronicle />
+        </TabsContent>
       </ConstellationTabs>
       <LevelUpOverlay />
     </main>

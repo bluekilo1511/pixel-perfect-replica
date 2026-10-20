@@ -1,5 +1,14 @@
-import { createContext, useContext, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useTracker } from "@/lib/tracker/store";
+import { SKY_BAND_CLASS, skyBand } from "@/lib/tracker/skyTime";
 
 const FocusContext = createContext<(remaining: number | null) => void>(() => {});
 export const useFocusSky = () => useContext(FocusContext);
@@ -14,7 +23,14 @@ function shatterIce() {
   if (!ctx) return;
   document.body.appendChild(canvas);
   const color = getComputedStyle(document.documentElement).getPropertyValue("--ice-shard").trim();
-  const shards = Array.from({ length: 48 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: 12 + Math.random() * 35, dx: (Math.random() - .5) * 180, dy: 100 + Math.random() * 180, angle: Math.random() * Math.PI }));
+  const shards = Array.from({ length: 48 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: 12 + Math.random() * 35,
+    dx: (Math.random() - 0.5) * 180,
+    dy: 100 + Math.random() * 180,
+    angle: Math.random() * Math.PI,
+  }));
   const start = performance.now();
   const frame = (now: number) => {
     const p = Math.min(1, (now - start) / 850);
@@ -23,10 +39,20 @@ function shatterIce() {
     ctx.strokeStyle = color;
     ctx.globalAlpha = 1 - p;
     shards.forEach((s) => {
-      ctx.save(); ctx.translate(s.x + s.dx * p, s.y + s.dy * p * p); ctx.rotate(s.angle + p * 2);
-      ctx.beginPath(); ctx.moveTo(0, -s.size); ctx.lineTo(s.size * .6, s.size * .4); ctx.lineTo(-s.size * .5, s.size * .7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      ctx.save();
+      ctx.translate(s.x + s.dx * p, s.y + s.dy * p * p);
+      ctx.rotate(s.angle + p * 2);
+      ctx.beginPath();
+      ctx.moveTo(0, -s.size);
+      ctx.lineTo(s.size * 0.6, s.size * 0.4);
+      ctx.lineTo(-s.size * 0.5, s.size * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     });
-    if (p < 1) requestAnimationFrame(frame); else canvas.remove();
+    if (p < 1) requestAnimationFrame(frame);
+    else canvas.remove();
   };
   requestAnimationFrame(frame);
 }
@@ -35,6 +61,13 @@ export function SkyExperience({ children }: { children: ReactNode }) {
   const { data, timer } = useTracker();
   const [petRemaining, setPetRemaining] = useState<number | null>(null);
   const [wave, setWave] = useState(false);
+  const [band, setBand] = useState(() => skyBand(new Date().getHours()));
+  useEffect(() => {
+    const tick = () => setBand(skyBand(new Date().getHours()));
+    tick();
+    const iv = setInterval(tick, 60_000);
+    return () => clearInterval(iv);
+  }, []);
   const waveTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const frozen = data.streak.freezeActive === true;
   const previousFreeze = useRef(frozen);
@@ -51,7 +84,12 @@ export function SkyExperience({ children }: { children: ReactNode }) {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const button = target.closest("button, input[type=checkbox]");
-    if (!button || button.hasAttribute("disabled") || (!button.hasAttribute("data-ocean") && !button.closest("[data-pet-interactions]"))) return;
+    if (
+      !button ||
+      button.hasAttribute("disabled") ||
+      (!button.hasAttribute("data-ocean") && !button.closest("[data-pet-interactions]"))
+    )
+      return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const widget = button.closest<HTMLElement>(".glass") ?? button.parentElement;
     if (!widget) return;
@@ -66,12 +104,18 @@ export function SkyExperience({ children }: { children: ReactNode }) {
     overlay.appendChild(ring);
     widget.appendChild(overlay);
     ring.addEventListener("animationend", () => overlay.remove(), { once: true });
-    setWave(true); clearTimeout(waveTimeout.current);
+    setWave(true);
+    clearTimeout(waveTimeout.current);
     waveTimeout.current = setTimeout(() => setWave(false), 900);
   };
-  return <FocusContext.Provider value={setPetRemaining}>
-    <div className={`sky-experience ${remaining !== null ? "sky-focusing" : ""} ${remaining !== null && remaining <= 300 ? "sky-final" : ""} ${frozen ? "sky-frozen" : ""} ${wave ? "sky-wave" : ""}`} onClickCapture={ripple}>
-      {children}
-    </div>
-  </FocusContext.Provider>;
+  return (
+    <FocusContext.Provider value={setPetRemaining}>
+      <div
+        className={`sky-experience ${SKY_BAND_CLASS[band]} ${remaining !== null ? "sky-focusing" : ""} ${remaining !== null && remaining <= 300 ? "sky-final" : ""} ${frozen ? "sky-frozen" : ""} ${wave ? "sky-wave" : ""}`}
+        onClickCapture={ripple}
+      >
+        {children}
+      </div>
+    </FocusContext.Provider>
+  );
 }
