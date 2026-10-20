@@ -74,6 +74,8 @@ export function PetWidget() {
   const pet = data.petState;
   const mood = moodOf(pet);
   const pomodoroMinutes = data.settings.pomodoroMinutes;
+  const breakMinutes = data.settings.breakMinutes;
+  const autoBreak = data.settings.autoBreak;
   const presetOptions = [...POMODORO_PRESETS, ...data.settings.customPresets];
   const [customMin, setCustomMin] = useState("");
   const applyCustomPreset = () => {
@@ -118,9 +120,17 @@ export function PetWidget() {
   const [left, setLeft] = useState(pomodoroMinutes * 60);
   const [bossActive, setBossActive] = useState(false);
   const [zen, setZen] = useState(false);
+  const [warmup, setWarmup] = useState(false); // 5-minute anti-procrastination session
+  const warmupRef = useRef(false);
+  warmupRef.current = warmup;
+  const [breakEndAt, setBreakEndAt] = useState<number | null>(null);
+  const [breakLeft, setBreakLeft] = useState(breakMinutes * 60);
   useEffect(() => {
     if (!endAt) setLeft(pomodoroMinutes * 60);
   }, [endAt, pomodoroMinutes]);
+  useEffect(() => {
+    if (!breakEndAt) setBreakLeft(breakMinutes * 60);
+  }, [breakEndAt, breakMinutes]);
   useEffect(() => {
     setFocus(endAt ? left : null);
   }, [endAt, left, setFocus]);
@@ -138,21 +148,47 @@ export function PetWidget() {
         clearInterval(iv);
         setEndAt(null);
         setLeft(pomodoroMinutes * 60);
-        const boss = bossRef.current;
-        finishPomodoro(boss, pomodoroMinutes);
+        setWarmup(false);
+        const wasWarmup = warmupRef.current;
+        const boss = bossRef.current && !wasWarmup;
+        finishPomodoro(boss, wasWarmup ? 5 : pomodoroMinutes, wasWarmup ? "warmup" : "pomodoro");
         celebrate();
-        if (boss) {
+        if (wasWarmup) {
+          toast.success("🚀 Xong 5 phút — bạn đã vào việc rồi đó!");
+          say("Mình biết bạn làm được mà! 🚀");
+        } else if (boss) {
           celebrate();
           ting(true);
           toast.success(
             `⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
           );
-        } else toast.success(`🍅 Xong Pomodoro cùng thú cưng! +${POMODORO_REWARD} 😺`);
+          if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+        } else {
+          toast.success(`🍅 Xong Pomodoro cùng thú cưng! +${POMODORO_REWARD} 😺`);
+          if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+        }
         say("Giỏi quá! Mình tự hào về bạn! 🎉");
       }
     }, 500);
     return () => clearInterval(iv);
-  }, [endAt, finishPomodoro, pomodoroMinutes]);
+  }, [endAt, finishPomodoro, pomodoroMinutes, autoBreak, breakMinutes]);
+
+  // Auto-break countdown after a finished Pomodoro.
+  useEffect(() => {
+    if (!breakEndAt) return;
+    const iv = setInterval(() => {
+      const r = Math.max(0, Math.ceil((breakEndAt - Date.now()) / 1000));
+      setBreakLeft(r);
+      if (r <= 0) {
+        clearInterval(iv);
+        setBreakEndAt(null);
+        ting();
+        toast("☕ Hết giờ nghỉ — quay lại thôi!");
+        say("Nghỉ xong rồi, làm tiếp nhé! 💪");
+      }
+    }, 500);
+    return () => clearInterval(iv);
+  }, [breakEndAt]);
 
   const s = data.streak;
   const todayDone = s.today.date === dateStr() ? s.today.done : 0;
@@ -243,7 +279,13 @@ export function PetWidget() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="font-display text-2xl tabular-nums">{fmt(left)}</span>
+            {breakEndAt ? (
+              <span className="font-display text-2xl tabular-nums text-hunger">
+                ☕ {fmt(breakLeft)}
+              </span>
+            ) : (
+              <span className="font-display text-2xl tabular-nums">{fmt(left)}</span>
+            )}
             {endAt && (
               <Button
                 size="sm"
@@ -269,18 +311,44 @@ export function PetWidget() {
                   }
                   setEndAt(null);
                   setLeft(pomodoroMinutes * 60);
+                  setWarmup(false);
                 }}
               >
                 ⏹ Hủy
               </Button>
-            ) : (
+            ) : breakEndAt ? (
               <Button
                 size="sm"
+                variant="secondary"
                 onClick={() => {
-                  setEndAt(Date.now() + left * 1000);
-                  say(`Cùng tập trung ${pomodoroMinutes} phút nhé! 📚`);
+                  setBreakEndAt(null);
+                  toast("⏭ Đã bỏ qua giờ nghỉ");
                 }}
-              >{`🍅 Pomodoro ${pomodoroMinutes}p`}</Button>
+              >
+                ⏭ Bỏ qua nghỉ
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEndAt(Date.now() + left * 1000);
+                    say(`Cùng tập trung ${pomodoroMinutes} phút nhé! 📚`);
+                  }}
+                >{`🍅 Pomodoro ${pomodoroMinutes}p`}</Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  title="Chỉ cam kết 5 phút — thường là đủ để bắt đầu"
+                  onClick={() => {
+                    setWarmup(true);
+                    setEndAt(Date.now() + 5 * 60 * 1000);
+                    say("Chỉ 5 phút thôi! Vào việc nào 🚀");
+                  }}
+                >
+                  🚀 5p thôi
+                </Button>
+              </>
             )}
             <Select
               value={String(pomodoroMinutes)}
@@ -290,7 +358,7 @@ export function PetWidget() {
                   settings: { ...d.settings, pomodoroMinutes: Number(value) },
                 }))
               }
-              disabled={!!endAt}
+              disabled={!!endAt || !!breakEndAt}
             >
               <SelectTrigger className="h-8 w-[110px]">
                 <SelectValue placeholder="Thời lượng" />
@@ -316,7 +384,7 @@ export function PetWidget() {
               placeholder="Tuỳ ý"
               aria-label="Phút tuỳ chỉnh"
               value={customMin}
-              disabled={!!endAt}
+              disabled={!!endAt || !!breakEndAt}
               onChange={(e) => setCustomMin(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyCustomPreset()}
             />
@@ -324,7 +392,7 @@ export function PetWidget() {
               size="sm"
               variant="ghost"
               className="h-8 px-2"
-              disabled={!!endAt}
+              disabled={!!endAt || !!breakEndAt}
               onClick={applyCustomPreset}
             >
               Lưu
@@ -334,7 +402,7 @@ export function PetWidget() {
                 type="checkbox"
                 className="accent-[var(--destructive)]"
                 checked={bossActive}
-                disabled={!!endAt}
+                disabled={!!endAt || !!breakEndAt}
                 onChange={(e) => setBossActive(e.target.checked)}
               />
               ⚔️ Thách đấu Boss

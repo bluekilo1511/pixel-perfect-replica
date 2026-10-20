@@ -255,3 +255,56 @@ describe("task mood", () => {
     expect(setTaskMood(d, a.id, 0).tasks[0]?.mood).toBe(1);
   });
 });
+
+describe("focus session log", () => {
+  it("records a pomodoro session with time, minutes and kind", () => {
+    const now = new Date(2026, 9, 20, 9, 30);
+    const r = completePomodoroSession(defaultData(), 25, now);
+    const last = r.data.sessionLog.at(-1)!;
+    expect(last.at).toBe(now.toISOString());
+    expect(last.minutes).toBe(25);
+    expect(last.kind).toBe("pomodoro");
+  });
+
+  it("records warmup sessions with the warmup kind and a warmup title", () => {
+    const r = completePomodoroSession(defaultData(), 5, new Date(2026, 9, 20, 9, 30), "warmup");
+    expect(r.data.sessionLog.at(-1)!.kind).toBe("warmup");
+    expect(r.data.tasks.at(-1)!.title).toContain("Khởi động");
+  });
+
+  it("caps the log at 400 entries", () => {
+    let d = defaultData();
+    for (let i = 0; i < 405; i++) {
+      d = completePomodoroSession(d, 25, new Date(2026, 9, 20, 0, i % 60, i % 60)).data;
+    }
+    expect(d.sessionLog.length).toBe(400);
+  });
+
+  it("mirrors the picked mood into the matching session entry", () => {
+    const r = completePomodoroSession(defaultData(), 25, new Date(2026, 9, 20, 9, 30));
+    const task = r.data.tasks.at(-1)!;
+    const d2 = setTaskMood(r.data, task.id, 2);
+    expect(d2.sessionLog.at(-1)!.mood).toBe(2);
+  });
+
+  it("migrate keeps a valid session log and drops malformed rows", () => {
+    const raw = {
+      sessionLog: [
+        { at: new Date(2026, 9, 20, 8).toISOString(), minutes: 25, kind: "pomodoro" },
+        { minutes: "oops" },
+        null,
+        { at: new Date(2026, 9, 20, 9).toISOString(), minutes: 5, kind: "warmup", mood: 3 },
+      ],
+    };
+    const d = migrate(raw);
+    expect(d.sessionLog.length).toBe(2);
+    expect(d.sessionLog[1]!.kind).toBe("warmup");
+    expect(d.sessionLog[1]!.mood).toBe(3);
+  });
+
+  it("migrate defaults break settings for old files", () => {
+    const d = migrate({});
+    expect(d.settings.breakMinutes).toBe(5);
+    expect(d.settings.autoBreak).toBe(true);
+  });
+});

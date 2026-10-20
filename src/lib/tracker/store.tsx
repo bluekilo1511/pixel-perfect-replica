@@ -81,7 +81,7 @@ interface Store {
   spin: () => string | null;
   dismissLevelUp: () => void;
   restore: (raw: unknown) => void;
-  finishPomodoro: (boss: boolean, minutes: number) => void;
+  finishPomodoro: (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => void;
   bossCancel: () => void;
   claimAchievement: (id: AchievementId) => boolean;
   dismissBackupReminder: () => void;
@@ -362,7 +362,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     setReady(true);
   };
 
-  const finishPomodoro = (boss: boolean, minutes: number) => {
+  const finishPomodoro = (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => {
     const cur = dataRef.current;
     const game = boss
       ? defeatBoss(cur.game)
@@ -370,6 +370,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const r = completePomodoroSession(
       { ...cur, game, petState: bumpPet(cur.petState, 0, 10) },
       minutes,
+      undefined,
+      kind,
     );
     if (shouldNudgeWater(r.data)) {
       setData(markWaterNudged(r.data));

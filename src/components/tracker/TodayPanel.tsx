@@ -22,6 +22,7 @@ import {
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
 import { MonthlyReportCard } from "./MonthlyReport";
 import { WeeklyReportCard } from "./WeeklyReport";
+import { FocusJournalCard } from "./FocusJournal";
 import { FriendViewCard } from "./FriendView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -503,6 +504,7 @@ export function TodayPanel() {
         <DailyQuestsCard />
         <RaidBossCard />
         <WeeklyReportCard />
+        <FocusJournalCard />
         <MonthlyReportCard />
         <FriendViewCard />
       </div>

@@ -73,6 +73,15 @@ export interface Task {
   [extra: string]: unknown; // keep unknown fields from old files
 }
 
+export type SessionKind = "pomodoro" | "warmup"; // warmup = the 5-minute anti-procrastination session
+
+export interface SessionEntry {
+  at: string; // ISO time the session finished
+  minutes: number;
+  kind: SessionKind;
+  mood?: number; // mirrored from the related task when the user picks a mood
+}
+
 export interface Slot {
   id: string;
   start: string; // "HH:MM"
@@ -110,6 +119,8 @@ export interface AppSettings {
   pomodoroMinutes: number;
   customPresets: number[]; // user-saved durations (outside the built-in 15/25/50)
   ambient: { kind: AmbientSettingKind; volume: number };
+  breakMinutes: number; // auto-break length after a Pomodoro (0 disables)
+  autoBreak: boolean; // start the break automatically when a Pomodoro finishes
 }
 
 export interface AppData {
@@ -136,6 +147,7 @@ export interface AppData {
   raid: RaidState;
   exams: ExamEvent[];
   templates: TaskTemplate[];
+  sessionLog: SessionEntry[];
   [extra: string]: unknown;
 }
 
@@ -197,6 +209,8 @@ export function defaultSettings(): AppSettings {
     pomodoroMinutes: POMODORO_MINUTES,
     customPresets: [],
     ambient: { kind: null, volume: 0.4 },
+    breakMinutes: 5,
+    autoBreak: true,
   };
 }
 
@@ -221,6 +235,7 @@ export function defaultData(): AppData {
     raid: defaultRaid(),
     exams: defaultExams(),
     templates: defaultTemplates(),
+    sessionLog: [],
   };
 }
 
@@ -340,6 +355,8 @@ export function migrate(raw: unknown): AppData {
           : null,
       volume: clamp01(num(rawSettings?.ambient?.volume, 0.4), 0.4),
     },
+    breakMinutes: Math.min(30, Math.max(0, num(rawSettings?.breakMinutes, 5))),
+    autoBreak: rawSettings?.autoBreak !== false,
   };
   return {
     ...rest,
@@ -384,7 +401,26 @@ export function migrate(raw: unknown): AppData {
     },
     exams: normalizeExams(r.exams),
     templates: normalizeTemplates(r.templates),
+    sessionLog: normalizeSessionLog(r.sessionLog),
   };
+}
+
+/** Keeps the last 400 focus-session entries and drops malformed rows from old files. */
+function normalizeSessionLog(raw: unknown): SessionEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const rows = raw.filter((s): s is Record<string, unknown> => !!s && typeof s === "object");
+  return rows
+    .filter((s) => typeof s["at"] === "string")
+    .map((s) => {
+      const mood = Math.min(4, Math.max(1, Math.round(num(s["mood"], 0))));
+      return {
+        at: s["at"] as string,
+        minutes: num(s["minutes"], 0),
+        kind: s["kind"] === "warmup" ? ("warmup" as const) : ("pomodoro" as const),
+        ...(mood >= 1 ? { mood } : {}),
+      };
+    })
+    .slice(-400);
 }
 
 function extrasFrom(r: any) {
@@ -392,10 +428,16 @@ function extrasFrom(r: any) {
   return e;
 }
 
-/** Saves the 1..4 mood the user felt right after finishing a timed task. */
+/** Saves the 1..4 mood the user felt right after finishing a timed task; mirrors it into the session log. */
 export function setTaskMood(data: AppData, taskId: string, mood: number): AppData {
   const m = Math.min(4, Math.max(1, Math.round(mood)));
-  return { ...data, tasks: data.tasks.map((t) => (t.id === taskId ? { ...t, mood: m } : t)) };
+  const tasks = data.tasks.map((t) => (t.id === taskId ? { ...t, mood: m } : t));
+  const done = tasks.find((t) => t.id === taskId);
+  const sessionLog =
+    done?.completedAt && done.minutes > 0
+      ? data.sessionLog.map((s) => (s.at === done.completedAt ? { ...s, mood: m } : s))
+      : data.sessionLog;
+  return { ...data, tasks, sessionLog };
 }
 
 /** Adds XP and handles multiple level-ups. Returns number of levels gained. */
@@ -617,16 +659,24 @@ export function completePomodoroSession(
   data: AppData,
   minutes: number,
   now = new Date(),
+  kind: SessionKind = "pomodoro",
 ): { data: AppData; fresh: AchievementId[] } {
   const today = dateStr(now);
   const focusToday = (data.dailyStats[today]?.focusMin ?? 0) + minutes;
   const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
-  const record = makeTask(`Pomodoro tập trung (${minutes} phút)`, "pomodoro", minutes, today, {
-    completed: true,
-    rewardClaimed: true,
-    remainingSeconds: 0,
-    completedAt: now.toISOString(),
-  });
+  const record = makeTask(
+    kind === "warmup" ? `Khởi động (${minutes} phút)` : `Pomodoro tập trung (${minutes} phút)`,
+    "pomodoro",
+    minutes,
+    today,
+    {
+      completed: true,
+      rewardClaimed: true,
+      remainingSeconds: 0,
+      completedAt: now.toISOString(),
+    },
+  );
+  const sessionLog = [...data.sessionLog, { at: now.toISOString(), minutes, kind }].slice(-400);
   const d = {
     ...data,
     achievements,
@@ -634,6 +684,7 @@ export function completePomodoroSession(
     expedition: startExpedition(data.expedition, focusToday, now),
     dailyStats: bumpStats(data.dailyStats, dateStr(now), { focusMin: minutes, pomodoros: 1 }),
     tasks: [...data.tasks, record],
+    sessionLog,
   };
   return applyAchievements(d, { nightOwl: isNightOwlHour(now) }, now);
 }
