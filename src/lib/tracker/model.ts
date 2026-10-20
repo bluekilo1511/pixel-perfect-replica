@@ -320,13 +320,13 @@ export function claimAchievementReward(data: AppData, id: AchievementId, now = n
 }
 
 /** Completes a task once. Second call is a no-op (anti-spam). */
-export function completeTask(data: AppData, taskId: string, now = new Date(), rng: () => number = Math.random): CompleteResult {
+export function completeTask(data: AppData, taskId: string, now = new Date(), rng: () => number = Math.random, xpMult = 1): CompleteResult {
   const task = data.tasks.find((t) => t.id === taskId);
   if (!task || task.completed || task.rewardClaimed) return { data, rewarded: false, levelsGained: 0, drop: null, petEvolved: false, petLevels: 0, fresh: [] };
   const r = rewardFor(task.kind);
   const today = dateStr(now);
   const mult = streakMultiplier(data.streak.count);
-  const earned = Math.round(r.xp * mult);
+  const earned = Math.round(r.xp * mult * xpMult);
   const { game, levelsGained } = addXp(data.game, earned);
   const pet = addPetXp(bumpPet(data.petState, 0, 5), earned);
   const drop = rollDrop(rng);
@@ -365,6 +365,39 @@ export function completePomodoroSession(data: AppData, minutes: number, now = ne
     tasks: [...data.tasks, record],
   };
   return applyAchievements(d, { nightOwl: isNightOwlHour(now) }, now);
+}
+
+// ---- Daily quests & weekly raid ----
+/** Claims a daily quest reward when its target is met. Resets automatically on a new day. */
+export function claimQuest(data: AppData, questId: string, now = new Date()): { data: AppData; ok: boolean } {
+  const today = dateStr(now);
+  const quest = dailyQuests(today).find((q) => q.id === questId);
+  if (!quest) return { data, ok: false };
+  const claimed = data.quests.date === today ? data.quests.claimed : [];
+  if (claimed.includes(questId)) return { data, ok: false };
+  if (questProgress(data.dailyStats[today], quest) < quest.target) return { data, ok: false };
+  return {
+    ok: true,
+    data: {
+      ...data,
+      quests: { date: today, claimed: [...claimed, questId] },
+      game: { ...data.game, catCoins: data.game.catCoins + quest.reward.catCoins, lizardGems: data.game.lizardGems + quest.reward.lizardGems },
+    },
+  };
+}
+
+/** Claims the weekly raid reward once the boss is defeated. */
+export function claimRaid(data: AppData, now = new Date()): { data: AppData; ok: boolean } {
+  const st = raidStatus(data.dailyStats, dateStr(now), data.raid);
+  if (!st.claimable) return { data, ok: false };
+  return {
+    ok: true,
+    data: {
+      ...data,
+      raid: { weekStart: st.weekStart, claimed: true },
+      game: { ...data.game, catCoins: data.game.catCoins + RAID_REWARD.catCoins, lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems },
+    },
+  };
 }
 
 // ---- Backup reminder ----
