@@ -1,5 +1,13 @@
 import { useRef, useState, type ReactNode } from "react";
-import { CalendarDays, Check, ChartColumn, PawPrint, Sparkles, Newspaper } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChartColumn,
+  PawPrint,
+  Sparkles,
+  Newspaper,
+  Settings,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const items = [
@@ -9,6 +17,7 @@ const items = [
   { value: "shop", label: "Pet Shop", icon: PawPrint },
   { value: "wheel", label: "Vòng quay", icon: Sparkles },
   { value: "chronicle", label: "Nhật báo tuần", icon: Newspaper },
+  { value: "settings", label: "Cài đặt", icon: Settings },
 ];
 
 export function ConstellationTabs({ children }: { children: ReactNode }) {

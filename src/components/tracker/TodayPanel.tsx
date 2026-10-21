@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
+import { NotesCard } from "./NotesCard";
 import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import {
   addExam,
@@ -448,7 +449,10 @@ export function TodayPanel() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-      <WaterCard />
+      <div className="space-y-5">
+        <WaterCard />
+        <NotesCard />
+      </div>
       <div className="space-y-5">
         <PetWidget />
         <section className="glass p-5">
@@ -485,16 +489,36 @@ export function TodayPanel() {
           </Button>
           <AddTask />
           <TemplatesCard />
-          <ul className="mt-4 space-y-2">
-            {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-            {!tasks.length && (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Chưa có nhiệm vụ nào.
-              </p>
-            )}
-          </ul>
+          {(() => {
+            const open = tasks.filter((t) => !t.completed);
+            const completed = tasks.filter((t) => t.completed);
+            return (
+              <>
+                <ul className="mt-4 space-y-2">
+                  {open.map((t) => (
+                    <TaskRow key={t.id} task={t} />
+                  ))}
+                  {!tasks.length && (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      Chưa có nhiệm vụ nào.
+                    </p>
+                  )}
+                </ul>
+                {completed.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      ✓ Đã hoàn thành ({completed.length})
+                    </p>
+                    <ul className="space-y-2">
+                      {completed.map((t) => (
+                        <TaskRow key={t.id} task={t} />
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </section>
         <ExamCard />
         <DailyQuestsCard />

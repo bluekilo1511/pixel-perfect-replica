@@ -54,6 +54,14 @@ import {
 
 export type TaskKind = "pomodoro" | "exercise" | "water" | "custom";
 
+/** A routine to-do the user tracks without a timer — "Dậy sớm", "Đọc 10 trang". Persists every day; the check resets each morning. */
+export interface NoteItem {
+  id: string;
+  title: string;
+  lastDoneDate: string | null; // YYYY-MM-DD; shown done when it equals today
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -151,6 +159,7 @@ export interface AppData {
   exams: ExamEvent[];
   templates: TaskTemplate[];
   sessionLog: SessionEntry[];
+  notes: NoteItem[];
   ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
 }
@@ -241,6 +250,7 @@ export function defaultData(): AppData {
     exams: defaultExams(),
     templates: defaultTemplates(),
     sessionLog: [],
+    notes: [],
   };
 }
 
@@ -411,10 +421,65 @@ export function migrate(raw: unknown): AppData {
     exams: normalizeExams(r.exams),
     templates: normalizeTemplates(r.templates),
     sessionLog: normalizeSessionLog(r.sessionLog),
+    notes: normalizeNotes(r.notes),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
       ? { ownerName: r.ownerName.trim().slice(0, 30) }
       : {}),
   };
+}
+
+export const NOTES_MAX = 20;
+
+const noteDoneToday = (n: NoteItem, today: string) => n.lastDoneDate === today;
+
+/** Counts how many routine notes are checked off for the given day. */
+export function notesDoneCount(notes: NoteItem[], today = dateStr()): number {
+  return notes.filter((n) => noteDoneToday(n, today)).length;
+}
+
+export function addNote(data: AppData, title: string, now = new Date()): AppData {
+  const clean = title.trim().slice(0, 120);
+  if (!clean || data.notes.length >= NOTES_MAX) return data;
+  const note: NoteItem = {
+    id: uid("note"),
+    title: clean,
+    lastDoneDate: null,
+    createdAt: now.toISOString(),
+  };
+  return { ...data, notes: [...data.notes, note] };
+}
+
+/** Checks a note off for today (or unchecks it); the check itself does not touch XP, streak or coins. */
+export function toggleNote(data: AppData, noteId: string, today = dateStr()): AppData {
+  const notes = data.notes.map((n) =>
+    n.id === noteId ? { ...n, lastDoneDate: noteDoneToday(n, today) ? null : today } : n,
+  );
+  return { ...data, notes };
+}
+
+export function renameNote(data: AppData, noteId: string, title: string): AppData {
+  const clean = title.trim().slice(0, 120);
+  if (!clean) return data;
+  return { ...data, notes: data.notes.map((n) => (n.id === noteId ? { ...n, title: clean } : n)) };
+}
+
+export function removeNote(data: AppData, noteId: string): AppData {
+  return { ...data, notes: data.notes.filter((n) => n.id !== noteId) };
+}
+
+/** Accepts any old/new JSON for the routine notes and keeps the newest 20 well-formed rows. */
+export function normalizeNotes(raw: unknown): NoteItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((n): n is Record<string, unknown> => !!n && typeof n === "object")
+    .filter((n) => typeof n["title"] === "string" && (n["title"] as string).trim())
+    .map((n) => ({
+      id: typeof n["id"] === "string" ? n["id"] : uid("note"),
+      title: (n["title"] as string).trim().slice(0, 120),
+      lastDoneDate: typeof n["lastDoneDate"] === "string" ? n["lastDoneDate"] : null,
+      createdAt: typeof n["createdAt"] === "string" ? n["createdAt"] : new Date().toISOString(),
+    }))
+    .slice(0, NOTES_MAX);
 }
 
 /** Keeps the last 400 focus-session entries and drops malformed rows from old files. */

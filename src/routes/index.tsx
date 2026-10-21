@@ -21,6 +21,7 @@ import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/tracker/OnboardingTour";
 import { ScrollTop } from "@/components/tracker/ScrollTop";
+import { SettingsPanel } from "@/components/tracker/SettingsPanel";
 import { skyBand } from "@/lib/tracker/skyTime";
 
 export const Route = createFileRoute("/")({
@@ -94,6 +95,9 @@ function AppInner() {
         </TabsContent>
         <TabsContent value="chronicle" className="mt-5">
           <Chronicle />
+        </TabsContent>
+        <TabsContent value="settings" className="mt-5">
+          <SettingsPanel />
         </TabsContent>
       </ConstellationTabs>
       <LevelUpOverlay />
