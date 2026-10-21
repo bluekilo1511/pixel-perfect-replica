@@ -16,10 +16,17 @@ const WEEK = "2026-10-19"; // its Monday
 describe("week goals", () => {
   it("pins a task as a goal of the current week", () => {
     const base = defaultData();
-    const withTask = { ...base, tasks: [makeTask("Học Toán chương 3", "pomodoro", 25, "2026-10-21")] };
+    const withTask = {
+      ...base,
+      tasks: [makeTask("Học Toán chương 3", "pomodoro", 25, "2026-10-21")],
+    };
     const pinned = pinTaskAsWeekGoal(withTask, withTask.tasks[0]!.id, NOW)!;
     expect(pinned.weekGoals).toHaveLength(1);
-    expect(pinned.weekGoals[0]).toMatchObject({ title: "Học Toán chương 3", weekStart: WEEK, doneAt: null });
+    expect(pinned.weekGoals[0]).toMatchObject({
+      title: "Học Toán chương 3",
+      weekStart: WEEK,
+      doneAt: null,
+    });
   });
 
   it("rejects duplicates (case-insensitive) and empty titles", () => {

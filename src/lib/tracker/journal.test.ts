@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { defaultData } from "./model";
-import { deleteJournal, journalForDate, normalizeJournal, upsertJournal, JOURNAL_MAX } from "./journal";
+import {
+  deleteJournal,
+  journalForDate,
+  normalizeJournal,
+  upsertJournal,
+  JOURNAL_MAX,
+} from "./journal";
 
 describe("journal", () => {
   it("normalizes junk into nothing", () => {
@@ -23,14 +29,25 @@ describe("journal", () => {
       date: `2026-01-${String((i % 28) + 1).padStart(2, "0")}-${i}`,
       text: `e${i}`,
     })).filter(() => true);
-    expect(normalizeJournal(many.map((e, i) => ({ date: `2025-01-${String((i % 28) + 1).padStart(2, "0")}`, text: `t${i}` }))).length).toBeLessThanOrEqual(JOURNAL_MAX);
+    expect(
+      normalizeJournal(
+        many.map((e, i) => ({
+          date: `2025-01-${String((i % 28) + 1).padStart(2, "0")}`,
+          text: `t${i}`,
+        })),
+      ).length,
+    ).toBeLessThanOrEqual(JOURNAL_MAX);
   });
 
   it("upserts by day and updates by id", () => {
     const base = defaultData();
     const withEntry = upsertJournal(base, { date: "2026-10-21", text: "Hôm nay học Toán." });
     expect(withEntry?.journal).toHaveLength(1);
-    const updated = upsertJournal(withEntry!, { id: withEntry!.journal[0]!.id, date: "2026-10-21", text: "Sửa lại nội dung." });
+    const updated = upsertJournal(withEntry!, {
+      id: withEntry!.journal[0]!.id,
+      date: "2026-10-21",
+      text: "Sửa lại nội dung.",
+    });
     expect(updated!.journal).toHaveLength(1);
     expect(updated!.journal[0]!.text).toBe("Sửa lại nội dung.");
     const second = upsertJournal(updated!, { date: "2026-10-22", text: "Ngày mai." });

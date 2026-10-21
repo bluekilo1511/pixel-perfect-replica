@@ -41,6 +41,8 @@ import {
 import { AmbientControl } from "./AmbientControl";
 import { FocusMode } from "./FocusMode";
 import { useFocusSky } from "./SkyExperience";
+import { publishHud } from "@/lib/tracker/hudBus";
+import { fireFlashbang } from "./Flashbang";
 import { ting } from "@/lib/tracker/effects";
 
 const fmt = (s: number) =>
@@ -170,7 +172,33 @@ export function PetWidget() {
   const bossRef = useRef(false);
   bossRef.current = bossActive;
   const [hit, setHit] = useState(false);
+  const [strikes, setStrikes] = useState(0); // "phá đò" escapes in this session
+  const strikesRef = useRef(0);
+  const endAtRef = useRef(endAt);
+  endAtRef.current = endAt;
   const hp = bossHp(left, pomodoroMinutes * 60);
+  // Fresh session, fresh break-in counter.
+  useEffect(() => {
+    if (endAt) {
+      strikesRef.current = 0;
+      setStrikes(0);
+    }
+  }, [endAt]);
+  // Phá đò: catch tab escapes while a Pomodoro is running.
+  useEffect(() => {
+    const onHide = () => {
+      if (!document.hidden || !endAtRef.current) return;
+      strikesRef.current += 1;
+      setStrikes(strikesRef.current);
+      fireFlashbang("breakin");
+      if (strikesRef.current >= 3)
+        toast.error("🚨 Phá đò 3 lần — phiên này sẽ không được tính thưởng!");
+      else toast(`🚨 Phá đò lần ${strikesRef.current}/3 — quay lại tập trung đi!`);
+      say(strikesRef.current >= 3 ? "Ngồi yên đi mà… 😤" : "Ê, đang học mà! 👀");
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, []);
   useEffect(() => {
     if (!endAt) return;
     const iv = setInterval(() => {
@@ -183,23 +211,29 @@ export function PetWidget() {
         setWarmup(false);
         const wasWarmup = warmupRef.current;
         const boss = bossRef.current && !wasWarmup;
-        finishPomodoro(boss, wasWarmup ? 5 : pomodoroMinutes, wasWarmup ? "warmup" : "pomodoro");
-        celebrate();
-        if (wasWarmup) {
-          toast.success("🚀 Xong 5 phút — bạn đã vào việc rồi đó!");
-          say("Mình biết bạn làm được mà! 🚀");
-        } else if (boss) {
-          celebrate();
-          ting(true);
-          toast.success(
-            `⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
-          );
-          if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+        if (strikesRef.current >= 3) {
+          toast.error("🚨 Phá đò 3 lần — phiên này không được tính, thử lại nhé!");
+          say("Lần này tập trung thật nhé… 😤");
         } else {
-          toast.success(`🍅 Xong Pomodoro cùng thú cưng! +${POMODORO_REWARD} 😺`);
-          if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+          finishPomodoro(boss, wasWarmup ? 5 : pomodoroMinutes, wasWarmup ? "warmup" : "pomodoro");
+          celebrate();
+          fireFlashbang("done");
+          if (wasWarmup) {
+            toast.success("🚀 Xong 5 phút — bạn đã vào việc rồi đó!");
+            say("Mình biết bạn làm được mà! 🚀");
+          } else if (boss) {
+            celebrate();
+            ting(true);
+            toast.success(
+              `⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
+            );
+            if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+          } else {
+            toast.success(`🍅 Xong Pomodoro cùng thú cưng! +${POMODORO_REWARD} 😺`);
+            if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+          }
+          say("Giỏi quá! Mình tự hào về bạn! 🎉");
         }
-        say("Giỏi quá! Mình tự hào về bạn! 🎉");
       }
     }, 500);
     return () => clearInterval(iv);
@@ -221,6 +255,17 @@ export function PetWidget() {
     }, 500);
     return () => clearInterval(iv);
   }, [breakEndAt]);
+
+  // Feed the Tab Title HUD with the live Pomodoro state.
+  useEffect(() => {
+    publishHud({
+      running: !!endAt,
+      remaining: breakEndAt ? breakLeft : left,
+      boss: bossActive,
+      onBreak: !!breakEndAt,
+      strikes,
+    });
+  }, [endAt, left, breakEndAt, breakLeft, bossActive, strikes]);
 
   const s = data.streak;
   const todayDone = s.today.date === dateStr() ? s.today.done : 0;
@@ -540,6 +585,7 @@ export function PetWidget() {
         pet={pet}
         bossActive={bossActive}
         bossHpPct={hp}
+        strikes={strikes}
         onClose={() => setZen(false)}
       />
     </section>

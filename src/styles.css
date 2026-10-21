@@ -355,3 +355,71 @@
   100% { transform: translate(var(--dx), var(--dy)) scale(1.15); opacity: 0 }
 }
 @keyframes evo-breathe { 0%, 100% { opacity: .55 } 50% { opacity: 1 } }
+
+/* --- Flashbang pop-up (Phá đò alarm + Pomodoro done) --- */
+@keyframes flashbang-flash {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.flashbang-flash {
+  background: white;
+  animation: flashbang-flash 1.4s ease-out forwards;
+}
+@keyframes flashbang-text {
+  0% { opacity: 0; transform: scale(0.6); }
+  15% { opacity: 1; transform: scale(1.06); }
+  30% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.flashbang-text {
+  animation: flashbang-text 1.4s ease-out forwards;
+  text-shadow: 0 0 24px rgb(255 255 255 / 0.8);
+}
+.flashbang-text--calm {
+  animation-duration: 2.6s;
+}
+
+/* --- The Origin (Lizard's Core) easter egg --- */
+:root {
+  --origin-neon: #57ff9a;
+  --origin-blue: #050f2e;
+}
+@keyframes origin-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.origin-screen {
+  background: radial-gradient(ellipse at center, #0d2b6b 0%, var(--origin-blue) 72%);
+  color: var(--origin-neon);
+  animation: origin-fade 500ms ease-out;
+  text-shadow: 0 0 6px rgb(87 255 154 / 0.35);
+}
+.origin-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.16) 0 1px, transparent 1px 3px);
+}
+.origin-box {
+  border-color: rgb(87 255 154 / 0.5);
+  box-shadow: 0 0 40px rgb(87 255 154 / 0.12) inset;
+}
+.origin-count {
+  color: var(--origin-neon);
+  text-shadow: 0 0 18px rgb(87 255 154 / 0.6);
+}
+.origin-tick {
+  border-color: rgb(87 255 154 / 0.6);
+}
+.origin-tick:hover {
+  background: var(--origin-neon);
+  color: var(--origin-blue);
+  text-shadow: none;
+}
+.origin-return {
+  font-size: 12px;
+  letter-spacing: 0.15em;
+}

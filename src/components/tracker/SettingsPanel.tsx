@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AmbientControl } from "./AmbientControl";
+import { OriginButton } from "./OriginOverlay";
 
 function Row({
   label,
@@ -293,6 +294,7 @@ export function SettingsPanel() {
             ⬆️ Nhập backup
           </Button>
         </div>
+        <OriginButton />
       </section>
     </div>
   );

@@ -14,6 +14,7 @@ interface FocusModeProps {
   pet: PetState;
   bossActive: boolean;
   bossHpPct: number;
+  strikes?: number;
   onClose: () => void;
 }
 
@@ -25,6 +26,7 @@ export function FocusMode({
   pet,
   bossActive,
   bossHpPct,
+  strikes = 0,
   onClose,
 }: FocusModeProps) {
   useEffect(() => {
@@ -61,6 +63,11 @@ export function FocusMode({
           {MOOD_META[mood].face} {SPECIES[pet.species].name} đang canh chừng để bạn không xao nhãng…
         </span>
         <p className="font-display text-8xl tabular-nums sm:text-9xl">{fmt(left)}</p>
+        {strikes > 0 && (
+          <p className="font-mono text-xs uppercase tracking-wider text-destructive">
+            🚨 Phá đò {strikes}/3 — đừng rời tab nhé!
+          </p>
+        )}
         {bossActive && running && (
           <p className="font-mono text-xs uppercase tracking-wider text-destructive">
             ⚔️ Quái Vật Xao Nhãng · HP {bossHpPct}%

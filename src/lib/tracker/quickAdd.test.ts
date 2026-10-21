@@ -3,8 +3,16 @@ import { parseQuickAdd } from "./quickAdd";
 
 describe("parseQuickAdd", () => {
   it("extracts a trailing duration", () => {
-    expect(parseQuickAdd("Học Toán 25p")).toEqual({ title: "Học Toán", minutes: 25, subject: null });
-    expect(parseQuickAdd("Ôn Văn 15 phút")).toEqual({ title: "Ôn Văn", minutes: 15, subject: null });
+    expect(parseQuickAdd("Học Toán 25p")).toEqual({
+      title: "Học Toán",
+      minutes: 25,
+      subject: null,
+    });
+    expect(parseQuickAdd("Ôn Văn 15 phút")).toEqual({
+      title: "Ôn Văn",
+      minutes: 15,
+      subject: null,
+    });
     expect(parseQuickAdd("Học Toán25p")).toEqual({ title: "Học Toán", minutes: 25, subject: null });
   });
   it("keeps the rest of the title", () => {

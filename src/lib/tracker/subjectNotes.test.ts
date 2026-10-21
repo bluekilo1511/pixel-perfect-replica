@@ -14,7 +14,15 @@ describe("subject notes", () => {
     expect(normalizeSubjectNotes(null)).toEqual({});
     expect(normalizeSubjectNotes({ Toán: "not an object" })).toEqual({});
     expect(normalizeSubjectNotes({ Toán: { note: "   ", topics: [] } })).toEqual({});
-    const ok = normalizeSubjectNotes({ " Toán ": { note: " chú trọng hàm ", topics: [{ name: " Hàm số ", mark: "weak" }, { name: "hàm số", mark: "good" }] } });
+    const ok = normalizeSubjectNotes({
+      " Toán ": {
+        note: " chú trọng hàm ",
+        topics: [
+          { name: " Hàm số ", mark: "weak" },
+          { name: "hàm số", mark: "good" },
+        ],
+      },
+    });
     expect(ok["Toán"]?.note).toBe("chú trọng hàm");
     expect(ok["Toán"]?.topics).toHaveLength(1);
     expect(ok["Toán"]?.topics![0]!.mark).toBe("weak");

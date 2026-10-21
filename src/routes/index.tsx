@@ -24,6 +24,9 @@ import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/tracker/OnboardingTour";
 import { ScrollTop } from "@/components/tracker/ScrollTop";
+import { TabTitleHud } from "@/components/tracker/TabTitleHud";
+import { Flashbang } from "@/components/tracker/Flashbang";
+import { OriginOverlay } from "@/components/tracker/OriginOverlay";
 import { SettingsPanel } from "@/components/tracker/SettingsPanel";
 import { skyBand } from "@/lib/tracker/skyTime";
 
@@ -115,6 +118,9 @@ function AppInner() {
       <LevelUpOverlay />
       <EvolutionFx />
       <KeyboardShortcuts />
+      <Flashbang />
+      <TabTitleHud />
+      <OriginOverlay />
     </main>
   );
 }
