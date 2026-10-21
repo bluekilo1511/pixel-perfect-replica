@@ -297,7 +297,7 @@ export function PetShop() {
         </ul>
         <h3 className="mb-2 mt-6 font-semibold">🏠 Trang trí phòng</h3>
         <p className="mb-3 text-xs text-muted-foreground">
-          Đồ trang trí cho góc học tập của thú cưng — bày tối đa {MAX_ACTIVE_DECOR} món trong phòng.
+          Đồ trang trí cho góc học tập của thú cưng — bày tự do trong phòng 3D, không giới hạn!
         </p>
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {(Object.keys(DECORATIONS) as DecorId[])
@@ -319,7 +319,7 @@ export function PetShop() {
                       variant="outline"
                       onClick={() => {
                         if (!placed && pet.decorActive.length >= MAX_ACTIVE_DECOR) {
-                          toast.error(`Phòng chỉ bày được ${MAX_ACTIVE_DECOR} món — tháo bớt nhé!`);
+                          toast.error('Phòng đã bày đủ tất cả các món rồi!');
                           return;
                         }
                         update((d) => {

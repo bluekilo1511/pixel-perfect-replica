@@ -265,7 +265,7 @@ export function PetWidget() {
                 update((d) => {
                   const r = toggleDecor(d.petState, id);
                   if (r && !r.placed && !r.pet.decorActive.includes(id)) {
-                    toast("🏠 Không còn chỗ — tối đa 3 món đang bày");
+                    toast("🏠 Đã bày đủ tất cả các món!");
                   }
                   return r ? { ...d, petState: r.pet } : d;
                 })

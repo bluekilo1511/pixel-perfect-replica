@@ -61,7 +61,7 @@ export const ACCESSORIES: Record<
   wings: { emoji: "🪽", name: "Cánh Thiên Thần", price: 0, craftOnly: true },
 };
 
-export const MAX_ACTIVE_DECOR = 3;
+export const MAX_ACTIVE_DECOR = 8; // All decorations can be placed at once
 
 /** Pet-room decorations, bought with 🦎 like head accessories. Purely cosmetic. */
 export const DECORATIONS: Record<
