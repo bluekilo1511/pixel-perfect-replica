@@ -51,7 +51,13 @@ import { bossCounterAttack, defeatBoss } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import { celebrate, levelUpFx, ting } from "./effects";
 import { CAPSULE_INTERVAL_MS, lastSnapshotAt, saveSnapshot } from "./timeCapsule";
-import { createFile, createWriter, downloadData, openFile } from "./storage";
+import { createFile, createWriter, downloadData, openFile, type Handle } from "./storage";
+
+/** True only when the user cancelled the file picker. */
+const isAbort = (e: unknown): boolean =>
+  e instanceof Error
+    ? e.name === "AbortError"
+    : e !== null && typeof e === "object" && (e as { name?: unknown }).name === "AbortError";
 
 export type SaveStatus = "none" | "saving" | "saved" | "dirty" | "error";
 
@@ -159,7 +165,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const boot = (raw: unknown, name: string | null, handle: unknown) => {
+  const boot = (raw: unknown, name: string | null, handle: Handle | null) => {
     writer.current = handle ? createWriter(handle) : null;
     setFileName(name);
     setData(pushDueSlots(ensureDailyPins(migrate(raw))).data);
@@ -178,8 +184,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       }
       boot(raw, r.name, r.handle);
       toast.success(`Đã mở "${r.name}"`);
-    } catch (e: any) {
-      if (e?.name !== "AbortError") toast.error("Không mở được file");
+    } catch (e: unknown) {
+      if (!isAbort(e)) toast.error("Không mở được file");
     }
   };
   const create = async () => {
@@ -190,8 +196,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         return;
       }
       boot(null, h.name, h);
-    } catch (e: any) {
-      if (e?.name !== "AbortError") toast.error("Không tạo được file");
+    } catch (e: unknown) {
+      if (!isAbort(e)) toast.error("Không tạo được file");
     }
   };
   const startOffline = () => boot(null, null, null);
@@ -265,6 +271,9 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       setTimer((t) => (t ? { ...t, remaining } : t));
     }, 250);
     return () => clearInterval(iv);
+    // The interval only reads taskId/endAt/finish; the per-tick `remaining` state
+    // update must not restart the interval, so `timer` is intentionally excluded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer?.taskId, timer?.endAt, finish]);
 
   const pauseTimer = () => {

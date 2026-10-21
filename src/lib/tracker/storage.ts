@@ -1,15 +1,41 @@
 // Local file storage via the File System Access API, with download fallback. No localStorage.
 import type { AppData } from "./model";
 
-type Handle = any;
+/** Minimal shape of a File System Access API file handle as used here. */
+export interface Handle {
+  getFile(): Promise<File>;
+  createWritable(opts?: { mode?: string }): Promise<{
+    write(data: string): Promise<void>;
+    close(): Promise<void>;
+  }>;
+  queryPermission?(opts?: { mode?: string }): Promise<string>;
+  requestPermission?(opts?: { mode?: string }): Promise<string>;
+  readonly name: string;
+}
+
+/** Window with the File System Access pickers, present only in Chromium browsers. */
+type PickerWindow = Window & {
+  showOpenFilePicker?: (opts?: unknown) => Promise<Handle[]>;
+  showSaveFilePicker?: (opts?: unknown) => Promise<Handle>;
+};
 export const FILE_NAME = "task-tracker-data.json";
-const pickerTypes = [{ description: "Dữ liệu Task Tracker", accept: { "application/json": [".json"], "text/plain": [".txt"] } }];
+const pickerTypes = [
+  {
+    description: "Dữ liệu Task Tracker",
+    accept: { "application/json": [".json"], "text/plain": [".txt"] },
+  },
+];
 
 export const supportsFSA = () => typeof window !== "undefined" && "showOpenFilePicker" in window;
 
-export async function openFile(): Promise<{ handle: Handle | null; text: string; name: string } | null> {
+export async function openFile(): Promise<{
+  handle: Handle | null;
+  text: string;
+  name: string;
+} | null> {
   if (supportsFSA()) {
-    const [handle] = await (window as any).showOpenFilePicker({ types: pickerTypes });
+    const picks = await (window as PickerWindow).showOpenFilePicker!({ types: pickerTypes });
+    const handle = picks[0]!;
     const file = await handle.getFile();
     return { handle, text: await file.text(), name: file.name };
   }
@@ -27,7 +53,10 @@ export async function openFile(): Promise<{ handle: Handle | null; text: string;
 
 export async function createFile(): Promise<Handle | null> {
   if (!supportsFSA()) return null;
-  return (window as any).showSaveFilePicker({ suggestedName: FILE_NAME, types: pickerTypes });
+  return (window as PickerWindow).showSaveFilePicker!({
+    suggestedName: FILE_NAME,
+    types: pickerTypes,
+  });
 }
 
 /** Serialised writer: never runs two writes at once, always writes the latest data. */
@@ -44,7 +73,7 @@ export function createWriter(handle: Handle) {
         pending = null;
         const opts = { mode: "readwrite" };
         if (handle.queryPermission && (await handle.queryPermission(opts)) !== "granted") {
-          if ((await handle.requestPermission(opts)) !== "granted") throw new Error("denied");
+          if ((await handle.requestPermission!(opts)) !== "granted") throw new Error("denied");
         }
         const w = await handle.createWritable();
         await w.write(JSON.stringify({ ...next, updatedAt: new Date().toISOString() }, null, 2));

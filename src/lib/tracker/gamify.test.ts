@@ -1,6 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { checkStreak, decayPet, defaultInventory, defaultPet, defaultStreak, moodOf, recordCompletion, streakMultiplier } from "./gamify";
-import { defaultData, ensureDailyPins, makeTask, migrate, syncTodaySlots, upcomingSlots } from "./model";
+import {
+  checkStreak,
+  decayPet,
+  defaultInventory,
+  defaultPet,
+  defaultStreak,
+  moodOf,
+  recordCompletion,
+  streakMultiplier,
+} from "./gamify";
+import {
+  defaultData,
+  ensureDailyPins,
+  makeTask,
+  migrate,
+  syncTodaySlots,
+  upcomingSlots,
+} from "./model";
 
 describe("gamification rules", () => {
   it("first completion removes active frost without prematurely increasing the streak", () => {
@@ -53,7 +69,12 @@ describe("gamification rules", () => {
   });
 
   it("freeze saves streak after missing exactly one day", () => {
-    const s = { ...defaultStreak("2026-10-17"), count: 5, lastQualifiedDate: "2026-10-17", lastCheckDate: "2026-10-17" };
+    const s = {
+      ...defaultStreak("2026-10-17"),
+      count: 5,
+      lastQualifiedDate: "2026-10-17",
+      lastCheckDate: "2026-10-17",
+    };
     const saved = checkStreak(s, { ...defaultInventory(), freezes: 1 }, "2026-10-19");
     expect(saved.streak.count).toBe(5);
     expect(saved.inventory.freezes).toBe(0);
@@ -62,7 +83,11 @@ describe("gamification rules", () => {
   });
 
   it("pinned tasks carry to the next day uncompleted", () => {
-    const t = { ...makeTask("Đọc sách", "custom", 0, "2026-10-18", { pinned: true }), completed: true, rewardClaimed: true };
+    const t = {
+      ...makeTask("Đọc sách", "custom", 0, "2026-10-18", { pinned: true }),
+      completed: true,
+      rewardClaimed: true,
+    };
     const d = ensureDailyPins({ ...defaultData(), tasks: [t] }, "2026-10-19");
     const moved = d.tasks.find((x) => x.title === "Đọc sách")!;
     expect(moved.date).toBe("2026-10-19");
@@ -71,7 +96,14 @@ describe("gamification rules", () => {
 
   it("quick sync adds today's slots with a time badge, once", () => {
     let d = defaultData();
-    d.timetable.days[0]!.slots.push({ id: "s1", start: "07:30", end: "08:15", title: "Toán", kind: "custom", minutes: 0 });
+    d.timetable.days[0]!.slots.push({
+      id: "s1",
+      start: "07:30",
+      end: "08:15",
+      title: "Toán",
+      kind: "custom",
+      minutes: 0,
+    });
     const sun = new Date(2026, 9, 18, 6, 0);
     d = syncTodaySlots(d, sun).data;
     expect(syncTodaySlots(d, sun).added).toBe(0);
@@ -80,7 +112,14 @@ describe("gamification rules", () => {
 
   it("reminds 5 minutes before a class", () => {
     const d = defaultData();
-    d.timetable.days[0]!.slots.push({ id: "s1", start: "07:30", end: "08:15", title: "Toán", kind: "custom", minutes: 0 });
+    d.timetable.days[0]!.slots.push({
+      id: "s1",
+      start: "07:30",
+      end: "08:15",
+      title: "Toán",
+      kind: "custom",
+      minutes: 0,
+    });
     expect(upcomingSlots(d, new Date(2026, 9, 18, 7, 25))).toHaveLength(1);
     expect(upcomingSlots(d, new Date(2026, 9, 18, 7, 20))).toHaveLength(0);
   });

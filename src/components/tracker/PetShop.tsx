@@ -51,7 +51,7 @@ export function PetShop() {
     ting();
     toast.success(`Đã mua ${it.emoji} ${it.name}`);
   };
-  const useItem = (id: string) => {
+  const applyItem = (id: string) => {
     const it = CONSUMABLES[id]!;
     if (!inv.items[id]) return;
     update((d) => ({
@@ -176,7 +176,7 @@ export function PetShop() {
             .filter(([id]) => (inv.items[id] ?? 0) > 0)
             .map(([id, it]) => (
               <li key={id}>
-                <Button variant="outline" size="sm" onClick={() => useItem(id)}>
+                <Button variant="outline" size="sm" onClick={() => applyItem(id)}>
                   {it.emoji} {it.name} ×{inv.items[id]} · Dùng
                 </Button>
               </li>

@@ -6,13 +6,18 @@ const STORE = "snapshots";
 export const MAX_SNAPSHOTS = 5;
 export const CAPSULE_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
-export interface Snapshot { id?: number; at: string; data: AppData }
+export interface Snapshot {
+  id?: number;
+  at: string;
+  data: AppData;
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((res, rej) => {
     if (typeof indexedDB === "undefined") return rej(new Error("no idb"));
     const r = indexedDB.open(DB, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+    r.onupgradeneeded = () =>
+      r.result.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
   });
@@ -39,9 +44,16 @@ export async function saveSnapshot(data: AppData): Promise<void> {
       tx.oncomplete = () => res();
       tx.onerror = () => rej(tx.error);
     });
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 export async function lastSnapshotAt(): Promise<number> {
-  try { const s = await listSnapshots(); return s[0] ? Date.parse(s[0].at) : 0; } catch { return 0; }
+  try {
+    const s = await listSnapshots();
+    return s[0] ? Date.parse(s[0].at) : 0;
+  } catch {
+    return 0;
+  }
 }

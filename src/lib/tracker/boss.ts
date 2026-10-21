@@ -5,7 +5,10 @@ export const BOSS_MAX_HP = 100;
 export const BOSS_COUNTER_HAPPINESS = 15;
 export const BOSS_REWARD = { catCoins: POMODORO_REWARD * 2, lizardGems: 2 };
 
-export interface BossState { bossActive: boolean; bossHp: number }
+export interface BossState {
+  bossActive: boolean;
+  bossHp: number;
+}
 export const idleBoss = (): BossState => ({ bossActive: false, bossHp: BOSS_MAX_HP });
 
 /** HP falls linearly with the remaining Pomodoro time. */
@@ -16,7 +19,12 @@ export function bossHp(leftSeconds: number, totalSeconds: number): number {
 }
 
 export function defeatBoss<G extends { catCoins: number; lizardGems: number }>(game: G): G {
-  return { ...game, catCoins: game.catCoins + BOSS_REWARD.catCoins, lizardGems: game.lizardGems + BOSS_REWARD.lizardGems };
+  return {
+    ...game,
+    catCoins: game.catCoins + BOSS_REWARD.catCoins,
+    lizardGems: game.lizardGems + BOSS_REWARD.lizardGems,
+  };
 }
 
-export const bossCounterAttack = (pet: PetState): PetState => bumpPet(pet, 0, -BOSS_COUNTER_HAPPINESS);
+export const bossCounterAttack = (pet: PetState): PetState =>
+  bumpPet(pet, 0, -BOSS_COUNTER_HAPPINESS);

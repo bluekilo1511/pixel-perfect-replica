@@ -277,6 +277,10 @@ export function makeTask(
 }
 
 const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+
+/** Loose record view over unknown legacy-JSON values during migration. */
+const obj = (v: unknown): Record<string, unknown> =>
+  v && typeof v === "object" ? (v as Record<string, unknown>) : {};
 const KINDS: TaskKind[] = ["pomodoro", "exercise", "water", "custom"];
 const clampPomodoroMinutes = (v: unknown) => {
   const minutes = Math.round(num(v, POMODORO_MINUTES));
@@ -293,15 +297,18 @@ const normalizeCustomPresets = (v: unknown): number[] => {
     .slice(0, 4);
 };
 
-function normalizeSlot(s: any): Slot {
-  const kind: TaskKind = KINDS.includes(s?.kind) ? s.kind : "custom";
+function normalizeSlot(input: unknown): Slot {
+  const s = obj(input);
+  const kind: TaskKind = (KINDS as readonly unknown[]).includes(s.kind)
+    ? (s.kind as TaskKind)
+    : "custom";
   return {
-    id: typeof s?.id === "string" ? s.id : uid("slot"),
-    start: typeof s?.start === "string" ? s.start : "08:00",
-    end: typeof s?.end === "string" ? s.end : "08:30",
-    title: typeof s?.title === "string" && s.title ? s.title : KIND_META[kind].label,
+    id: typeof s.id === "string" ? s.id : uid("slot"),
+    start: typeof s.start === "string" ? s.start : "08:00",
+    end: typeof s.end === "string" ? s.end : "08:30",
+    title: typeof s.title === "string" && s.title ? s.title : KIND_META[kind].label,
     kind,
-    minutes: num(s?.minutes, KIND_META[kind].minutes),
+    minutes: num(s.minutes, KIND_META[kind].minutes),
   };
 }
 
@@ -309,10 +316,10 @@ function normalizeSlot(s: any): Slot {
 export function migrate(raw: unknown): AppData {
   const base = defaultData();
   if (!raw || typeof raw !== "object") return base;
-  const r = raw as any;
-  const oldGame = r.game ?? r.gameState ?? {};
+  const r = raw as Record<string, unknown>;
+  const oldGame = obj(r.game ?? r.gameState);
 
-  const tasks: Task[] = (Array.isArray(r.tasks) ? r.tasks : []).map((t: any) => {
+  const tasks: Task[] = (Array.isArray(r.tasks) ? r.tasks : []).map((t) => {
     const minutes = num(t.minutes ?? t.customMinutes, 25);
     return {
       ...t,
@@ -331,16 +338,20 @@ export function migrate(raw: unknown): AppData {
 
   // Timetable: new format {days:[7]}, or old flat array of slots with a `day` field.
   const tt = emptyTimetable();
-  const src = r.timetable ?? oldGame.timetable;
-  if (src && Array.isArray(src.days)) {
-    src.days.forEach((d: any, i: number) => {
-      const idx = typeof d?.dayIndex === "number" ? d.dayIndex : i;
-      if (idx >= 0 && idx < 7) tt.days[idx]!.slots = (d.slots ?? []).map(normalizeSlot);
+  const srcRaw = r.timetable ?? oldGame.timetable;
+  const srcObj = obj(srcRaw);
+  if (Array.isArray(srcObj.days)) {
+    srcObj.days.forEach((d, i) => {
+      const dd = obj(d);
+      const idx = typeof dd.dayIndex === "number" ? dd.dayIndex : i;
+      if (idx >= 0 && idx < 7)
+        tt.days[idx]!.slots = (Array.isArray(dd.slots) ? dd.slots : []).map(normalizeSlot);
     });
-  } else if (Array.isArray(src)) {
-    src.forEach((s: any) => {
-      const idx = num(s?.day ?? s?.dayIndex, -1);
-      if (idx >= 0 && idx < 7) tt.days[idx]!.slots.push(normalizeSlot(s));
+  } else if (Array.isArray(srcRaw)) {
+    srcRaw.forEach((s) => {
+      const ss = obj(s);
+      const idx = num(ss.day ?? ss.dayIndex, -1);
+      if (idx >= 0 && idx < 7) tt.days[idx]!.slots.push(normalizeSlot(ss));
     });
   }
   tt.days.forEach((d) => d.slots.sort((a, b) => a.start.localeCompare(b.start)));
@@ -348,40 +359,44 @@ export function migrate(raw: unknown): AppData {
   const { timetable: _old, ...gameRest } = oldGame;
   const game: GameState = {
     ...base.game,
-    ...gameRest,
+    ...(gameRest as Partial<GameState>),
     level: Math.max(1, num(oldGame.level, 1)),
     xp: Math.max(0, num(oldGame.xp, 0)),
     catCoins: num(oldGame.catCoins, 0),
     lizardGems: num(oldGame.lizardGems, 0),
     spinTickets: num(oldGame.spinTickets, 0),
     spinHistory: Array.isArray(oldGame.spinHistory) ? oldGame.spinHistory : [],
-    water: { ...base.game.water, ...(oldGame.water ?? {}) },
+    water: { ...base.game.water, ...obj(oldGame.water) },
   };
 
   const { gameState: _g, ...rest } = r;
-  const rawSettings = r.settings;
+  const rawSettings = obj(r.settings);
+  const ambientRaw = obj(rawSettings.ambient);
   const settings: AppSettings = {
     themeMode:
-      rawSettings?.themeMode === "light" || rawSettings?.themeMode === "dark"
+      rawSettings.themeMode === "light" || rawSettings.themeMode === "dark"
         ? rawSettings.themeMode
         : "auto",
-    pomodoroMinutes: clampPomodoroMinutes(rawSettings?.pomodoroMinutes),
-    customPresets: normalizeCustomPresets(rawSettings?.customPresets),
+    pomodoroMinutes: clampPomodoroMinutes(rawSettings.pomodoroMinutes),
+    customPresets: normalizeCustomPresets(rawSettings.customPresets),
     ambient: {
       kind:
-        rawSettings?.ambient?.kind === "rain" || rawSettings?.ambient?.kind === "ocean"
-          ? rawSettings.ambient.kind
+        ambientRaw.kind === "rain" || ambientRaw.kind === "ocean"
+          ? (ambientRaw.kind as "rain" | "ocean")
           : null,
-      volume: clamp01(num(rawSettings?.ambient?.volume, 0.4), 0.4),
+      volume: clamp01(num(ambientRaw.volume, 0.4), 0.4),
     },
-    breakMinutes: Math.min(30, Math.max(0, num(rawSettings?.breakMinutes, 5))),
-    autoBreak: rawSettings?.autoBreak !== false,
+    breakMinutes: Math.min(30, Math.max(0, num(rawSettings.breakMinutes, 5))),
+    autoBreak: rawSettings.autoBreak !== false,
   };
+  const backupRaw = obj(r.backup);
+  const questsRaw = obj(r.quests);
+  const raidRaw = obj(r.raid);
   return {
-    ...rest,
+    ...(rest as Partial<AppData>),
     app: "local-task-tracker-pro",
     version: 3,
-    updatedAt: r.updatedAt ?? base.updatedAt,
+    updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : base.updatedAt,
     tasks,
     game,
     timetable: tt,
@@ -392,31 +407,35 @@ export function migrate(raw: unknown): AppData {
       r.streak && typeof r.streak === "object"
         ? {
             ...base.streak,
-            ...r.streak,
-            freezeActive: r.streak.freezeActive === true,
-            today: { ...base.streak.today, ...(r.streak.today ?? {}) },
+            ...(r.streak as Partial<StreakState>),
+            freezeActive: (r.streak as Record<string, unknown>).freezeActive === true,
+            today: {
+              ...base.streak.today,
+              ...obj((r.streak as Record<string, unknown>).today),
+            },
           }
         : { ...base.streak, freezeActive: false },
     settings,
     ...extrasFrom(r),
     inventory: {
-      items: { ...(r.inventory?.items ?? {}) },
-      freezes: num(r.inventory?.freezes, 0),
+      items: { ...(obj(obj(r.inventory).items) as Record<string, number>) },
+      freezes: num(obj(r.inventory).freezes, 0),
       materials: normalizeExtras(r).materials,
     },
     backup: {
-      lastBackupAt: typeof r.backup?.lastBackupAt === "string" ? r.backup.lastBackupAt : null,
-      lastReminderAt: typeof r.backup?.lastReminderAt === "string" ? r.backup.lastReminderAt : null,
+      lastBackupAt: typeof backupRaw.lastBackupAt === "string" ? backupRaw.lastBackupAt : null,
+      lastReminderAt:
+        typeof backupRaw.lastReminderAt === "string" ? backupRaw.lastReminderAt : null,
     },
     quests: {
-      date: typeof r.quests?.date === "string" ? r.quests.date : null,
-      claimed: Array.isArray(r.quests?.claimed)
-        ? r.quests.claimed.filter((x: unknown) => typeof x === "string")
+      date: typeof questsRaw.date === "string" ? questsRaw.date : null,
+      claimed: Array.isArray(questsRaw.claimed)
+        ? questsRaw.claimed.filter((x: unknown) => typeof x === "string")
         : [],
     },
     raid: {
-      weekStart: typeof r.raid?.weekStart === "string" ? r.raid.weekStart : null,
-      claimed: r.raid?.claimed === true,
+      weekStart: typeof raidRaw.weekStart === "string" ? raidRaw.weekStart : null,
+      claimed: raidRaw.claimed === true,
     },
     exams: normalizeExams(r.exams),
     templates: normalizeTemplates(r.templates),
@@ -500,7 +519,7 @@ function normalizeSessionLog(raw: unknown): SessionEntry[] {
     .slice(-400);
 }
 
-function extrasFrom(r: any) {
+function extrasFrom(r: unknown) {
   const { materials: _m, ...e } = normalizeExtras(r);
   return e;
 }

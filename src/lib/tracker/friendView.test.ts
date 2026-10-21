@@ -26,7 +26,9 @@ describe("summarizeFriend", () => {
     data.achievements.lifetime = { tasks: 120, focusMin: 3100, pomodoros: 90 };
     data.dailyStats["2026-10-01"] = { ...emptyDay(), tasks: 5, focusMin: 125 };
     data.dailyStats["2026-10-02"] = { ...emptyDay(), focusMin: 25 };
-    data.tasks = [makeTask("A", "pomodoro", 25, "2026-10-01", { completed: true, rewardClaimed: true })];
+    data.tasks = [
+      makeTask("A", "pomodoro", 25, "2026-10-01", { completed: true, rewardClaimed: true }),
+    ];
     const r = summarizeFriend(data);
     expect(r.ok).toBe(true);
     if (!r.ok) return;

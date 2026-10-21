@@ -32,7 +32,9 @@ export function summarizeFriend(raw: unknown): FriendParseResult {
   }
   const d = migrate(raw);
   const life = d.achievements.lifetime;
-  const activeDays = Object.values(d.dailyStats).filter((s) => s.tasks > 0 || s.focusMin > 0).length;
+  const activeDays = Object.values(d.dailyStats).filter(
+    (s) => s.tasks > 0 || s.focusMin > 0,
+  ).length;
   const s = SPECIES[d.petState.species as Species] ?? SPECIES.cat;
   return {
     ok: true,

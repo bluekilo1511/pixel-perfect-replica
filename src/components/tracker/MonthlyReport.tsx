@@ -70,7 +70,11 @@ function drawReport(canvas: HTMLCanvasElement, s: MonthSummary, generatedAt: str
   ctx.fillText(`Báo cáo ${s.label}`, 40, 92);
   ctx.fillStyle = COLORS.dim;
   ctx.font = "13px sans-serif";
-  ctx.fillText(`Lv.${s.level} · ${s.petLabel} · Chuỗi hiện tại ${s.streakNow} ngày (kỷ lục ${s.streakBest})`, 40, 118);
+  ctx.fillText(
+    `Lv.${s.level} · ${s.petLabel} · Chuỗi hiện tại ${s.streakNow} ngày (kỷ lục ${s.streakBest})`,
+    40,
+    118,
+  );
 
   const stats: [string, string][] = [
     ["Nhiệm vụ hoàn thành", String(s.tasksCompleted)],
@@ -102,7 +106,9 @@ function drawReport(canvas: HTMLCanvasElement, s: MonthSummary, generatedAt: str
   const gap = 6;
   ctx.fillStyle = COLORS.dim;
   ctx.font = "11px sans-serif";
-  ["CN", "T2", "T3", "T4", "T5", "T6", "T7"].forEach((l, i) => ctx.fillText(l, gx + i * (cell + gap) + 20, gy - 8));
+  ["CN", "T2", "T3", "T4", "T5", "T6", "T7"].forEach((l, i) =>
+    ctx.fillText(l, gx + i * (cell + gap) + 20, gy - 8),
+  );
   const first = new Date(s.year, s.month - 1, 1);
   const rows = Math.ceil((first.getDay() + s.days.length) / 7);
   s.days.forEach((d, i) => {
@@ -126,17 +132,23 @@ function drawReport(canvas: HTMLCanvasElement, s: MonthSummary, generatedAt: str
 
   ctx.fillStyle = COLORS.dim;
   ctx.font = "12px sans-serif";
-  ctx.fillText(`Tạo lúc ${generatedAt} · file chỉ để xem/chia sẻ, không phải bản sao lưu dữ liệu`, 40, gy + rows * (cell + gap) + 36);
+  ctx.fillText(
+    `Tạo lúc ${generatedAt} · file chỉ để xem/chia sẻ, không phải bản sao lưu dữ liệu`,
+    40,
+    gy + rows * (cell + gap) + 36,
+  );
 }
 
 export function MonthlyReportCard() {
   const { data } = useTracker();
   const now = new Date();
   const [offset, setOffset] = useState(0);
+  const baseYear = now.getFullYear();
+  const baseMonth = now.getMonth();
   const [year, month] = useMemo(() => {
-    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const d = new Date(baseYear, baseMonth - offset, 1);
     return [d.getFullYear(), d.getMonth() + 1] as const;
-  }, [offset, now.getFullYear(), now.getMonth()]);
+  }, [offset, baseYear, baseMonth]);
   const s = useMemo(() => monthSummary(data, year, month), [data, year, month]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -159,7 +171,12 @@ export function MonthlyReportCard() {
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold">📈 Báo cáo tháng</h2>
         <span className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setOffset((o) => o + 1)} aria-label="Tháng trước">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setOffset((o) => o + 1)}
+            aria-label="Tháng trước"
+          >
             ‹
           </Button>
           <span className="text-sm text-muted-foreground">{s.label}</span>

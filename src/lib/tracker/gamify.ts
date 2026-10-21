@@ -272,14 +272,15 @@ export function shiftDate(d: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
-export function normalizePet(raw: any, now = new Date()): PetState {
+export function normalizePet(rawInput: unknown, now = new Date()): PetState {
   const b = defaultPet(now);
-  if (!raw || typeof raw !== "object") return b;
+  if (!rawInput || typeof rawInput !== "object") return b;
+  const raw = rawInput as Record<string, unknown>;
   const sp = Object.keys(SPECIES) as Species[];
   const ac = Object.keys(ACCESSORIES) as Accessory[];
   const dec = Object.keys(DECORATIONS) as DecorId[];
   const owned = Array.isArray(raw.ownedSpecies)
-    ? raw.ownedSpecies.filter((x: any) => sp.includes(x))
+    ? raw.ownedSpecies.filter((x) => sp.includes(x as Species))
     : [];
   const decorOwned = Array.isArray(raw.decorOwned)
     ? raw.decorOwned.filter((x: unknown) => dec.includes(x as DecorId))
@@ -290,11 +291,11 @@ export function normalizePet(raw: any, now = new Date()): PetState {
     .filter((x) => dec.includes(x) && decorOwned.includes(x))
     .slice(0, MAX_ACTIVE_DECOR);
   return {
-    species: sp.includes(raw.species) ? raw.species : "cat",
+    species: sp.includes(raw.species as Species) ? (raw.species as Species) : "cat",
     ownedSpecies: Array.from(new Set<Species>(["cat", ...owned])),
-    accessory: ac.includes(raw.accessory) ? raw.accessory : null,
+    accessory: ac.includes(raw.accessory as Accessory) ? (raw.accessory as Accessory) : null,
     ownedAccessories: Array.isArray(raw.ownedAccessories)
-      ? raw.ownedAccessories.filter((x: any) => ac.includes(x))
+      ? raw.ownedAccessories.filter((x) => ac.includes(x as Accessory))
       : [],
     decorOwned,
     decorActive,
@@ -303,9 +304,8 @@ export function normalizePet(raw: any, now = new Date()): PetState {
     lastDecayAt: typeof raw.lastDecayAt === "string" ? raw.lastDecayAt : b.lastDecayAt,
     petLevel: typeof raw.petLevel === "number" && raw.petLevel >= 1 ? Math.floor(raw.petLevel) : 1,
     petXp: typeof raw.petXp === "number" && raw.petXp >= 0 ? raw.petXp : 0,
-    petName:
-      typeof raw.petName === "string" && raw.petName.trim()
-        ? raw.petName.trim().slice(0, 20)
-        : undefined,
+    ...(typeof raw.petName === "string" && raw.petName.trim()
+      ? { petName: raw.petName.trim().slice(0, 20) }
+      : {}),
   };
 }

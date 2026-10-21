@@ -12,7 +12,10 @@ export function FriendViewCard() {
     try {
       setResult(summarizeFriend(JSON.parse(text)));
     } catch {
-      setResult({ ok: false, error: "Không đọc được JSON — kiểm tra lại nội dung đã copy đủ chưa." });
+      setResult({
+        ok: false,
+        error: "Không đọc được JSON — kiểm tra lại nội dung đã copy đủ chưa.",
+      });
     }
   };
 
@@ -25,7 +28,7 @@ export function FriendViewCard() {
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder='Dán file JSON vào đây...'
+        placeholder="Dán file JSON vào đây..."
         className="mb-3 min-h-24 font-mono text-xs"
         aria-label="Nội dung JSON của bạn bè"
       />
@@ -33,7 +36,10 @@ export function FriendViewCard() {
         👀 Xem tiến trình
       </Button>
       {result && !result.ok && (
-        <p className="mt-3 rounded-xl border border-destructive/40 p-3 text-sm text-destructive" role="alert">
+        <p
+          className="mt-3 rounded-xl border border-destructive/40 p-3 text-sm text-destructive"
+          role="alert"
+        >
           {result.error}
         </p>
       )}

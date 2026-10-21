@@ -23,7 +23,13 @@ describe("monthSummary", () => {
 
   it("sums stats, counts active days and finds the best day", () => {
     const data = defaultData();
-    data.dailyStats["2026-10-05"] = { ...emptyDay(), tasks: 3, focusMin: 50, pomodoros: 2, water: 4 };
+    data.dailyStats["2026-10-05"] = {
+      ...emptyDay(),
+      tasks: 3,
+      focusMin: 50,
+      pomodoros: 2,
+      water: 4,
+    };
     data.dailyStats["2026-10-06"] = { ...emptyDay(), tasks: 1, focusMin: 75, pomodoros: 3 };
     data.dailyStats["2026-09-30"] = { ...emptyDay(), tasks: 9, focusMin: 999 }; // other month, ignored
     const s = monthSummary(data, 2026, 10);
@@ -34,7 +40,13 @@ describe("monthSummary", () => {
     expect(s.activeDays).toBe(2);
     expect(s.bestDay).toEqual({ date: "2026-10-06", focusMin: 75 });
     expect(s.days).toHaveLength(31);
-    expect(s.days[0]).toEqual({ date: "2026-10-01", tasks: 0, focusMin: 0, pomodoros: 0, water: 0 });
+    expect(s.days[0]).toEqual({
+      date: "2026-10-01",
+      tasks: 0,
+      focusMin: 0,
+      pomodoros: 0,
+      water: 0,
+    });
   });
 
   it("counts only completed tasks dated inside the month", () => {

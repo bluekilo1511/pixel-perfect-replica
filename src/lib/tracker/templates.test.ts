@@ -38,8 +38,12 @@ describe("saveTaskAsTemplate", () => {
   it("ignores blank titles and exact duplicates", () => {
     let data = migrate(null);
     data = saveTaskAsTemplate(data, { title: "Toán", kind: "pomodoro", minutes: 25 });
-    expect(saveTaskAsTemplate(data, { title: "Toán", kind: "pomodoro", minutes: 25 }).templates).toHaveLength(1);
-    expect(saveTaskAsTemplate(data, { title: "   ", kind: "custom", minutes: 0 }).templates).toHaveLength(1);
+    expect(
+      saveTaskAsTemplate(data, { title: "Toán", kind: "pomodoro", minutes: 25 }).templates,
+    ).toHaveLength(1);
+    expect(
+      saveTaskAsTemplate(data, { title: "   ", kind: "custom", minutes: 0 }).templates,
+    ).toHaveLength(1);
   });
 });
 
@@ -49,7 +53,13 @@ describe("taskFromTemplate", () => {
     data = saveTaskAsTemplate(data, { title: "Đọc sách", kind: "custom", minutes: 0 });
     const r = taskFromTemplate(data, data.templates[0]!.id, today);
     expect(r).not.toBeNull();
-    expect(r!.task).toMatchObject({ title: "Đọc sách", kind: "custom", minutes: 0, date: today, completed: false });
+    expect(r!.task).toMatchObject({
+      title: "Đọc sách",
+      kind: "custom",
+      minutes: 0,
+      date: today,
+      completed: false,
+    });
     expect(r!.task.remainingSeconds).toBe(0);
     expect(r!.data.tasks.some((t) => t.id === r!.task.id)).toBe(true);
   });
