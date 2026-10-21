@@ -1,13 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Floating "back to top" button, appears after scrolling past the first screens. */
 export function ScrollTop() {
   const [show, setShow] = useState(false);
   useEffect(() => {
-    const onScroll = () => setShow(window.scrollY > 600);
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return; // throttle: at most one scroll-state update per frame
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setShow(window.scrollY > 600);
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, []);
   if (!show) return null;
   return (

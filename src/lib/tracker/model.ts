@@ -149,6 +149,7 @@ export interface AppSettings {
   autoBreak: boolean; // start the break automatically when a Pomodoro finishes
   fxSound: boolean; // play little effect sounds (tings, fanfares)
   chime: ChimeKind; // style of the Pomodoro-finished chime
+  batterySaver: boolean; // lower 3D room resolution/effects to save battery
 }
 
 export interface AppData {
@@ -246,6 +247,7 @@ export function defaultSettings(): AppSettings {
     pomodoroMinutes: POMODORO_MINUTES,
     customPresets: [],
     ambient: { kind: null, volume: 0.4 },
+    batterySaver: false,
     breakMinutes: 5,
     autoBreak: true,
     fxSound: true,
@@ -424,6 +426,7 @@ export function migrate(raw: unknown): AppData {
     chime: (["soft", "bowl", "retro", "birds"] as const).includes(rawSettings.chime as ChimeKind)
       ? (rawSettings.chime as ChimeKind)
       : "soft",
+    batterySaver: rawSettings.batterySaver === true,
   };
   const backupRaw = obj(r.backup);
   const questsRaw = obj(r.quests);

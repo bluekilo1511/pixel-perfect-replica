@@ -6,7 +6,7 @@ import { grantPetXp, type Materials } from "./extras";
  * Pure logic: the caller owns the data object, this only reshapes it.
  */
 
-export type MarketItemId = "shield" | "honey" | "box" | "galaxy" | "starClock";
+export type MarketItemId = "shield" | "honey" | "box" | "galaxy" | "starClock" | "heal";
 
 export interface MarketItem {
   id: MarketItemId;
@@ -45,6 +45,13 @@ export const MARKET_ITEMS: Record<MarketItemId, MarketItem> = {
     desc: `Decor hiếm cho góc học — chỉ có ở Chợ Hư Không`,
     price: 30,
   },
+  heal: {
+    id: "heal",
+    emoji: "🧪",
+    name: "Bình Chữa Lành",
+    desc: "Thú cưng hồi phục: 💗 đầy 100 và +40 🍖 no bụng — giảm đau khi boss phản đòn",
+    price: 12,
+  },
   starClock: {
     id: "starClock",
     emoji: "🪐",
@@ -61,9 +68,9 @@ export const isMarketDecor = (id: DecorId) => DECORATIONS[id]?.marketOnly === tr
 /** Stock rotations — one pool per week, cycling forever. */
 const POOLS: MarketItemId[][] = [
   ["shield", "honey", "box"],
-  ["honey", "galaxy", "box"],
+  ["honey", "galaxy", "box", "heal"],
   ["shield", "starClock", "box"],
-  ["galaxy", "honey", "shield"],
+  ["galaxy", "honey", "shield", "heal"],
   ["starClock", "box", "honey"],
 ];
 
@@ -135,6 +142,20 @@ export function buyMarket<T extends MarketData>(
         petState: { ...data.petState, decorOwned: [...data.petState.decorOwned, id] },
       },
       message: `${item.emoji} ${item.name} vào kho decor — bày ở Pet Shop nhé!`,
+    };
+  }
+  if (id === "heal") {
+    return {
+      ok: true,
+      data: {
+        ...base,
+        petState: {
+          ...data.petState,
+          happiness: 100,
+          hunger: Math.min(100, data.petState.hunger + 40),
+        },
+      },
+      message: "🧪 Thú cưng hồi phục — 💗 đầy 100 và bụng no hơn!",
     };
   }
   if (id === "honey") {

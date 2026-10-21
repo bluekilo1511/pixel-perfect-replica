@@ -13,7 +13,7 @@ describe("boss raid", () => {
   });
   it("cancel reduces pet happiness by 15", () => {
     const p = { ...defaultPet(), happiness: 50 };
-    expect(bossCounterAttack(p).happiness).toBe(35);
+    expect(bossCounterAttack(p).happiness).toBe(42);
     expect(bossCounterAttack({ ...p, happiness: 5 }).happiness).toBe(0);
   });
 });

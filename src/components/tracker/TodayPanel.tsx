@@ -13,6 +13,7 @@ import {
   editTask,
   setTaskSubject,
   KIND_META,
+  SUBJECTS_MAX,
   makeTask,
   removeExam,
   removeTemplate,
@@ -425,12 +426,29 @@ function AddTask() {
   const add = () => {
     const name = title.trim() || KIND_META[kind].label;
     update((d) => {
-      const subject = d.subjects.find((s) => name.toLowerCase().includes(s.toLowerCase()));
+      const tagMatch = name.match(/#([^\s#]{1,24})(?=\s|$)/);
+      const cleanName =
+        (tagMatch ? name.replace(tagMatch[0], " ").replace(/\s+/g, " ").trim() : name) ||
+        KIND_META[kind].label;
+      let subject: string | null = null;
+      let subjects = d.subjects;
+      if (tagMatch) {
+        const tag = tagMatch[1]!;
+        const found = d.subjects.find((x) => x.toLowerCase() === tag.toLowerCase());
+        if (found) subject = found;
+        else if (d.subjects.length < SUBJECTS_MAX) {
+          subject = tag;
+          subjects = [...d.subjects, tag];
+        }
+      } else {
+        subject = d.subjects.find((x) => cleanName.toLowerCase().includes(x.toLowerCase())) ?? null;
+      }
       return {
         ...d,
+        subjects,
         tasks: [
           ...d.tasks,
-          makeTask(name, kind, minutes, dateStr(), {
+          makeTask(cleanName, kind, minutes, dateStr(), {
             ...(examId ? { examId } : {}),
             ...(subject ? { subject } : {}),
           }),

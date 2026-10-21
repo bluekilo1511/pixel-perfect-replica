@@ -3,6 +3,7 @@ import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { dateStr, KIND_META, makeTask, type TaskKind } from "@/lib/tracker/model";
 import { parseQuickAdd } from "@/lib/tracker/quickAdd";
+import { SUBJECTS_MAX } from "@/lib/tracker/model";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,13 +37,32 @@ export function QuickAdd() {
 
   const add = () => {
     const parsed = parseQuickAdd(text);
-    update((d) => ({
-      ...d,
-      tasks: [
-        ...d.tasks,
-        makeTask(parsed.title, kind, parsed.minutes ?? KIND_META[kind].minutes, dateStr()),
-      ],
-    }));
+    update((d) => {
+      const tag = parsed.subject;
+      let subject: string | null = null;
+      let subjects = d.subjects;
+      if (tag) {
+        const found = d.subjects.find((x) => x.toLowerCase() === tag.toLowerCase());
+        if (found) subject = found;
+        else if (d.subjects.length < SUBJECTS_MAX) {
+          subject = tag;
+          subjects = [...d.subjects, tag];
+        }
+      } else {
+        subject =
+          d.subjects.find((x) => parsed.title.toLowerCase().includes(x.toLowerCase())) ?? null;
+      }
+      return {
+        ...d,
+        subjects,
+        tasks: [
+          ...d.tasks,
+          makeTask(parsed.title, kind, parsed.minutes ?? KIND_META[kind].minutes, dateStr(), {
+            ...(subject ? { subject } : {}),
+          }),
+        ],
+      };
+    });
     toast.success(`Đã thêm "${parsed.title}" ${KIND_META[kind].emoji}`);
     setText("");
     setOpen(false);

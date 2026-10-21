@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   pauseAmbient,
   playAmbient,
@@ -13,6 +13,24 @@ export function AmbientControl() {
   const [kind, setKind] = useState<AmbientKind | null>(data.settings.ambient.kind);
   const [on, setOn] = useState(false);
   const [vol, setVol] = useState(data.settings.ambient.volume);
+  const wasOn = useRef(false);
+
+  // Battery saver: pause the ambience when the tab is hidden, resume when it returns.
+  useEffect(() => {
+    const handler = () => {
+      if (document.hidden) {
+        if (on) {
+          wasOn.current = true;
+          void pauseAmbient();
+        }
+      } else if (wasOn.current) {
+        wasOn.current = false;
+        if (kind) void playAmbient(kind, vol);
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [on, kind, vol]);
 
   useEffect(() => {
     setKind(data.settings.ambient.kind);

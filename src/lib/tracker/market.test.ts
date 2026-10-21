@@ -82,6 +82,25 @@ describe("buyMarket", () => {
     expect(total).toBeLessThanOrEqual(3);
   });
 
+  it("heal restores happiness to 100 and tops up hunger (cap 100)", () => {
+    const d = makeData();
+    d.petState.happiness = 35;
+    d.petState.hunger = 80;
+    const r = buyMarket(d, "heal", nextMonday);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.petState.happiness).toBe(100);
+    expect(r.data.petState.hunger).toBe(100);
+  });
+
+  it("heal can only be bought once per week", () => {
+    const d = makeData();
+    const r = buyMarket(d, "heal", nextMonday);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(buyMarket(r.data, "heal", nextMonday)).toMatchObject({ ok: false });
+  });
+
   it("market decor goes into decorOwned, not active", () => {
     const stock = marketStock(wednesday);
     const decorId = stock.find((id) => id === "galaxy" || id === "starClock");

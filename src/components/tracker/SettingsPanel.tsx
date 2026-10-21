@@ -275,6 +275,7 @@ export function SettingsPanel() {
 
       <section className="glass p-5 lg:col-span-2">
         <h2 className="mb-1 text-lg font-semibold">💾 Dữ liệu</h2>
+        <StorageUsage />
         <p className="mb-3 text-xs text-muted-foreground">
           {data.backup.lastBackupAt
             ? `Lần sao lưu cuối: ${new Date(data.backup.lastBackupAt).toLocaleString("vi-VN")}`
@@ -294,5 +295,30 @@ export function SettingsPanel() {
         </div>
       </section>
     </div>
+  );
+}
+
+/** Rough estimate of how much localStorage the app occupies (limit is ~5 MB). */
+function StorageUsage() {
+  const [kb, setKb] = useState<number | null>(null);
+  useEffect(() => {
+    try {
+      let n = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)!;
+        n += key.length + (localStorage.getItem(key)?.length ?? 0);
+      }
+      setKb(Math.round(n / 1024));
+    } catch {
+      setKb(null);
+    }
+  }, []);
+  if (kb == null) return null;
+  const pct = Math.min(100, Math.round((kb / 5120) * 100));
+  return (
+    <p className="mb-4 text-xs text-muted-foreground">
+      📦 Dữ liệu đang chiếm ~<b>{kb.toLocaleString("vi-VN")} KB</b> / ~5 MB của trình duyệt
+      {pct > 60 && " — gần giới hạn, nên xuất backup thường xuyên nhé"}
+    </p>
   );
 }

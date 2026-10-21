@@ -1,6 +1,15 @@
 import { Component, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Float, RoundedBox, Sparkles } from "@react-three/drei";
+import { createContext, useContext } from "react";
+
+const SaverCtx = createContext(false);
+
+/** Sparkles that vanish in battery-saver mode (they redraw every frame). */
+function Fx(props: Parameters<typeof Sparkles>[0]) {
+  const saver = useContext(SaverCtx);
+  return saver ? null : <Fx {...props} />;
+}
 import * as THREE from "three";
 import { DECORATIONS, type DecorId } from "@/lib/tracker/gamify";
 
@@ -336,7 +345,7 @@ function FairyLights() {
           </mesh>
         ))}
       </group>
-      <Sparkles
+      <Fx
         count={14}
         scale={[5.6, 0.5, 0.4]}
         position={[0, -0.25, 0]}
@@ -846,7 +855,7 @@ function Room({
             <planeGeometry args={[0.6, 0.9]} />
             <meshBasicMaterial map={galaxyTex} toneMapped={false} />
           </mesh>
-          <Sparkles count={8} scale={[0.6, 0.9, 0.1]} size={2} speed={0.25} color="#e9d5ff" />
+          <Fx count={8} scale={[0.6, 0.9, 0.1]} size={2} speed={0.25} color="#e9d5ff" />
         </Clickable>
       )}
       {has("starClock") && (
@@ -859,7 +868,7 @@ function Room({
           <FairyLights />
         </Clickable>
       )}
-      <Sparkles
+      <Fx
         count={26}
         scale={[5.5, 2.2, 3.5]}
         position={[0, 1.2, -0.3]}
@@ -958,32 +967,36 @@ export function StudyRoom3D({
   petEmoji,
   onShelfClick,
   season = roomSeason(),
+  batterySaver = false,
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
   petEmoji: string;
   onShelfClick?: () => void;
   season?: RoomSeason;
+  batterySaver?: boolean;
 }) {
   return (
     <div className="h-48 w-full">
       <Boundary fallback={<EmojiFallback decor={decor} onStow={onStow} />}>
         <Canvas
-          dpr={[1, 2]}
-          shadows
-          gl={{ alpha: true, antialias: true }}
+          dpr={batterySaver ? 1 : [1, 2]}
+          shadows={!batterySaver}
+          gl={{ alpha: true, antialias: !batterySaver }}
           style={{ background: "transparent" }}
           orthographic
           camera={{ position: [9, 7.5, 9], zoom: 38, near: 0.1, far: 60 }}
           onCreated={({ camera }) => camera.lookAt(0, 0.75, 0)}
         >
-          <Room
-            decor={decor}
-            onStow={onStow}
-            petEmoji={petEmoji}
-            onShelfClick={onShelfClick}
-            season={season}
-          />
+          <SaverCtx.Provider value={batterySaver}>
+            <Room
+              decor={decor}
+              onStow={onStow}
+              petEmoji={petEmoji}
+              onShelfClick={onShelfClick}
+              season={season}
+            />
+          </SaverCtx.Provider>
         </Canvas>
       </Boundary>
     </div>

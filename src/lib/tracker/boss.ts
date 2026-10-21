@@ -2,7 +2,7 @@
 import { bumpPet, POMODORO_REWARD, type PetState } from "./gamify";
 
 export const BOSS_MAX_HP = 100;
-export const BOSS_COUNTER_HAPPINESS = 15;
+export const BOSS_COUNTER_HAPPINESS = 8;
 export const BOSS_REWARD = { catCoins: POMODORO_REWARD * 2, lizardGems: 2 };
 
 export interface BossState {

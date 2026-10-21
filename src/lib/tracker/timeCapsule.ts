@@ -3,7 +3,7 @@ import type { AppData } from "./model";
 
 const DB = "task_tracker_time_capsule";
 const STORE = "snapshots";
-export const MAX_SNAPSHOTS = 5;
+export const MAX_SNAPSHOTS = 3;
 export const CAPSULE_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
 export interface Snapshot {
