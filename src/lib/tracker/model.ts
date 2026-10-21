@@ -12,6 +12,7 @@ import {
   type PetState,
   type StreakState,
 } from "./gamify";
+import { defaultMarket, type MarketState } from "./market";
 import {
   addPetXp,
   bumpLifetime,
@@ -132,6 +133,7 @@ export interface AppSettings {
   ambient: { kind: AmbientSettingKind; volume: number };
   breakMinutes: number; // auto-break length after a Pomodoro (0 disables)
   autoBreak: boolean; // start the break automatically when a Pomodoro finishes
+  fxSound: boolean; // play little effect sounds (tings, fanfares)
 }
 
 export interface AppData {
@@ -160,6 +162,7 @@ export interface AppData {
   templates: TaskTemplate[];
   sessionLog: SessionEntry[];
   notes: NoteItem[];
+  market: MarketState;
   ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
 }
@@ -225,6 +228,7 @@ export function defaultSettings(): AppSettings {
     ambient: { kind: null, volume: 0.4 },
     breakMinutes: 5,
     autoBreak: true,
+    fxSound: true,
   };
 }
 
@@ -251,6 +255,7 @@ export function defaultData(): AppData {
     templates: defaultTemplates(),
     sessionLog: [],
     notes: [],
+    market: defaultMarket(),
   };
 }
 
@@ -388,6 +393,7 @@ export function migrate(raw: unknown): AppData {
     },
     breakMinutes: Math.min(30, Math.max(0, num(rawSettings.breakMinutes, 5))),
     autoBreak: rawSettings.autoBreak !== false,
+    fxSound: rawSettings.fxSound !== false,
   };
   const backupRaw = obj(r.backup);
   const questsRaw = obj(r.quests);
@@ -413,8 +419,13 @@ export function migrate(raw: unknown): AppData {
               ...base.streak.today,
               ...obj((r.streak as Record<string, unknown>).today),
             },
+            restDates: Array.isArray((r.streak as Record<string, unknown>).restDates)
+              ? ((r.streak as Record<string, unknown>).restDates as unknown[]).filter(
+                  (x) => typeof x === "string",
+                )
+              : [],
           }
-        : { ...base.streak, freezeActive: false },
+        : { ...base.streak, freezeActive: false, restDates: [] },
     settings,
     ...extrasFrom(r),
     inventory: {
@@ -441,6 +452,7 @@ export function migrate(raw: unknown): AppData {
     templates: normalizeTemplates(r.templates),
     sessionLog: normalizeSessionLog(r.sessionLog),
     notes: normalizeNotes(r.notes),
+    market: normalizeMarket(r.market),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
       ? { ownerName: r.ownerName.trim().slice(0, 30) }
       : {}),
@@ -487,6 +499,21 @@ export function removeNote(data: AppData, noteId: string): AppData {
 }
 
 /** Accepts any old/new JSON for the routine notes and keeps the newest 20 well-formed rows. */
+export function normalizeMarket(raw: unknown): MarketState {
+  if (!raw || typeof raw !== "object") return defaultMarket();
+  const r = raw as Record<string, unknown>;
+  const bought: MarketState["bought"] = {};
+  if (r.bought && typeof r.bought === "object") {
+    for (const [k, v] of Object.entries(r.bought as Record<string, unknown>)) {
+      if (typeof v === "string") bought[k as keyof MarketState["bought"]] = v;
+    }
+  }
+  return {
+    lastWeek: typeof r.lastWeek === "string" ? r.lastWeek : null,
+    bought,
+  };
+}
+
 export function normalizeNotes(raw: unknown): NoteItem[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -1118,4 +1145,24 @@ export function upcomingSlots(data: AppData, now = new Date(), leadMin = 5): Slo
     const d = toMin(s.start) - nowMin;
     return d > 0 && d <= leadMin;
   });
+}
+
+/** The slot running right now (start <= now < end), or null. */
+export function runningSlotToday(data: AppData, now = new Date()): Slot | null {
+  const day = data.timetable.days[now.getDay()];
+  if (!day) return null;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return day.slots.find((s) => toMin(s.start) <= nowMin && nowMin < toMin(s.end)) ?? null;
+}
+
+/** The next timetable slot today that has not started yet, or null when the day is done. */
+export function nextSlotToday(data: AppData, now = new Date()): Slot | null {
+  const day = data.timetable.days[now.getDay()];
+  if (!day) return null;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return (
+    [...day.slots]
+      .sort((a, b) => toMin(a.start) - toMin(b.start))
+      .find((s) => toMin(s.start) > nowMin) ?? null
+  );
 }

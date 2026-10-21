@@ -1,7 +1,13 @@
 import confetti from "canvas-confetti";
 
 let ctx: AudioContext | null = null;
+let enabled = true;
+/** Master switch for effect sounds (user setting, persisted in AppSettings.fxSound). */
+export function setFxEnabled(v: boolean) {
+  enabled = v;
+}
 export function ting(big = false) {
+  if (!enabled) return;
   try {
     ctx ??= new AudioContext();
     const notes = big ? [784, 988, 1175, 1568] : [1318, 1760];

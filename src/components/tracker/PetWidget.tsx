@@ -8,11 +8,14 @@ import {
   moodOf,
   POMODORO_REWARD,
   randomLine as baseLine,
+  toggleDecor,
+  toggleRestDay,
   type PetState,
   SPECIES,
   streakMultiplier,
   STREAK_GOAL,
 } from "@/lib/tracker/gamify";
+import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { celebrate } from "@/lib/tracker/effects";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
@@ -114,6 +117,24 @@ export function PetWidget() {
     if (doneCount > prevDone.current) say(randomLine(pet));
     prevDone.current = doneCount;
   }, [doneCount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cards elsewhere (e.g. the timetable slot card) can ask for a Pomodoro here.
+  useEffect(() => {
+    return onPomodoroRequest(({ minutes, label }) => {
+      setEndAt((cur) => {
+        if (cur) {
+          toast("⏳ Đang có phiên tập trung rồi — hoàn thành đi đã!");
+          return cur;
+        }
+        setWarmup(false);
+        setLeft(minutes * 60);
+        setZen(true);
+        say(`Học "${label}" ${minutes} phút thôi! 📚`);
+        toast(`🍅 Bắt đầu ${minutes}p cho "${label}"`);
+        return Date.now() + minutes * 60_000;
+      });
+    });
+  }, []);
 
   // Pomodoro with the pet (wall-clock based).
   const [endAt, setEndAt] = useState<number | null>(null);
@@ -232,13 +253,33 @@ export function PetWidget() {
           </Button>
           {pet.decorActive.length > 0 && (
             <div
-              className="mt-1 flex justify-center gap-1.5 text-xl"
-              aria-label="Phòng của thú cưng"
-              title="Phòng của thú cưng — mua thêm ở mục Cửa hàng"
+              className="mt-2 rounded-xl border bg-gradient-to-b from-secondary/70 to-accent/70 px-3 pb-1.5 pt-2"
+              aria-label="Góc học của thú cưng"
+              title="Góc học — bấm một món để cất vào kho"
             >
-              {pet.decorActive.map((id) => (
-                <span key={id}>{DECORATIONS[id].emoji}</span>
-              ))}
+              <div className="flex items-end justify-center gap-2 text-2xl">
+                {pet.decorActive.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    title={`${DECORATIONS[id].name} — bấm để cất`}
+                    aria-label={`Cất ${DECORATIONS[id].name}`}
+                    className="leading-none transition-transform hover:-translate-y-0.5"
+                    onClick={() =>
+                      update((d) => {
+                        const r = toggleDecor(d.petState, id);
+                        if (r && !r.placed && !r.pet.decorActive.includes(id)) {
+                          toast("🏠 Không còn chỗ — tối đa 3 món đang bày");
+                        }
+                        return r ? { ...d, petState: r.pet } : d;
+                      })
+                    }
+                  >
+                    {DECORATIONS[id].emoji}
+                  </button>
+                ))}
+              </div>
+              <div className="mx-auto mt-0.5 h-1.5 w-3/4 rounded-full bg-amber-800/50" />
             </div>
           )}
         </div>
@@ -456,6 +497,39 @@ export function PetWidget() {
           <div className="mt-2 text-xs text-muted-foreground">
             Hôm nay {Math.min(todayDone, STREAK_GOAL)}/{STREAK_GOAL} · 🧊 {data.inventory.freezes}
           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-1 h-7 text-xs"
+            title="Ngày mệt/bận: bấm vào đây là streak không bị mất (kể cả hôm sau)"
+            onClick={() =>
+              update((d) => {
+                if (d.streak.lastQualifiedDate === dateStr()) {
+                  toast(
+                    "Hôm nay đã đủ " + STREAK_GOAL + " nhiệm vụ — streak vẫn giữ, khỏi cần nghỉ 😎",
+                  );
+                  return d;
+                }
+                const ns = toggleRestDay(d.streak, dateStr());
+                if (
+                  ns &&
+                  ns.restDates.includes(dateStr()) !==
+                    (d.streak.restDates ?? []).includes(dateStr())
+                ) {
+                  toast(
+                    ns.restDates.includes(dateStr())
+                      ? "🌙 Đã đánh dấu hôm nay là ngày nghỉ"
+                      : "☀️ Đã bỏ đánh dấu ngày nghỉ",
+                  );
+                }
+                return ns ? { ...d, streak: ns } : d;
+              })
+            }
+          >
+            {(data.streak.restDates ?? []).includes(dateStr())
+              ? "🌙 Bỏ nghỉ hôm nay"
+              : "🌙 Hôm nay nghỉ"}
+          </Button>
         </div>
       </div>
       <FocusMode

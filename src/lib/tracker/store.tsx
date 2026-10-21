@@ -49,7 +49,7 @@ import {
 } from "./model";
 import { bossCounterAttack, defeatBoss } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
-import { celebrate, levelUpFx, ting } from "./effects";
+import { celebrate, levelUpFx, setFxEnabled, ting } from "./effects";
 import { CAPSULE_INTERVAL_MS, lastSnapshotAt, saveSnapshot } from "./timeCapsule";
 import { createFile, createWriter, downloadData, openFile, type Handle } from "./storage";
 
@@ -157,6 +157,11 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   }, [data, ready]);
 
   const update = useCallback((fn: (d: AppData) => AppData) => setData((d) => fn(d)), []);
+
+  // Keep the effect-sound switch in sync with the saved setting.
+  useEffect(() => {
+    setFxEnabled(data.settings.fxSound);
+  }, [data.settings.fxSound]);
 
   const onLevels = (n: number, level: number) => {
     if (n > 0) {

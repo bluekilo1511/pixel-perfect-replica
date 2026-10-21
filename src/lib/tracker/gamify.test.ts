@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { toggleRestDay } from "./gamify";
 import {
   checkStreak,
   decayPet,
@@ -80,6 +81,27 @@ describe("gamification rules", () => {
     expect(saved.inventory.freezes).toBe(0);
     const broken = checkStreak(s, defaultInventory(), "2026-10-20");
     expect(broken.streak.count).toBe(0);
+  });
+
+  it("toggleRestDay marks and unmarks a day, refuses a qualified day", () => {
+    let s = defaultStreak("2026-10-18");
+    s = toggleRestDay(s, "2026-10-18")!;
+    expect(s.restDates).toContain("2026-10-18");
+    s = toggleRestDay(s, "2026-10-18")!;
+    expect(s.restDates).not.toContain("2026-10-18");
+    const qualified = { ...defaultStreak("2026-10-18"), count: 2, lastQualifiedDate: "2026-10-18" };
+    expect(toggleRestDay(qualified, "2026-10-18")).toBeNull();
+  });
+
+  it("a manually marked rest day preserves the streak", () => {
+    let s = defaultStreak("2026-10-18");
+    for (let i = 0; i < 3; i++) s = recordCompletion(s, "2026-10-18");
+    expect(s.count).toBe(1);
+    // miss two days but mark yesterday as a rest day
+    s = toggleRestDay(s, "2026-10-19")!;
+    const r = checkStreak(s, defaultInventory(), "2026-10-20");
+    expect(r.broke).toBe(false);
+    expect(r.streak.count).toBe(1);
   });
 
   it("pinned tasks carry to the next day uncompleted", () => {

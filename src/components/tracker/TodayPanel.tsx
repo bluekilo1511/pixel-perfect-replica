@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
+import { NextSlotCard } from "./NextSlotCard";
 import { NotesCard } from "./NotesCard";
 import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import {
@@ -450,6 +451,7 @@ export function TodayPanel() {
   return (
     <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
       <div className="space-y-5">
+        <NextSlotCard />
         <WaterCard />
         <NotesCard />
       </div>

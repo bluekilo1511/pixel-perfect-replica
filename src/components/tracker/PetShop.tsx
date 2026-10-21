@@ -26,6 +26,7 @@ import {
   type Recipe,
 } from "@/lib/tracker/extras";
 import { dateStr } from "@/lib/tracker/model";
+import { MarketCard } from "./MarketCard";
 import { celebrate } from "@/lib/tracker/effects";
 
 export function PetShop() {
@@ -299,56 +300,58 @@ export function PetShop() {
           Đồ trang trí cho góc học tập của thú cưng — bày tối đa {MAX_ACTIVE_DECOR} món trong phòng.
         </p>
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {(Object.keys(DECORATIONS) as DecorId[]).map((id) => {
-            const m = DECORATIONS[id];
-            const owned = pet.decorOwned.includes(id);
-            const placed = pet.decorActive.includes(id);
-            return (
-              <li
-                key={id}
-                className={`rounded-xl p-3 text-center ${placed ? "bg-secondary glass-glow" : "bg-muted"}`}
-              >
-                <div className="text-3xl">{m.emoji}</div>
-                <p className="my-1 text-xs font-medium">{m.name}</p>
-                {owned ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (!placed && pet.decorActive.length >= MAX_ACTIVE_DECOR) {
-                        toast.error(`Phòng chỉ bày được ${MAX_ACTIVE_DECOR} món — tháo bớt nhé!`);
-                        return;
+          {(Object.keys(DECORATIONS) as DecorId[])
+            .filter((id) => !DECORATIONS[id].marketOnly)
+            .map((id) => {
+              const m = DECORATIONS[id];
+              const owned = pet.decorOwned.includes(id);
+              const placed = pet.decorActive.includes(id);
+              return (
+                <li
+                  key={id}
+                  className={`rounded-xl p-3 text-center ${placed ? "bg-secondary glass-glow" : "bg-muted"}`}
+                >
+                  <div className="text-3xl">{m.emoji}</div>
+                  <p className="my-1 text-xs font-medium">{m.name}</p>
+                  {owned ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (!placed && pet.decorActive.length >= MAX_ACTIVE_DECOR) {
+                          toast.error(`Phòng chỉ bày được ${MAX_ACTIVE_DECOR} món — tháo bớt nhé!`);
+                          return;
+                        }
+                        update((d) => {
+                          const r = toggleDecor(d.petState, id);
+                          return r ? { ...d, petState: r.pet } : d;
+                        });
+                        toast(
+                          placed
+                            ? `Đã cất ${m.emoji} ${m.name} vào tủ`
+                            : `Đã bày ${m.emoji} ${m.name} trong phòng 🏠`,
+                        );
+                      }}
+                    >
+                      {placed ? "Cất đi" : "Bày ra"}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        gem(
+                          m.price,
+                          (d) => ({ ...d, petState: buyDecor(d.petState, id) ?? d.petState }),
+                          `Đã mua ${m.emoji} ${m.name}!`,
+                        )
                       }
-                      update((d) => {
-                        const r = toggleDecor(d.petState, id);
-                        return r ? { ...d, petState: r.pet } : d;
-                      });
-                      toast(
-                        placed
-                          ? `Đã cất ${m.emoji} ${m.name} vào tủ`
-                          : `Đã bày ${m.emoji} ${m.name} trong phòng 🏠`,
-                      );
-                    }}
-                  >
-                    {placed ? "Cất đi" : "Bày ra"}
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      gem(
-                        m.price,
-                        (d) => ({ ...d, petState: buyDecor(d.petState, id) ?? d.petState }),
-                        `Đã mua ${m.emoji} ${m.name}!`,
-                      )
-                    }
-                  >
-                    {m.price} 🦎
-                  </Button>
-                )}
-              </li>
-            );
-          })}
+                    >
+                      {m.price} 🦎
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
         </ul>
         <div className="mt-5 flex items-center gap-3 rounded-xl bg-muted p-3">
           <span className="text-3xl">🧊</span>
@@ -372,6 +375,7 @@ export function PetShop() {
           </Button>
         </div>
       </section>
+      <MarketCard />
     </div>
   );
 }

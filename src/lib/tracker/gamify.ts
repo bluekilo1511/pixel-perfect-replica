@@ -3,7 +3,8 @@ import type { Materials } from "./extras";
 
 export type Species = "cat" | "lizard" | "dog" | "owl";
 export type Accessory = "gradcap" | "sunglasses" | "crown" | "wings";
-export type DecorId = "lamp" | "plant" | "shelf" | "poster" | "teddy" | "fairy";
+export type DecorId =
+  "lamp" | "plant" | "shelf" | "poster" | "teddy" | "fairy" | "galaxy" | "starClock";
 export type Mood = "excited" | "normal" | "hungry" | "sulky";
 
 export interface PetState {
@@ -28,6 +29,7 @@ export interface StreakState {
   lastQualifiedDate: string | null; // day with >=3 completed tasks
   today: { date: string; done: number };
   lastCheckDate: string | null;
+  restDates: string[]; // manually marked days off — the streak survives them
 }
 
 export interface Inventory {
@@ -62,13 +64,18 @@ export const ACCESSORIES: Record<
 export const MAX_ACTIVE_DECOR = 3;
 
 /** Pet-room decorations, bought with 🦎 like head accessories. Purely cosmetic. */
-export const DECORATIONS: Record<DecorId, { emoji: string; name: string; price: number }> = {
+export const DECORATIONS: Record<
+  DecorId,
+  { emoji: string; name: string; price: number; marketOnly?: boolean }
+> = {
   lamp: { emoji: "💡", name: "Đèn học", price: 4 },
   plant: { emoji: "🪴", name: "Cây xanh", price: 5 },
   shelf: { emoji: "📚", name: "Kệ sách mini", price: 6 },
   poster: { emoji: "🖼️", name: "Poster động lực", price: 5 },
   teddy: { emoji: "🧸", name: "Gấu bông", price: 8 },
   fairy: { emoji: "🧚", name: "Đèn sao treo", price: 10 },
+  galaxy: { emoji: "🌌", name: "Tranh dải ngân hà", price: 30, marketOnly: true },
+  starClock: { emoji: "🪐", name: "Đồng hồ sao", price: 25, marketOnly: true },
 };
 
 /** Buys a room decoration; returns null when it is already owned. Payment stays in the caller. */
@@ -122,7 +129,21 @@ export function defaultStreak(today: string): StreakState {
     lastQualifiedDate: null,
     today: { date: today, done: 0 },
     lastCheckDate: today,
+    restDates: [],
   };
+}
+
+/**
+ * Marks or unmarks a day off. A day the user already qualified cannot become a
+ * rest day (it already counted). Keeps only the 60 most recent entries.
+ */
+export function toggleRestDay(s: StreakState, date: string): StreakState | null {
+  if (s.lastQualifiedDate === date) return null;
+  const has = s.restDates.includes(date);
+  const restDates = has
+    ? s.restDates.filter((d) => d !== date)
+    : [...s.restDates.filter((d) => d !== date), date].slice(-60);
+  return { ...s, restDates };
 }
 export const defaultInventory = (): Inventory => ({
   items: {},
@@ -249,9 +270,15 @@ export function checkStreak(
   let inventory = inv;
   let usedFreeze = false;
   let broke = false;
+  const rest = Array.isArray(s.restDates) ? s.restDates : [];
   if (s.lastQualifiedDate && s.count > 0) {
     const missed = daysBetween(s.lastQualifiedDate, today) - 1;
+    const missedDays: string[] = [];
+    for (let i = 1; i <= missed; i++) missedDays.push(shiftDate(today, -i));
     if (missed === 1 && (isWeekday(shiftDate(today, -1)) || isHoliday(shiftDate(today, -1)))) {
+      streak = { ...streak, lastQualifiedDate: shiftDate(today, -1) };
+    } else if (missed >= 1 && missedDays.every((d) => rest.includes(d))) {
+      // Every skipped day was manually marked as a day off — the chain survives.
       streak = { ...streak, lastQualifiedDate: shiftDate(today, -1) };
     } else if (missed === 1 && inv.freezes > 0) {
       const yesterday = shiftDate(today, -1);

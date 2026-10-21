@@ -226,6 +226,13 @@ export function SettingsPanel() {
               </Button>
             </>
           </Row>
+          <Row label="Hiệu ứng âm thanh" hint="Tiếng ting khi Pomodoro xong, nhạc khai mở chòm sao">
+            <Switch
+              checked={s.fxSound}
+              aria-label="Hiệu ứng âm thanh"
+              onCheckedChange={(v) => set({ fxSound: v })}
+            />
+          </Row>
           <Row label="Nghỉ tự động" hint="Tự bắt đầu nghỉ sau mỗi Pomodoro">
             <Switch
               checked={s.autoBreak}
