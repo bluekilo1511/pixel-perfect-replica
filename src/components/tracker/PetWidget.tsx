@@ -15,6 +15,7 @@ import {
   streakMultiplier,
   STREAK_GOAL,
 } from "@/lib/tracker/gamify";
+import { StudyRoom3D } from "./StudyRoom3D";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { celebrate } from "@/lib/tracker/effects";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
@@ -75,6 +76,7 @@ export function PetWidget() {
   const setFocus = useFocusSky();
   const { data, finishPomodoro, bossCancel, update } = useTracker();
   const pet = data.petState;
+  const petEmoji = SPECIES[pet.species].emoji;
   const mood = moodOf(pet);
   const pomodoroMinutes = data.settings.pomodoroMinutes;
   const breakMinutes = data.settings.breakMinutes;
@@ -251,37 +253,25 @@ export function PetWidget() {
               {MOOD_META[mood].face}
             </span>
           </Button>
-          {pet.decorActive.length > 0 && (
-            <div
-              className="mt-2 rounded-xl border bg-gradient-to-b from-secondary/70 to-accent/70 px-3 pb-1.5 pt-2"
-              aria-label="Góc học của thú cưng"
-              title="Góc học — bấm một món để cất vào kho"
-            >
-              <div className="flex items-end justify-center gap-2 text-2xl">
-                {pet.decorActive.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    title={`${DECORATIONS[id].name} — bấm để cất`}
-                    aria-label={`Cất ${DECORATIONS[id].name}`}
-                    className="leading-none transition-transform hover:-translate-y-0.5"
-                    onClick={() =>
-                      update((d) => {
-                        const r = toggleDecor(d.petState, id);
-                        if (r && !r.placed && !r.pet.decorActive.includes(id)) {
-                          toast("🏠 Không còn chỗ — tối đa 3 món đang bày");
-                        }
-                        return r ? { ...d, petState: r.pet } : d;
-                      })
-                    }
-                  >
-                    {DECORATIONS[id].emoji}
-                  </button>
-                ))}
-              </div>
-              <div className="mx-auto mt-0.5 h-1.5 w-3/4 rounded-full bg-amber-800/50" />
-            </div>
-          )}
+          <div
+            className="mt-2 overflow-hidden rounded-xl border bg-gradient-to-b from-secondary/70 to-accent/70"
+            aria-label="Góc học của thú cưng"
+            title="Góc học — bấm một món để cất vào kho"
+          >
+            <StudyRoom3D
+              decor={pet.decorActive}
+              petEmoji={petEmoji}
+              onStow={(id) =>
+                update((d) => {
+                  const r = toggleDecor(d.petState, id);
+                  if (r && !r.placed && !r.pet.decorActive.includes(id)) {
+                    toast("🏠 Không còn chỗ — tối đa 3 món đang bày");
+                  }
+                  return r ? { ...d, petState: r.pet } : d;
+                })
+              }
+            />
+          </div>
         </div>
 
         <div className="space-y-3">

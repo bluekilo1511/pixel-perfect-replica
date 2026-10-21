@@ -233,6 +233,19 @@ export function SettingsPanel() {
               onCheckedChange={(v) => set({ fxSound: v })}
             />
           </Row>
+          <Row label="Kiểu chuông" hint="Âm báo khi hết phiên Pomodoro">
+            <select
+              className="h-8 rounded-md border border-input bg-popover px-2 text-sm"
+              value={s.chime}
+              onChange={(e) => set({ chime: e.target.value as typeof s.chime })}
+              aria-label="Kiểu chuông"
+            >
+              <option value="soft">🔔 Chuông nhẹ</option>
+              <option value="bowl">🪘 Bát Tây Tạng</option>
+              <option value="retro">🎮 8-bit retro</option>
+              <option value="birds">🐦 Chim hót</option>
+            </select>
+          </Row>
           <Row label="Nghỉ tự động" hint="Tự bắt đầu nghỉ sau mỗi Pomodoro">
             <Switch
               checked={s.autoBreak}

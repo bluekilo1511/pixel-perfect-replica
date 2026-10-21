@@ -4,11 +4,14 @@ import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
 import { NextSlotCard } from "./NextSlotCard";
 import { NotesCard } from "./NotesCard";
+import { WeeklyGoalCard } from "./WeeklyGoalCard";
+import { SubjectsCard } from "./SubjectsCard";
 import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import {
   addExam,
   dateStr,
   editTask,
+  setTaskSubject,
   KIND_META,
   makeTask,
   removeExam,
@@ -72,14 +75,24 @@ function TaskRow({ task }: { task: Task }) {
     kind: task.kind,
     minutes: task.minutes,
     date: task.date,
+    subject: task.subject ?? "",
   });
   const openEditor = () => {
-    setDraft({ title: task.title, kind: task.kind, minutes: task.minutes, date: task.date });
+    setDraft({
+      title: task.title,
+      kind: task.kind,
+      minutes: task.minutes,
+      date: task.date,
+      subject: task.subject ?? "",
+    });
     setEditing(true);
   };
   const saveEdit = () => {
     if (running) pauseTimer();
-    update((d) => editTask(d, task.id, draft) ?? d);
+    update((d) => {
+      const edited = editTask(d, task.id, draft) ?? d;
+      return setTaskSubject(edited, task.id, draft.subject || null) ?? edited;
+    });
     setEditing(false);
     toast.success("Đã cập nhật nhiệm vụ ✏️");
   };
@@ -124,6 +137,19 @@ function TaskRow({ task }: { task: Task }) {
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
             aria-label="Ngày"
           />
+          <select
+            className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
+            value={draft.subject}
+            onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
+            aria-label="Môn học"
+          >
+            <option value="">— môn? —</option>
+            {data.subjects.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
           <Button size="sm" onClick={saveEdit}>
             💾 Lưu
           </Button>
@@ -141,6 +167,11 @@ function TaskRow({ task }: { task: Task }) {
       {exam && (
         <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
           📝 {exam.name} · {examLabel(daysUntil(exam.date, dateStr()))}
+        </span>
+      )}
+      {task.subject && (
+        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+          📚 {task.subject}
         </span>
       )}
       <span className="text-xl">{KIND_META[task.kind].emoji}</span>
@@ -365,10 +396,19 @@ function AddTask() {
   const [examId, setExamId] = useState<string>("");
   const add = () => {
     const name = title.trim() || KIND_META[kind].label;
-    update((d) => ({
-      ...d,
-      tasks: [...d.tasks, makeTask(name, kind, minutes, dateStr(), examId ? { examId } : {})],
-    }));
+    update((d) => {
+      const subject = d.subjects.find((s) => name.toLowerCase().includes(s.toLowerCase()));
+      return {
+        ...d,
+        tasks: [
+          ...d.tasks,
+          makeTask(name, kind, minutes, dateStr(), {
+            ...(examId ? { examId } : {}),
+            ...(subject ? { subject } : {}),
+          }),
+        ],
+      };
+    });
     setTitle("");
   };
   return (
@@ -452,8 +492,10 @@ export function TodayPanel() {
     <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
       <div className="space-y-5">
         <NextSlotCard />
+        <WeeklyGoalCard />
         <WaterCard />
         <NotesCard />
+        <SubjectsCard />
       </div>
       <div className="space-y-5">
         <PetWidget />

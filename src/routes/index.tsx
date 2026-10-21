@@ -4,6 +4,7 @@ import { TrackerProvider, useTracker } from "@/lib/tracker/store";
 import { HeaderHud } from "@/components/tracker/HeaderHud";
 import { TodayPanel } from "@/components/tracker/TodayPanel";
 import { WeeklyReportCard } from "@/components/tracker/WeeklyReport";
+import { SubjectChartCard } from "@/components/tracker/SubjectChartCard";
 import { FocusJournalCard } from "@/components/tracker/FocusJournal";
 import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
 import { FriendViewCard } from "@/components/tracker/FriendView";
@@ -79,6 +80,7 @@ function AppInner() {
         <TabsContent value="stats" className="mt-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <WeeklyReportCard />
+            <SubjectChartCard />
             <FocusJournalCard />
             <MonthlyReportCard />
             <FriendViewCard />

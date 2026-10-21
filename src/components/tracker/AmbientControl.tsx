@@ -54,14 +54,22 @@ export function AmbientControl() {
       >
         {on ? "⏸" : "▶"}
       </Button>
-      {(["rain", "ocean"] as AmbientKind[]).map((k) => (
+      {(
+        [
+          ["rain", "🌧️ Mưa"],
+          ["ocean", "🌊 Sóng biển"],
+          ["campfire", "🔥 Lửa trại"],
+          ["cafe", "☕ Quán cafe"],
+          ["night", "🌙 Đêm hè"],
+        ] as [AmbientKind, string][]
+      ).map(([k, label]) => (
         <button
           key={k}
           type="button"
           onClick={() => pick(k)}
           className={`rounded-full px-2 py-1 font-medium transition ${kind === k ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground"}`}
         >
-          {k === "rain" ? "🌧️ Mưa" : "🌊 Sóng biển"}
+          {label}
         </button>
       ))}
       <input

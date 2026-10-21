@@ -78,6 +78,7 @@ export interface Task {
   fromSlotId?: string;
   examId?: string | undefined; // linked exam countdown
   mood?: number; // 1..4 feeling after finishing a timed task (1 = tuyệt vời)
+  subject?: string; // study subject tag (from data.subjects) used by the per-subject chart
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
 }
@@ -89,6 +90,14 @@ export interface SessionEntry {
   minutes: number;
   kind: SessionKind;
   mood?: number; // mirrored from the related task when the user picks a mood
+  subject?: string; // study subject tag for the per-subject chart
+}
+
+export type ChimeKind = "soft" | "bowl" | "retro" | "birds";
+
+export interface WeeklyGoalState {
+  minutes: number; // focus-minute target for the week (0 = goal off)
+  celebratedWeek: string | null; // Monday date of the week whose reward was claimed
 }
 
 export interface Slot {
@@ -123,7 +132,7 @@ export interface GameState {
   [extra: string]: unknown;
 }
 
-export type AmbientSettingKind = "rain" | "ocean" | null;
+export type AmbientSettingKind = "rain" | "ocean" | "campfire" | "cafe" | "night" | null;
 export type ThemeMode = "auto" | "dark" | "light";
 
 export interface AppSettings {
@@ -134,6 +143,7 @@ export interface AppSettings {
   breakMinutes: number; // auto-break length after a Pomodoro (0 disables)
   autoBreak: boolean; // start the break automatically when a Pomodoro finishes
   fxSound: boolean; // play little effect sounds (tings, fanfares)
+  chime: ChimeKind; // style of the Pomodoro-finished chime
 }
 
 export interface AppData {
@@ -163,6 +173,8 @@ export interface AppData {
   sessionLog: SessionEntry[];
   notes: NoteItem[];
   market: MarketState;
+  subjects: string[]; // user-managed study subjects (max 12)
+  weeklyGoal: WeeklyGoalState;
   ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
 }
@@ -229,6 +241,7 @@ export function defaultSettings(): AppSettings {
     breakMinutes: 5,
     autoBreak: true,
     fxSound: true,
+    chime: "soft",
   };
 }
 
@@ -256,6 +269,8 @@ export function defaultData(): AppData {
     sessionLog: [],
     notes: [],
     market: defaultMarket(),
+    subjects: [],
+    weeklyGoal: { minutes: 300, celebratedWeek: null },
   };
 }
 
@@ -385,15 +400,19 @@ export function migrate(raw: unknown): AppData {
     pomodoroMinutes: clampPomodoroMinutes(rawSettings.pomodoroMinutes),
     customPresets: normalizeCustomPresets(rawSettings.customPresets),
     ambient: {
-      kind:
-        ambientRaw.kind === "rain" || ambientRaw.kind === "ocean"
-          ? (ambientRaw.kind as "rain" | "ocean")
-          : null,
+      kind: (["rain", "ocean", "campfire", "cafe", "night"] as AmbientSettingKind[]).includes(
+        ambientRaw.kind as AmbientSettingKind,
+      )
+        ? (ambientRaw.kind as AmbientSettingKind)
+        : null,
       volume: clamp01(num(ambientRaw.volume, 0.4), 0.4),
     },
     breakMinutes: Math.min(30, Math.max(0, num(rawSettings.breakMinutes, 5))),
     autoBreak: rawSettings.autoBreak !== false,
     fxSound: rawSettings.fxSound !== false,
+    chime: (["soft", "bowl", "retro", "birds"] as const).includes(rawSettings.chime as ChimeKind)
+      ? (rawSettings.chime as ChimeKind)
+      : "soft",
   };
   const backupRaw = obj(r.backup);
   const questsRaw = obj(r.quests);
@@ -453,6 +472,23 @@ export function migrate(raw: unknown): AppData {
     sessionLog: normalizeSessionLog(r.sessionLog),
     notes: normalizeNotes(r.notes),
     market: normalizeMarket(r.market),
+    subjects: Array.isArray(r.subjects)
+      ? [
+          ...new Set(
+            r.subjects
+              .filter((x: unknown): x is string => typeof x === "string")
+              .map((x: string) => x.trim().slice(0, 24))
+              .filter(Boolean),
+          ),
+        ].slice(0, 12)
+      : [],
+    weeklyGoal: {
+      minutes: Math.min(10080, Math.max(0, Math.round(num(obj(r.weeklyGoal).minutes, 300)))),
+      celebratedWeek:
+        typeof obj(r.weeklyGoal).celebratedWeek === "string"
+          ? (obj(r.weeklyGoal).celebratedWeek as string)
+          : null,
+    },
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
       ? { ownerName: r.ownerName.trim().slice(0, 30) }
       : {}),
@@ -536,11 +572,16 @@ function normalizeSessionLog(raw: unknown): SessionEntry[] {
     .filter((s) => typeof s["at"] === "string")
     .map((s) => {
       const mood = Math.min(4, Math.max(1, Math.round(num(s["mood"], 0))));
+      const subject =
+        typeof s["subject"] === "string" && s["subject"].trim()
+          ? s["subject"].trim().slice(0, 24)
+          : undefined;
       return {
         at: s["at"] as string,
         minutes: num(s["minutes"], 0),
         kind: s["kind"] === "warmup" ? ("warmup" as const) : ("pomodoro" as const),
         ...(mood >= 1 ? { mood } : {}),
+        ...(subject ? { subject } : {}),
       };
     })
     .slice(-400);
@@ -694,6 +735,18 @@ export function completeTask(
           }
         : t,
     ),
+    sessionLog:
+      task.kind === "pomodoro"
+        ? [
+            ...data.sessionLog,
+            {
+              at: now.toISOString(),
+              minutes: task.minutes,
+              kind: "pomodoro" as const,
+              ...(task.subject ? { subject: task.subject } : {}),
+            },
+          ].slice(-400)
+        : data.sessionLog,
   };
   const ach = applyAchievements(addMaterial(base, drop), { nightOwl: isNightOwlHour(now) }, now);
   return {
@@ -1165,4 +1218,52 @@ export function nextSlotToday(data: AppData, now = new Date()): Slot | null {
       .sort((a, b) => toMin(a.start) - toMin(b.start))
       .find((s) => toMin(s.start) > nowMin) ?? null
   );
+}
+
+// ---- Study subjects & per-subject chart ----
+
+export const SUBJECTS_MAX = 12;
+export const SUBJECT_MAX_LEN = 24;
+export const UNTAGGED_LABEL = "Chưa gán";
+
+function cleanSubjectName(v: unknown): string {
+  return typeof v === "string" ? v.trim().slice(0, SUBJECT_MAX_LEN) : "";
+}
+
+/** Adds a new study subject. Returns null when the name is empty, duplicated or the list is full. */
+export function addSubject(data: AppData, name: string): AppData | null {
+  const n = cleanSubjectName(name);
+  if (!n) return null;
+  if (data.subjects.some((x) => x.toLowerCase() === n.toLowerCase())) return null;
+  if (data.subjects.length >= SUBJECTS_MAX) return null;
+  return { ...data, subjects: [...data.subjects, n] };
+}
+
+/** Removes a subject from the picker list. History (tasks/sessions) keeps its tag. */
+export function removeSubject(data: AppData, name: string): AppData {
+  return { ...data, subjects: data.subjects.filter((x) => x !== name) };
+}
+
+/** Tags (or untags with null) an unfinished task with a study subject. */
+export function setTaskSubject(
+  data: AppData,
+  taskId: string,
+  subject: string | null,
+): AppData | null {
+  const task = data.tasks.find((t) => t.id === taskId);
+  if (!task || task.completed || task.rewardClaimed) return null;
+  const tag = subject && data.subjects.includes(subject) ? subject : undefined;
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      if (!tag) {
+        const withoutSubject = Object.fromEntries(
+          Object.entries(t).filter(([k]) => k !== "subject"),
+        ) as Task;
+        return withoutSubject;
+      }
+      return { ...t, subject: tag };
+    }),
+  };
 }
