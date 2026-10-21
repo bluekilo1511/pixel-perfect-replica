@@ -292,3 +292,36 @@
 /* Weekly chronicle newspaper */
 .chronicle { background: color-mix(in oklab, var(--card) 88%, transparent); border: 3px double var(--foreground); }
 .chronicle-rule { border-top: 2px solid var(--foreground); border-bottom: 1px solid var(--foreground); height: 5px; }
+
+/* ---- Light theme: applied via [data-theme="light"] on <html> (auto day band or manual) ---- */
+[data-theme="light"] {
+  --background: oklch(0.94 0.03 250);
+  --foreground: oklch(0.28 0.05 255);
+  --card: oklch(0.99 0.01 250 / 0.66);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.98 0.012 250);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.55 0.13 235);
+  --primary-foreground: oklch(0.98 0.01 250);
+  --secondary: oklch(0.6 0.08 235 / 0.14);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.55 0.05 230 / 0.1);
+  --muted-foreground: oklch(0.46 0.04 230);
+  --border: oklch(0.5 0.05 230 / 0.22);
+  --input: oklch(0.5 0.05 230 / 0.25);
+  --time-badge: oklch(0.55 0.12 250);
+  --glow: 0 0 0 1px oklch(0.6 0.1 220 / 0.14), 0 18px 45px -18px oklch(0.6 0.06 250 / 0.35);
+  --glass-shadow: inset 0 1px 0 oklch(1 0 0 / 0.55), 0 20px 50px -28px oklch(0.55 0.06 250 / 0.4);
+  --neon-shadow: 0 0 10px oklch(0.6 0.12 220 / 0.35);
+  --aurora-1: oklch(0.88 0.08 240);
+  --aurora-2: oklch(0.9 0.07 210);
+  --aurora-3: oklch(0.84 0.09 260);
+  --aurora-4: oklch(0.87 0.07 230);
+  --aurora-cosmic-1: oklch(0.86 0.08 270);
+  --aurora-cosmic-2: oklch(0.88 0.07 290);
+  --aurora-cosmic-3: oklch(0.82 0.06 265);
+  --weather-star: oklch(0.6 0.08 250 / 0.4);
+  --gradient-xp: linear-gradient(90deg, oklch(0.6 0.13 230), oklch(0.65 0.13 190), oklch(0.68 0.12 290));
+  --gradient-pet-halo: radial-gradient(circle, oklch(0.65 0.1 210 / 0.18), transparent 72%);
+}
+[data-theme="light"] .stars { opacity: 0.35; }

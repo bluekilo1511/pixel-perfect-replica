@@ -308,3 +308,26 @@ describe("focus session log", () => {
     expect(d.settings.autoBreak).toBe(true);
   });
 });
+
+describe("display names & theme", () => {
+  it("migrate keeps ownerName, petName and themeMode", () => {
+    const d = migrate({
+      ownerName: "  Tuấn  ",
+      petState: { petName: "  Mấm  " },
+      settings: { themeMode: "light" },
+    });
+    expect(d.ownerName).toBe("Tuấn");
+    expect(d.petState.petName).toBe("Mấm");
+    expect(d.settings.themeMode).toBe("light");
+  });
+
+  it("migrate defaults themeMode for old files and rejects invalid values", () => {
+    expect(migrate({}).settings.themeMode).toBe("auto");
+    expect(migrate({ settings: { themeMode: "rainbow" } }).settings.themeMode).toBe("auto");
+  });
+
+  it("migrate clears empty pet names", () => {
+    const d = migrate({ petState: { petName: "   " } });
+    expect(d.petState.petName).toBeUndefined();
+  });
+});

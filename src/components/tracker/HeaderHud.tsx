@@ -2,9 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/tracker/image";
 import { useTracker } from "@/lib/tracker/store";
-import { xpForLevel } from "@/lib/tracker/model";
+import { xpForLevel, type AppSettings } from "@/lib/tracker/model";
 import { openFile } from "@/lib/tracker/storage";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TimeCapsuleButton } from "./TimeCapsule";
 
 const statusText = {
@@ -72,10 +80,16 @@ export function HeaderHud() {
               }
             }}
           />
-          <div>
-            <h1 className="text-xl font-bold">Task Tracker Pro</h1>
-            <p className="text-xs text-muted-foreground">Cấp độ {g.level}</p>
-          </div>
+          <NameBadge
+            name={data.ownerName}
+            level={g.level}
+            onChange={(v) =>
+              update((d) => {
+                const { ownerName: _o, ...rest } = d;
+                return { ...rest, ...(v ? { ownerName: v } : {}) };
+              })
+            }
+          />
         </div>
 
         <div className="min-w-[200px] flex-1">
@@ -113,6 +127,24 @@ export function HeaderHud() {
         </span>
         <span className="ml-auto" />
         <TimeCapsuleButton />
+        <Select
+          value={data.settings.themeMode}
+          onValueChange={(v) =>
+            update((d) => ({
+              ...d,
+              settings: { ...d.settings, themeMode: v as AppSettings["themeMode"] },
+            }))
+          }
+        >
+          <SelectTrigger className="h-8 w-[118px]" aria-label="Giao diện sáng/tối">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">🌗 Tự động</SelectItem>
+            <SelectItem value="light">☀️ Sáng</SelectItem>
+            <SelectItem value="dark">🌙 Tối</SelectItem>
+          </SelectContent>
+        </Select>
         {notificationPermission === "default" && (
           <Button
             size="sm"
@@ -164,5 +196,71 @@ export function HeaderHud() {
         </Button>
       </div>
     </header>
+  );
+}
+
+function NameBadge({
+  name,
+  level,
+  onChange,
+}: {
+  name?: string | undefined;
+  level: number;
+  onChange: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  if (editing)
+    return (
+      <div className="flex items-center gap-1.5">
+        <Input
+          value={draft}
+          autoFocus
+          maxLength={30}
+          className="h-8 w-44"
+          aria-label="Tên hiển thị"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onChange(draft.trim());
+              setEditing(false);
+            }
+            if (e.key === "Escape") setEditing(false);
+          }}
+        />
+        <Button
+          size="sm"
+          variant="secondary"
+          className="h-8"
+          onClick={() => {
+            onChange(draft.trim());
+            setEditing(false);
+          }}
+        >
+          Lưu
+        </Button>
+      </div>
+    );
+  return (
+    <div className="flex items-center gap-1">
+      <div>
+        <h1 className="flex items-center gap-1 text-xl font-bold">
+          {name?.trim() || "Task Tracker Pro"}
+          <button
+            type="button"
+            aria-label="Đổi tên hiển thị"
+            title="Đổi tên hiển thị"
+            className="text-xs opacity-50 transition hover:opacity-100"
+            onClick={() => {
+              setDraft(name?.trim() ?? "");
+              setEditing(true);
+            }}
+          >
+            ✏️
+          </button>
+        </h1>
+        <p className="text-xs text-muted-foreground">Cấp độ {level}</p>
+      </div>
+    </div>
   );
 }

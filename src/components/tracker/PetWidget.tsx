@@ -254,6 +254,15 @@ export function PetWidget() {
             <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
               {MOOD_META[mood].label}
             </span>
+            <PetName
+              pet={pet}
+              onRename={(v) =>
+                update((d) => {
+                  const { petName: _p, ...petRest } = d.petState;
+                  return { ...d, petState: { ...petRest, ...(v ? { petName: v } : {}) } };
+                })
+              }
+            />
             {data.expedition.endAt && (
               <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
                 🧭 {SPECIES[pet.species].name} đang thám hiểm…
@@ -459,5 +468,54 @@ export function PetWidget() {
         onClose={() => setZen(false)}
       />
     </section>
+  );
+}
+
+function PetName({ pet, onRename }: { pet: PetState; onRename: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  if (editing)
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Input
+          value={draft}
+          autoFocus
+          maxLength={20}
+          className="h-7 w-32 text-xs"
+          aria-label="Tên thú cưng"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onRename(draft.trim());
+              setEditing(false);
+            }
+            if (e.key === "Escape") setEditing(false);
+          }}
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-1.5"
+          onClick={() => {
+            onRename(draft.trim());
+            setEditing(false);
+          }}
+        >
+          ✓
+        </Button>
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      title="Đặt tên cho thú cưng"
+      className="rounded-full bg-secondary px-2 py-0.5 text-xs transition hover:bg-secondary/70"
+      onClick={() => {
+        setDraft(pet.petName ?? "");
+        setEditing(true);
+      }}
+    >
+      {pet.petName ? `“${pet.petName}”` : "+ Đặt tên"}
+    </button>
   );
 }

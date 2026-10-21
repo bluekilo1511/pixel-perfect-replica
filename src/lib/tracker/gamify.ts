@@ -18,6 +18,7 @@ export interface PetState {
   lastDecayAt: string; // ISO
   petLevel: number;
   petXp: number;
+  petName?: string; // custom nickname, editable
 }
 
 export interface StreakState {
@@ -302,5 +303,9 @@ export function normalizePet(raw: any, now = new Date()): PetState {
     lastDecayAt: typeof raw.lastDecayAt === "string" ? raw.lastDecayAt : b.lastDecayAt,
     petLevel: typeof raw.petLevel === "number" && raw.petLevel >= 1 ? Math.floor(raw.petLevel) : 1,
     petXp: typeof raw.petXp === "number" && raw.petXp >= 0 ? raw.petXp : 0,
+    petName:
+      typeof raw.petName === "string" && raw.petName.trim()
+        ? raw.petName.trim().slice(0, 20)
+        : undefined,
   };
 }

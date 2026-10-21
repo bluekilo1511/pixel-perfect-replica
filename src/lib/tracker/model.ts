@@ -115,7 +115,10 @@ export interface GameState {
 }
 
 export type AmbientSettingKind = "rain" | "ocean" | null;
+export type ThemeMode = "auto" | "dark" | "light";
+
 export interface AppSettings {
+  themeMode: ThemeMode; // "auto" = light during the day sky band, dark otherwise
   pomodoroMinutes: number;
   customPresets: number[]; // user-saved durations (outside the built-in 15/25/50)
   ambient: { kind: AmbientSettingKind; volume: number };
@@ -148,6 +151,7 @@ export interface AppData {
   exams: ExamEvent[];
   templates: TaskTemplate[];
   sessionLog: SessionEntry[];
+  ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
 }
 
@@ -206,6 +210,7 @@ export function defaultGame(today = dateStr()): GameState {
 const clamp01 = (v: number, d: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : d);
 export function defaultSettings(): AppSettings {
   return {
+    themeMode: "auto",
     pomodoroMinutes: POMODORO_MINUTES,
     customPresets: [],
     ambient: { kind: null, volume: 0.4 },
@@ -346,6 +351,10 @@ export function migrate(raw: unknown): AppData {
   const { gameState: _g, ...rest } = r;
   const rawSettings = r.settings;
   const settings: AppSettings = {
+    themeMode:
+      rawSettings?.themeMode === "light" || rawSettings?.themeMode === "dark"
+        ? rawSettings.themeMode
+        : "auto",
     pomodoroMinutes: clampPomodoroMinutes(rawSettings?.pomodoroMinutes),
     customPresets: normalizeCustomPresets(rawSettings?.customPresets),
     ambient: {
@@ -402,6 +411,9 @@ export function migrate(raw: unknown): AppData {
     exams: normalizeExams(r.exams),
     templates: normalizeTemplates(r.templates),
     sessionLog: normalizeSessionLog(r.sessionLog),
+    ...(typeof r.ownerName === "string" && r.ownerName.trim()
+      ? { ownerName: r.ownerName.trim().slice(0, 30) }
+      : {}),
   };
 }
 

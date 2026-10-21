@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { TrackerProvider, useTracker } from "@/lib/tracker/store";
 import { HeaderHud } from "@/components/tracker/HeaderHud";
 import { TodayPanel } from "@/components/tracker/TodayPanel";
+import { WeeklyReportCard } from "@/components/tracker/WeeklyReport";
+import { FocusJournalCard } from "@/components/tracker/FocusJournal";
+import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
+import { FriendViewCard } from "@/components/tracker/FriendView";
 import { Timetable } from "@/components/tracker/Timetable";
 import { PetShop } from "@/components/tracker/PetShop";
 import { Wheel } from "@/components/tracker/Wheel";
@@ -14,6 +19,9 @@ import { BackupReminder } from "@/components/tracker/BackupReminder";
 import { QuickAdd } from "@/components/tracker/QuickAdd";
 import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
+import { OnboardingTour } from "@/components/tracker/OnboardingTour";
+import { ScrollTop } from "@/components/tracker/ScrollTop";
+import { skyBand } from "@/lib/tracker/skyTime";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,7 +54,17 @@ function App() {
 }
 
 function AppInner() {
-  const { ready } = useTracker();
+  const { ready, data } = useTracker();
+  const [band, setBand] = useState(() => skyBand(new Date().getHours()));
+  useEffect(() => {
+    const t = setInterval(() => setBand(skyBand(new Date().getHours())), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const mode = data.settings.themeMode;
+    const light = mode === "light" || (mode === "auto" && band === "day");
+    document.documentElement.dataset["theme"] = light ? "light" : "dark";
+  }, [data.settings.themeMode, band]);
   if (!ready) return <Welcome />;
   return (
     <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
@@ -56,6 +74,14 @@ function AppInner() {
       <ConstellationTabs>
         <TabsContent value="today" className="mt-5">
           <TodayPanel />
+        </TabsContent>
+        <TabsContent value="stats" className="mt-5">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <WeeklyReportCard />
+            <FocusJournalCard />
+            <MonthlyReportCard />
+            <FriendViewCard />
+          </div>
         </TabsContent>
         <TabsContent value="week" className="mt-5">
           <Timetable />
