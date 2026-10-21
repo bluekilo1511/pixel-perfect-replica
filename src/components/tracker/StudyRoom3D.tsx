@@ -1,4 +1,4 @@
-import { Component, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Float, RoundedBox, Sparkles } from "@react-three/drei";
 import { createContext, useContext } from "react";
@@ -8,7 +8,7 @@ const SaverCtx = createContext(false);
 /** Sparkles that vanish in battery-saver mode (they redraw every frame). */
 function Fx(props: Parameters<typeof Sparkles>[0]) {
   const saver = useContext(SaverCtx);
-  return saver ? null : <Fx {...props} />;
+  return saver ? null : <Sparkles {...props} />;
 }
 import * as THREE from "three";
 import { DECORATIONS, type DecorId } from "@/lib/tracker/gamify";
@@ -976,10 +976,18 @@ export function StudyRoom3D({
   season?: RoomSeason;
   batterySaver?: boolean;
 }) {
+  // Stop the render loop entirely while the tab is hidden (saves CPU/GPU/RAM).
+  const [tabHidden, setTabHidden] = useState(false);
+  useEffect(() => {
+    const onVis = () => setTabHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
   return (
     <div className="h-48 w-full">
       <Boundary fallback={<EmojiFallback decor={decor} onStow={onStow} />}>
         <Canvas
+          frameloop={tabHidden ? "never" : "always"}
           dpr={batterySaver ? 1 : [1, 2]}
           shadows={!batterySaver}
           gl={{ alpha: true, antialias: !batterySaver }}
