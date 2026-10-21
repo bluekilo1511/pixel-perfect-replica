@@ -44,6 +44,11 @@ import {
   type RaidState,
 } from "./quests";
 import { defaultExams, newExamId, normalizeExams, type ExamEvent } from "./exams";
+import { normalizeJournal } from "./journal";
+import { normalizeWeekGoals } from "./goals";
+import { normalizeSubjectNotes, removeSubjectNote, type SubjectNoteMap } from "./subjectNotes";
+import type { JournalEntry } from "./journal";
+import type { WeekGoal } from "./goals";
 import {
   defaultTemplates,
   newTemplateId,
@@ -174,6 +179,9 @@ export interface AppData {
   notes: NoteItem[];
   market: MarketState;
   subjects: string[]; // user-managed study subjects (max 12)
+  subjectNotes: SubjectNoteMap; // per-subject note + weak/strong topic marks
+  weekGoals: WeekGoal[]; // goals pinned for the whole week
+  journal: JournalEntry[]; // hidden personal diary, opened from the wall bookshelf
   weeklyGoal: WeeklyGoalState;
   ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
@@ -270,6 +278,9 @@ export function defaultData(): AppData {
     notes: [],
     market: defaultMarket(),
     subjects: [],
+    subjectNotes: {},
+    weekGoals: [],
+    journal: [],
     weeklyGoal: { minutes: 300, celebratedWeek: null },
   };
 }
@@ -489,6 +500,9 @@ export function migrate(raw: unknown): AppData {
           ? (obj(r.weeklyGoal).celebratedWeek as string)
           : null,
     },
+    subjectNotes: normalizeSubjectNotes(r.subjectNotes),
+    weekGoals: normalizeWeekGoals(r.weekGoals),
+    journal: normalizeJournal(r.journal),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
       ? { ownerName: r.ownerName.trim().slice(0, 30) }
       : {}),
@@ -1239,9 +1253,10 @@ export function addSubject(data: AppData, name: string): AppData | null {
   return { ...data, subjects: [...data.subjects, n] };
 }
 
-/** Removes a subject from the picker list. History (tasks/sessions) keeps its tag. */
+/** Removes a subject from the picker list. History (tasks/sessions) keeps its tag; its note is dropped. */
 export function removeSubject(data: AppData, name: string): AppData {
-  return { ...data, subjects: data.subjects.filter((x) => x !== name) };
+  const withoutSubject = { ...data, subjects: data.subjects.filter((x) => x !== name) };
+  return removeSubjectNote(withoutSubject, name);
 }
 
 /** Tags (or untags with null) an unfinished task with a study subject. */

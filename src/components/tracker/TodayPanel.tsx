@@ -25,6 +25,16 @@ import {
   type TaskKind,
 } from "@/lib/tracker/model";
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
+import {
+  addWeekGoal,
+  currentWeekGoals,
+  pinTaskAsWeekGoal,
+  removeWeekGoal,
+  toggleWeekGoalDone,
+} from "@/lib/tracker/goals";
+import { weeklyGoalProgress } from "@/lib/tracker/weeklyGoal";
+import { mondayOf } from "@/lib/tracker/weeklyReport";
+import { weakTopics } from "@/lib/tracker/subjectNotes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -205,6 +215,24 @@ function TaskRow({ task }: { task: Task }) {
         }
       >
         📌
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label="Ghim làm mục tiêu tuần"
+        title="Ghim làm mục tiêu cho cả tuần — hiện trong bảng Mục tiêu tuần"
+        className="opacity-50 hover:opacity-100"
+        onClick={() => {
+          const r = pinTaskAsWeekGoal(data, task.id);
+          if (!r) {
+            toast.error("Mục tiêu tuần đã đầy hoặc nhiệm vụ này đã được ghim rồi 🎯");
+            return;
+          }
+          update(() => r);
+          toast.success("Đã ghim làm mục tiêu cả tuần 🎯");
+        }}
+      >
+        🎯
       </Button>
       {locked ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -477,6 +505,143 @@ function AddTask() {
   );
 }
 
+function WeekGoalsCard() {
+  const { data, update } = useTracker();
+  const goals = currentWeekGoals(data);
+  const done = goals.filter((g) => g.doneAt).length;
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const r = addWeekGoal(data, draft);
+    if (!r) {
+      toast.error("Trùng mục tiêu hoặc đã đủ 6 mục tiêu cho tuần này 🎯");
+      return;
+    }
+    update(() => r);
+    setDraft("");
+    toast.success("Đã thêm mục tiêu tuần 🎯");
+  };
+  return (
+    <section className="glass p-5" aria-label="Mục tiêu tuần (từ việc cần làm)">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold">🎯 Mục tiêu ghim cả tuần</h2>
+        <span className="text-xs text-muted-foreground">
+          {done}/{goals.length}
+        </span>
+      </div>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Ghim từ nút 🎯 trên mỗi việc, hoặc thêm trực tiếp ở đây. Đánh dấu khi hoàn thành trong tuần.
+      </p>
+      {goals.length > 0 && (
+        <ul className="mb-2 space-y-1">
+          {goals.map((g) => (
+            <li key={g.id} className="flex items-center gap-2 rounded-lg bg-muted px-2 py-1.5">
+              <button
+                type="button"
+                aria-label={g.doneAt ? "Bỏ đánh dấu" : "Đánh dấu hoàn thành"}
+                aria-pressed={!!g.doneAt}
+                onClick={() => update((d) => toggleWeekGoalDone(d, g.id))}
+                className={`text-sm ${g.doneAt ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {g.doneAt ? "☑" : "☐"}
+              </button>
+              <span
+                className={`min-w-0 flex-1 truncate text-xs ${g.doneAt ? "line-through opacity-60" : ""}`}
+              >
+                {g.title}
+              </span>
+              <button
+                type="button"
+                aria-label={`Xoá mục tiêu ${g.title}`}
+                className="text-muted-foreground transition hover:text-destructive"
+                onClick={() => update((d) => removeWeekGoal(d, g.id))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex gap-2">
+        <Input
+          className="h-8"
+          placeholder="Mục tiêu cả tuần, vd: Hoàn thành 10 đề Toán"
+          value={draft}
+          maxLength={120}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+          aria-label="Mục tiêu tuần mới"
+        />
+        <Button size="sm" variant="outline" className="h-8" onClick={add}>
+          +
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function WeekReviewCard() {
+  const { data } = useTracker();
+  const goals = currentWeekGoals(data);
+  const goalsDone = goals.filter((g) => g.doneAt).length;
+  const start = mondayOf(new Date());
+  const shift = (date: string, n: number) => {
+    const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+    const dt = new Date(y, m - 1, d + n);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  };
+  const weekDates = new Set(Array.from({ length: 7 }, (_, i) => shift(start, i)));
+  const tasksThisWeek = data.tasks.filter((t) => weekDates.has(t.date));
+  const tasksDone = tasksThisWeek.filter((t) => t.completed).length;
+  const focus = weeklyGoalProgress(data);
+  const weak = weakTopics(data);
+  const notes = data.subjectNotes;
+  return (
+    <section className="glass p-5" aria-label="Bảng đánh giá tuần">
+      <h2 className="mb-2 text-sm font-semibold">📋 Bảng đánh giá tuần</h2>
+      <ul className="space-y-1.5 text-xs">
+        <li className="flex justify-between gap-2">
+          <span className="text-muted-foreground">Mục tiêu tuần</span>
+          <span className="font-medium">
+            {goalsDone}/{goals.length} đạt{" "}
+            {goals.length > 0 && goalsDone === goals.length ? "🎉" : ""}
+          </span>
+        </li>
+        <li className="flex justify-between gap-2">
+          <span className="text-muted-foreground">Việc cần làm trong tuần</span>
+          <span className="font-medium">
+            {tasksDone}/{tasksThisWeek.length} hoàn thành
+          </span>
+        </li>
+        <li className="flex justify-between gap-2">
+          <span className="text-muted-foreground">Phút tập trung</span>
+          <span className="font-medium">
+            {focus.done}
+            {focus.target > 0 ? `/${focus.target}` : ""} phút
+          </span>
+        </li>
+        <li className="flex justify-between gap-2">
+          <span className="text-muted-foreground">Chủ điểm cần ôn</span>
+          <span className="font-medium">{weak.length} chủ điểm</span>
+        </li>
+      </ul>
+      {weak.length > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Nên ưu tiên:{" "}
+          {weak
+            .slice(0, 3)
+            .map((w) => `${w.subject} · ${w.topic}`)
+            .join(", ")}
+        </p>
+      )}
+      {Object.keys(notes).length === 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Đánh dấu chủ điểm yếu/tốt trong card 📚 Môn học để bảng này có dữ liệu.
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function TodayPanel() {
   const { data, update } = useTracker();
   const today = dateStr();
@@ -493,12 +658,14 @@ export function TodayPanel() {
       <div className="space-y-5">
         <NextSlotCard />
         <WeeklyGoalCard />
+        <WeekReviewCard />
         <WaterCard />
         <NotesCard />
         <SubjectsCard />
       </div>
       <div className="space-y-5">
         <PetWidget />
+        <WeekGoalsCard />
         <section className="glass p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">✅ Nhiệm vụ cần làm hôm nay</h2>

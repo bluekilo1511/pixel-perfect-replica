@@ -16,6 +16,7 @@ import {
   STREAK_GOAL,
 } from "@/lib/tracker/gamify";
 import { StudyRoom3D } from "./StudyRoom3D";
+import { JournalModal } from "./JournalModal";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { celebrate } from "@/lib/tracker/effects";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
@@ -148,6 +149,7 @@ export function PetWidget() {
   warmupRef.current = warmup;
   const [breakEndAt, setBreakEndAt] = useState<number | null>(null);
   const [breakLeft, setBreakLeft] = useState(breakMinutes * 60);
+  const [journalOpen, setJournalOpen] = useState(false);
   useEffect(() => {
     if (!endAt) setLeft(pomodoroMinutes * 60);
   }, [endAt, pomodoroMinutes]);
@@ -227,6 +229,7 @@ export function PetWidget() {
 
   return (
     <section className="glass glass-glow p-5" data-pet-interactions>
+      <JournalModal open={journalOpen} onClose={() => setJournalOpen(false)} />
       <div className="grid gap-5 md:grid-cols-[auto_1fr_auto] md:items-center">
         <div className="mx-auto w-fit">
           <Button
@@ -256,11 +259,12 @@ export function PetWidget() {
           <div
             className="mt-2 overflow-hidden rounded-xl border bg-gradient-to-b from-secondary/70 to-accent/70"
             aria-label="Góc học của thú cưng"
-            title="Góc học — bấm một món để cất vào kho"
+            title="Góc học — bấm một món để cất vào kho (kệ sách có bí mật nhỏ 👀)"
           >
             <StudyRoom3D
               decor={pet.decorActive}
               petEmoji={petEmoji}
+              onShelfClick={() => setJournalOpen(true)}
               onStow={(id) =>
                 update((d) => {
                   const r = toggleDecor(d.petState, id);

@@ -385,10 +385,12 @@ function Room({
   decor,
   onStow,
   petEmoji,
+  onShelfClick,
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
   petEmoji: string;
+  onShelfClick?: (() => void) | undefined;
 }) {
   const wood = useMemo(() => woodTexture(), []);
   const galaxyTex = useMemo(() => galaxyTexture(), []);
@@ -590,7 +592,12 @@ function Room({
         </Clickable>
       )}
       {has("shelf") && (
-        <Clickable id="shelf" position={[2.35, 1.85, BACK_Z + 0.18]} onStow={onStow}>
+        <Clickable
+          id="shelf"
+          position={[2.35, 1.85, BACK_Z + 0.18]}
+          onStow={onStow}
+          onClick={onShelfClick}
+        >
           <WallShelf />
         </Clickable>
       )}
@@ -655,11 +662,13 @@ function Clickable({
   position,
   children,
   onStow,
+  onClick,
 }: {
   id: DecorId;
   position: [number, number, number];
   children: ReactNode;
   onStow: (id: DecorId) => void;
+  onClick?: (() => void) | undefined;
 }) {
   const [hover, setHover] = useState(false);
   return (
@@ -668,7 +677,8 @@ function Clickable({
       scale={hover ? 1.09 : 1}
       onClick={(e) => {
         e.stopPropagation();
-        onStow(id);
+        if (onClick) onClick();
+        else onStow(id);
       }}
       onPointerOver={(e) => {
         e.stopPropagation();
@@ -721,10 +731,12 @@ export function StudyRoom3D({
   decor,
   onStow,
   petEmoji,
+  onShelfClick,
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
   petEmoji: string;
+  onShelfClick?: () => void;
 }) {
   return (
     <div className="h-48 w-full">
@@ -738,7 +750,7 @@ export function StudyRoom3D({
           camera={{ position: [9, 7.5, 9], zoom: 38, near: 0.1, far: 60 }}
           onCreated={({ camera }) => camera.lookAt(0, 0.75, 0)}
         >
-          <Room decor={decor} onStow={onStow} petEmoji={petEmoji} />
+          <Room decor={decor} onStow={onStow} petEmoji={petEmoji} onShelfClick={onShelfClick} />
         </Canvas>
       </Boundary>
     </div>
