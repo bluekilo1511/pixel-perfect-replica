@@ -77,14 +77,25 @@ export const PET_XP_SHARE = 0.1;
 export const petXpForLevel = (lvl: number) => lvl * 100;
 
 const TIERS: Record<Species, [string, string, string]> = {
-  cat: ["Mèo Con", "Mèo Hộ Vệ", "Mèo Thần Thoại"],
-  lizard: ["Thằn Lằn Nhí", "Thằn Lằn Chiến Binh", "Rồng Thằn Lằn"],
+  cat: ["Mèo Con", "Mèo Hộ Vệ", "Mèo Đen Bí Ẩn"],
+  lizard: ["Thằn Lằn Nhí", "Thằn Lằn Chiến Binh", "Rồng Lửa"],
   dog: ["Cún Con", "Cún Hộ Vệ", "Sói Thần"],
   owl: ["Cú Non", "Cú Hiền Triết", "Cú Pháp Sư"],
+  whale: ["Cá Voi Nhí", "Cá Voi Hộ Vệ", "Cá Voi Tinh Tú"],
+};
+/** The pet physically changes form at the final tier (level 6+). */
+const TIER_FORM: Record<Species, [string, string, string]> = {
+  cat: ["🐱", "😼", "🐈‍⬛"],
+  lizard: ["🦎", "🦖", "🐉"],
+  dog: ["🐶", "🐕", "🐺"],
+  owl: ["🦉", "🦉", "🦅"],
+  whale: ["🐳", "🐳", "🐋"],
 };
 export const TIER_BADGE = ["🌱", "🛡️", "✨"];
 export const tierOf = (petLevel: number) => (petLevel >= 6 ? 2 : petLevel >= 3 ? 1 : 0);
 export const petTitle = (pet: PetState) => TIERS[pet.species][tierOf(pet.petLevel)];
+/** The emoji shown everywhere — final tier swaps in the evolved form. */
+export const petEmoji = (pet: PetState) => TIER_FORM[pet.species][tierOf(pet.petLevel)];
 
 export const ADVANCED_LINES = [
   "Sức mạnh của chúng ta đang tiến hóa! ⚡",

@@ -3,6 +3,13 @@ import type { AppData } from "./model";
 import { emptyDay, type DayStats } from "./extras";
 import { SPECIES, type Species } from "./gamify";
 
+const TIER_FORM_SAFE = {
+  cat: ["🐱", "😼", "🐈‍⬛"],
+  lizard: ["🦎", "🦖", "🐉"],
+  dog: ["🐶", "🐕", "🐺"],
+  owl: ["🦉", "🦉", "🦅"],
+  whale: ["🐳", "🐳", "🐋"],
+} as const;
 export interface MonthDayStat {
   date: string; // YYYY-MM-DD
   tasks: number;
@@ -39,8 +46,13 @@ export function monthLabel(year: number, month: number): string {
 }
 
 export function petLabelOf(data: AppData): string {
-  const s = SPECIES[data.petState.species as Species] ?? SPECIES.cat;
-  return `${s.emoji} ${s.name} Lv.${Math.max(1, data.petState.petLevel)}`;
+  const sp =
+    (data.petState.species as Species) in SPECIES ? (data.petState.species as Species) : "cat";
+  const s = SPECIES[sp];
+  const lvl = Math.max(1, data.petState.petLevel || 1);
+  const tier = lvl >= 6 ? 2 : lvl >= 3 ? 1 : 0;
+  const emoji = TIER_FORM_SAFE[sp][tier];
+  return `${emoji} ${s.name} Lv.${lvl}`;
 }
 
 /** Aggregates a month's stats from dailyStats and completed tasks. Never throws on odd data. */

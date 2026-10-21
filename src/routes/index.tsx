@@ -14,6 +14,8 @@ import { Wheel } from "@/components/tracker/Wheel";
 import { Chronicle } from "@/components/tracker/Chronicle";
 import { WeatherLayer } from "@/components/tracker/WeatherLayer";
 import { LevelUpOverlay, Welcome } from "@/components/tracker/Overlays";
+import { EvolutionFx } from "@/components/tracker/EvolutionFx";
+import { KeyboardShortcuts } from "@/components/tracker/KeyboardShortcuts";
 import { TabsContent } from "@/components/ui/tabs";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
 import { BackupReminder } from "@/components/tracker/BackupReminder";
@@ -40,6 +42,14 @@ export const Route = createFileRoute("/")({
         content: "Thời khóa biểu tuần, Pomodoro, XP và vòng quay — 100% offline.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/og.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      {
+        property: "og:image:alt",
+        content: "Task Tracker Pro — pixel-art study room with black cat, dragon and whale",
+      },
+      { name: "twitter:image", content: "/og.png" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
@@ -69,16 +79,16 @@ function AppInner() {
   }, [data.settings.themeMode, band]);
   if (!ready) return <Welcome />;
   return (
-    <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+    <main className="mx-auto max-w-7xl space-y-4 p-3 sm:space-y-5 sm:p-6">
       <HeaderHud />
       <BackupReminder />
       <QuickAdd />
       <ConstellationTabs>
-        <TabsContent value="today" className="mt-5">
+        <TabsContent value="today" className="mt-4 sm:mt-5">
           <TodayPanel />
         </TabsContent>
-        <TabsContent value="stats" className="mt-5">
-          <div className="grid gap-5 lg:grid-cols-2">
+        <TabsContent value="stats" className="mt-4 sm:mt-5">
+          <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
             <WeeklyReportCard />
             <SubjectChartCard />
             <FocusJournalCard />
@@ -86,23 +96,25 @@ function AppInner() {
             <FriendViewCard />
           </div>
         </TabsContent>
-        <TabsContent value="week" className="mt-5">
+        <TabsContent value="week" className="mt-4 sm:mt-5">
           <Timetable />
         </TabsContent>
-        <TabsContent value="shop" className="mt-5">
+        <TabsContent value="shop" className="mt-4 sm:mt-5">
           <PetShop />
         </TabsContent>
-        <TabsContent value="wheel" className="mt-5">
+        <TabsContent value="wheel" className="mt-4 sm:mt-5">
           <Wheel />
         </TabsContent>
-        <TabsContent value="chronicle" className="mt-5">
+        <TabsContent value="chronicle" className="mt-4 sm:mt-5">
           <Chronicle />
         </TabsContent>
-        <TabsContent value="settings" className="mt-5">
+        <TabsContent value="settings" className="mt-4 sm:mt-5">
           <SettingsPanel />
         </TabsContent>
       </ConstellationTabs>
       <LevelUpOverlay />
+      <EvolutionFx />
+      <KeyboardShortcuts />
     </main>
   );
 }

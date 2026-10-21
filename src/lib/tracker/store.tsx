@@ -31,6 +31,7 @@ import {
   ACHIEVEMENT_REWARD,
   ACHIEVEMENTS,
   MATERIALS,
+  petEmoji,
   petTitle,
   resolveExpedition,
   rollDrop,
@@ -49,7 +50,7 @@ import {
 } from "./model";
 import { bossCounterAttack, defeatBoss } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
-import { celebrate, levelUpFx, setFxEnabled, setChime, ting } from "./effects";
+import { celebrate, evolutionFx, levelUpFx, setFxEnabled, setChime, ting } from "./effects";
 import { CAPSULE_INTERVAL_MS, lastSnapshotAt, saveSnapshot } from "./timeCapsule";
 import { createFile, createWriter, downloadData, openFile, type Handle } from "./storage";
 
@@ -75,6 +76,7 @@ interface Store {
   lastSaved: Date | null;
   timer: Timer | null;
   levelUp: number | null;
+  evolution: { from: string; to: string; title: string } | null;
   update: (fn: (d: AppData) => AppData) => void;
   open: () => Promise<void>;
   create: () => Promise<void>;
@@ -86,6 +88,7 @@ interface Store {
   drinkWater: () => void;
   spin: () => string | null;
   dismissLevelUp: () => void;
+  dismissEvolution: () => void;
   restore: (raw: unknown) => void;
   finishPomodoro: (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => void;
   bossCancel: () => void;
@@ -130,6 +133,9 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [timer, setTimer] = useState<Timer | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
+  const [evolution, setEvolution] = useState<{ from: string; to: string; title: string } | null>(
+    null,
+  );
   const writer = useRef<ReturnType<typeof createWriter> | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -237,6 +243,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const finish = useCallback((id: string) => {
     const prev = dataRef.current;
     const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
+    const prevFormEmoji = petEmoji(dataRef.current.petState);
     const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
     if (!r.rewarded) return; // anti-spam
     setData(r.data);
@@ -257,6 +264,12 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     announceAchievements(r.fresh);
     if (r.petEvolved) {
       levelUpFx();
+      evolutionFx();
+      setEvolution({
+        from: prevFormEmoji,
+        to: petEmoji(r.data.petState),
+        title: petTitle(r.data.petState),
+      });
       toast.success(
         `${TIER_BADGE[tierOf(r.data.petState.petLevel)]} Thú cưng tiến hóa thành ${petTitle(r.data.petState)}!`,
         { className: "glass-toast", duration: 6000 },
@@ -454,6 +467,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         lastSaved,
         timer,
         levelUp,
+        evolution,
         update,
         open,
         create,
@@ -465,6 +479,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         drinkWater,
         spin,
         dismissLevelUp: () => setLevelUp(null),
+        dismissEvolution: () => setEvolution(null),
         restore,
         finishPomodoro,
         bossCancel,

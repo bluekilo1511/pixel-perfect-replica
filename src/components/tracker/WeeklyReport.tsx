@@ -38,6 +38,25 @@ export function WeeklyReportCard() {
             ? "➖ Ngang tuần trước"
             : `${up ? "📈" : "📉"} ${up ? "+" : "−"}${fmtMin(Math.abs(s.diffMin))} so với tuần trước`}
         </span>
+        <span
+          className={
+            s.diffTasks === 0
+              ? "text-muted-foreground"
+              : s.diffTasks > 0
+                ? "text-success"
+                : "text-destructive"
+          }
+        >
+          {s.diffTasks === 0
+            ? "➖ Số việc ngang tuần trước"
+            : `${s.diffTasks > 0 ? "✅" : "🔻"} ${s.diffTasks > 0 ? "+" : "−"}${Math.abs(s.diffTasks)} việc`}
+        </span>
+        {s.diffPct !== null && s.diffPct !== 0 && (
+          <span className={s.diffPct > 0 ? "text-success" : "text-destructive"}>
+            {s.diffPct > 0 ? "📈" : "📉"} {s.diffPct > 0 ? "+" : "−"}
+            {Math.abs(s.diffPct)}%
+          </span>
+        )}
         {s.bestDay && (
           <span className="text-muted-foreground">
             🔥 Ngày tốt nhất: {s.bestDay.date.slice(5)} ({fmtMin(s.bestDay.focusMin)})

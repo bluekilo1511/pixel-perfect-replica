@@ -117,6 +117,41 @@ export function celebrate() {
   confetti({ particleCount: 90, spread: 80, origin: { y: 0.3 }, gravity: 1.1 });
 }
 
+/** Dramatic ascending arpeggio + boom for pet evolution. */
+export function evolutionFx() {
+  if (!enabled) return;
+  const c = audio();
+  if (!c) return;
+  try {
+    const t0 = c.currentTime;
+    [261.6, 329.6, 392, 523.3, 659.3].forEach((f, i) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = "triangle";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0, t0 + i * 0.13);
+      g.gain.linearRampToValueAtTime(0.16, t0 + i * 0.13 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + i * 0.13 + 0.5);
+      o.connect(g).connect(c.destination);
+      o.start(t0 + i * 0.13);
+      o.stop(t0 + i * 0.13 + 0.55);
+    });
+    // boom
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(120, t0);
+    o.frequency.exponentialRampToValueAtTime(40, t0 + 0.9);
+    g.gain.setValueAtTime(0.22, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 1.1);
+    o.connect(g).connect(c.destination);
+    o.start(t0);
+    o.stop(t0 + 1.15);
+  } catch {
+    /* audio unavailable */
+  }
+}
+
 export function levelUpFx() {
   ting(true);
   const end = Date.now() + 1500;

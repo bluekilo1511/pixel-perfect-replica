@@ -2,6 +2,15 @@
 import { migrate } from "./model";
 import { SPECIES, type Species } from "./gamify";
 
+/** Evolved forms per species/tier, duplicated here so friend files render without extras. */
+const TIER_FORM_SAFE = {
+  cat: ["🐱", "😼", "🐈‍⬛"],
+  lizard: ["🦎", "🦖", "🐉"],
+  dog: ["🐶", "🐕", "🐺"],
+  owl: ["🦉", "🦉", "🦅"],
+  whale: ["🐳", "🐳", "🐋"],
+} as const;
+
 export interface FriendSummary {
   ok: true;
   updatedAt: string | null;
@@ -35,7 +44,11 @@ export function summarizeFriend(raw: unknown): FriendParseResult {
   const activeDays = Object.values(d.dailyStats).filter(
     (s) => s.tasks > 0 || s.focusMin > 0,
   ).length;
-  const s = SPECIES[d.petState.species as Species] ?? SPECIES.cat;
+  const sp = (d.petState.species as Species) in SPECIES ? (d.petState.species as Species) : "cat";
+  const s = SPECIES[sp];
+  const lvl = Math.max(1, Number(d.petState.petLevel) || 1);
+  const tier = lvl >= 6 ? 2 : lvl >= 3 ? 1 : 0;
+  const emoji = TIER_FORM_SAFE[sp][tier];
   return {
     ok: true,
     updatedAt: typeof r["updatedAt"] === "string" ? r["updatedAt"] : null,
@@ -48,7 +61,7 @@ export function summarizeFriend(raw: unknown): FriendParseResult {
     lifetimePomodoros: life.pomodoros,
     catCoins: d.game.catCoins,
     lizardGems: d.game.lizardGems,
-    petLabel: `${s.emoji} ${s.name} Lv.${Math.max(1, d.petState.petLevel)}`,
+    petLabel: `${emoji} ${s.name} Lv.${lvl}`,
     tasksCompleted: d.tasks.filter((t) => t.completed).length,
     activeDays,
   };

@@ -59,11 +59,11 @@ function WaterCard() {
           {cups}/{WATER_GOAL} ly
         </span>
       </div>
-      <div className="my-4 grid grid-cols-8 gap-1.5">
+      <div className="my-4 grid grid-cols-8 gap-1 sm:gap-1.5">
         {Array.from({ length: WATER_GOAL }, (_, i) => (
           <div
             key={i}
-            className={`h-10 rounded-lg border border-border transition-colors ${i < cups ? "bg-primary" : "bg-muted"}`}
+            className={`h-8 rounded-lg border border-border transition-colors sm:h-10 ${i < cups ? "bg-primary" : "bg-muted"}`}
           />
         ))}
       </div>
@@ -443,6 +443,7 @@ function AddTask() {
     <div className="flex flex-wrap gap-2">
       <Input
         className="min-w-[180px] flex-1"
+        data-task-input="true"
         placeholder="Tên nhiệm vụ…"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -654,7 +655,7 @@ export function TodayPanel() {
   const done = tasks.filter((t) => t.completed).length;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
+    <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
       <div className="space-y-5">
         <NextSlotCard />
         <WeeklyGoalCard />

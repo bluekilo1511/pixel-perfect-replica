@@ -381,17 +381,241 @@ function StarClock() {
 
 /* ---------- room ---------- */
 
+// ---- Seasonal room themes (auto by month): Tet (Jan-Feb), Halloween (Oct), Christmas (Dec) ----
+export type RoomSeason = "default" | "tet" | "halloween" | "christmas";
+export function roomSeason(date = new Date()): RoomSeason {
+  const m = date.getMonth();
+  if (m === 9) return "halloween";
+  if (m === 11) return "christmas";
+  if (m === 0 || m === 1) return "tet";
+  return "default";
+}
+
+const SEASON_PALETTE: Record<
+  RoomSeason,
+  {
+    wallBack: string;
+    wallLeft: string;
+    baseboard: string;
+    curtain: string;
+    windowPane: string;
+    moon: string;
+    moonLight: string;
+    ambient: string;
+    rugInner: string;
+    rugRing: string;
+    rugMid: string;
+  }
+> = {
+  default: {
+    wallBack: "#2c5570",
+    wallLeft: "#25495f",
+    baseboard: "#e8d8c3",
+    curtain: "#815ac0",
+    windowPane: "#9fc2e8",
+    moon: "#fdf6d8",
+    moonLight: "#aecbf5",
+    ambient: "#cfe3ff",
+    rugInner: "#c9603f",
+    rugRing: "#8a3f33",
+    rugMid: "#e0a06c",
+  },
+  tet: {
+    wallBack: "#8a2f2f",
+    wallLeft: "#742828",
+    baseboard: "#eec87a",
+    curtain: "#b91c1c",
+    windowPane: "#f7c948",
+    moon: "#fff3c4",
+    moonLight: "#ffd9a8",
+    ambient: "#ffe0c2",
+    rugInner: "#d64545",
+    rugRing: "#a31515",
+    rugMid: "#f4c430",
+  },
+  halloween: {
+    wallBack: "#3b3454",
+    wallLeft: "#332e4a",
+    baseboard: "#c4b5fd",
+    curtain: "#4c1d95",
+    windowPane: "#c7d2fe",
+    moon: "#e2e8f0",
+    moonLight: "#a78bfa",
+    ambient: "#d8b4fe",
+    rugInner: "#b45309",
+    rugRing: "#3b0764",
+    rugMid: "#f97316",
+  },
+  christmas: {
+    wallBack: "#274b3d",
+    wallLeft: "#224135",
+    baseboard: "#dbeafe",
+    curtain: "#b91c1c",
+    windowPane: "#e0f2fe",
+    moon: "#f8fafc",
+    moonLight: "#e0f2fe",
+    ambient: "#dbeafe",
+    rugInner: "#166534",
+    rugRing: "#14532d",
+    rugMid: "#dc2626",
+  },
+};
+
+function SeasonExtras({ season }: { season: RoomSeason }) {
+  if (season === "tet") {
+    const lantern = (x: number, y: number, key: number) => (
+      <group key={key} position={[x, y, BACK_Z + 0.25]}>
+        <mesh>
+          <sphereGeometry args={[0.14, 16, 12]} />
+          <meshStandardMaterial
+            color="#dc2626"
+            emissive="#ef4444"
+            emissiveIntensity={0.35}
+            roughness={0.4}
+          />
+        </mesh>
+        <mesh position={[0, 0.16, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.04, 10]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.5} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, -0.16, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.04, 10]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.5} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, -0.26, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.14, 6]} />
+          <meshStandardMaterial color="#fbbf24" roughness={0.5} />
+        </mesh>
+        <pointLight color="#ff9d5c" intensity={0.55} distance={2.2} />
+      </group>
+    );
+    return (
+      <group>
+        {lantern(-1.7, 2.05, 0)}
+        {lantern(1.15, 2.05, 1)}
+        {/* red-gold banner on the back wall */}
+        <mesh position={[0, 2.25, BACK_Z + 0.14]}>
+          <boxGeometry args={[1.6, 0.3, 0.02]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.6} />
+        </mesh>
+        {[" aura "].map((_, i) => (
+          <mesh key={`g${i}`} position={[-0.45 + i * 0.3, 2.25, BACK_Z + 0.16]}>
+            <circleGeometry args={[0.07, 5]} />
+            <meshBasicMaterial color="#fde68a" toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (season === "halloween") {
+    return (
+      <group>
+        {/* pumpkin on the floor */}
+        <group position={[1.5, 0.14, 0.8]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.22, 14, 12]} />
+            <meshStandardMaterial color="#f97316" roughness={0.55} />
+          </mesh>
+          <mesh position={[0, 0.24, 0]}>
+            <cylinderGeometry args={[0.03, 0.045, 0.1, 8]} />
+            <meshStandardMaterial color="#4a2e1c" roughness={0.9} />
+          </mesh>
+          {/* jack-o-lantern face */}
+          {[-0.09, 0.09].map((x, i) => (
+            <mesh key={i} position={[x, 0.05, 0.2]}>
+              <circleGeometry args={[0.045, 3]} />
+              <meshBasicMaterial color="#1c0a0a" toneMapped={false} />
+            </mesh>
+          ))}
+          <mesh position={[0, -0.05, 0.21]}>
+            <circleGeometry args={[0.07, 4]} />
+            <meshBasicMaterial color="#1c0a0a" toneMapped={false} />
+          </mesh>
+          <pointLight color="#fb923c" intensity={0.9} distance={1.8} position={[0, 0.1, 0.2]} />
+        </group>
+        {/* bats on the wall */}
+        {(
+          [
+            [-1.2, 2.2],
+            [-0.7, 2.35],
+            [0.4, 2.25],
+          ] as [number, number][]
+        ).map(([x, y], i) => (
+          <mesh key={i} position={[x, y, BACK_Z + 0.13]} rotation={[0, 0, (i % 2 ? 1 : -1) * 0.2]}>
+            <circleGeometry args={[0.09, 3]} />
+            <meshBasicMaterial color="#1e1b4b" toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (season === "christmas") {
+    return (
+      <group>
+        {/* small tree in the corner */}
+        <group position={[2.6, 0, -1.3]}>
+          <mesh position={[0, 0.08, 0]}>
+            <cylinderGeometry args={[0.22, 0.26, 0.16, 10]} />
+            <meshStandardMaterial color="#7c3f21" roughness={0.9} />
+          </mesh>
+          {[0.34, 0.26, 0.18].map((r, i) => (
+            <mesh key={i} position={[0, 0.32 + i * 0.24, 0]} castShadow>
+              <coneGeometry args={[r, 0.4, 12]} />
+              <meshStandardMaterial color="#166534" roughness={0.7} />
+            </mesh>
+          ))}
+          <mesh position={[0, 1.12, 0]}>
+            <sphereGeometry args={[0.06, 8, 8]} />
+            <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.8} />
+          </mesh>
+          {(
+            [
+              [0.12, 0.5],
+              [-0.1, 0.72],
+              [0.08, 0.9],
+              [-0.14, 0.42],
+            ] as [number, number][]
+          ).map(([x, y], i) => (
+            <mesh key={i} position={[x, y, 0.18]}>
+              <sphereGeometry args={[0.035, 8, 8]} />
+              <meshBasicMaterial
+                color={["#ef4444", "#fbbf24", "#38bdf8", "#f472b6"][i]!}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+          <pointLight color="#ffd9a8" intensity={0.5} distance={2.4} position={[0, 0.8, 0.3]} />
+        </group>
+        {/* warm string lights along the back wall */}
+        {Array.from({ length: 7 }, (_, i) => (
+          <mesh key={i} position={[-2.4 + i * 0.8, 2.3 + Math.sin(i * 1.1) * 0.06, BACK_Z + 0.12]}>
+            <sphereGeometry args={[0.035, 8, 8]} />
+            <meshBasicMaterial
+              color={["#fbbf24", "#f87171", "#4ade80", "#60a5fa"][i % 4]!}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  return null;
+}
+
 function Room({
   decor,
   onStow,
   petEmoji,
   onShelfClick,
+  season = "default",
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
   petEmoji: string;
   onShelfClick?: (() => void) | undefined;
+  season?: RoomSeason;
 }) {
+  const S = SEASON_PALETTE[season];
   const wood = useMemo(() => woodTexture(), []);
   const galaxyTex = useMemo(() => galaxyTexture(), []);
   const posterTex = useMemo(() => posterTexture(), []);
@@ -406,20 +630,20 @@ function Room({
       {/* walls */}
       <mesh position={[0, WALL_H / 2, BACK_Z - 0.04]} receiveShadow>
         <boxGeometry args={[FLOOR_W, WALL_H, 0.08]} />
-        <meshStandardMaterial color="#2c5570" roughness={0.95} />
+        <meshStandardMaterial color={S.wallBack} roughness={0.95} />
       </mesh>
       <mesh position={[LEFT_X - 0.04, WALL_H / 2, 0]}>
         <boxGeometry args={[0.08, WALL_H, FLOOR_D]} />
-        <meshStandardMaterial color="#25495f" roughness={0.95} />
+        <meshStandardMaterial color={S.wallLeft} roughness={0.95} />
       </mesh>
       {/* baseboards */}
       <mesh position={[0, 0.08, BACK_Z + 0.005]}>
         <boxGeometry args={[FLOOR_W, 0.16, 0.03]} />
-        <meshStandardMaterial color="#e8d8c3" roughness={0.9} />
+        <meshStandardMaterial color={S.baseboard} roughness={0.9} />
       </mesh>
       <mesh position={[LEFT_X + 0.005, 0.08, 0]}>
         <boxGeometry args={[0.03, 0.16, FLOOR_D]} />
-        <meshStandardMaterial color="#e8d8c3" roughness={0.9} />
+        <meshStandardMaterial color={S.baseboard} roughness={0.9} />
       </mesh>
       {/* window on the left wall with moonlight */}
       <group position={[LEFT_X + 0.06, 1.5, -0.55]} rotation={[0, Math.PI / 2, 0]}>
@@ -428,11 +652,11 @@ function Room({
         </RoundedBox>
         <mesh position={[0, 0, 0.05]}>
           <planeGeometry args={[0.95, 1.05]} />
-          <meshBasicMaterial color="#9fc2e8" toneMapped={false} />
+          <meshBasicMaterial color={S.windowPane} toneMapped={false} />
         </mesh>
         <mesh position={[0.22, 0.28, 0.06]}>
           <circleGeometry args={[0.13, 24]} />
-          <meshBasicMaterial color="#fdf6d8" toneMapped={false} />
+          <meshBasicMaterial color={S.moon} toneMapped={false} />
         </mesh>
         {Array.from({ length: 8 }, (_, i) => (
           <mesh key={i} position={[(Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.9, 0.06]}>
@@ -451,11 +675,11 @@ function Room({
         {/* curtains */}
         <mesh position={[-0.62, 0.05, 0.06]} rotation={[0, 0, 0.06]}>
           <boxGeometry args={[0.16, 1.5, 0.02]} />
-          <meshStandardMaterial color="#815ac0" roughness={0.95} />
+          <meshStandardMaterial color={S.curtain} roughness={0.95} />
         </mesh>
         <mesh position={[0.62, 0.05, 0.06]} rotation={[0, 0, -0.06]}>
           <boxGeometry args={[0.16, 1.5, 0.02]} />
-          <meshStandardMaterial color="#815ac0" roughness={0.95} />
+          <meshStandardMaterial color={S.curtain} roughness={0.95} />
         </mesh>
         <mesh position={[0, 0.72, 0.06]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.02, 0.02, 1.6, 8]} />
@@ -466,7 +690,7 @@ function Room({
       <directionalLight
         position={[-5.5, 4.5, -0.55]}
         intensity={1.15}
-        color="#aecbf5"
+        color={S.moonLight}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -476,19 +700,20 @@ function Room({
         shadow-camera-bottom={-4}
       />
       <directionalLight position={[5, 6, 4]} intensity={0.4} color="#ffd9a8" />
-      <ambientLight intensity={0.5} color="#cfe3ff" />
+      <ambientLight intensity={0.5} color={S.ambient} />
+      <SeasonExtras season={season} />
       {/* rug */}
       <mesh position={[0.55, 0.008, 0.5]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.28, 40]} />
-        <meshStandardMaterial color="#c9603f" roughness={0.95} />
+        <meshStandardMaterial color={S.rugInner} roughness={0.95} />
       </mesh>
       <mesh position={[0.55, 0.012, 0.5]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.06, 1.28, 40]} />
-        <meshStandardMaterial color="#8a3f33" roughness={0.95} />
+        <meshStandardMaterial color={S.rugRing} roughness={0.95} />
       </mesh>
       <mesh position={[0.55, 0.016, 0.5]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.78, 0.9, 40]} />
-        <meshStandardMaterial color="#e0a06c" roughness={0.95} />
+        <meshStandardMaterial color={S.rugMid} roughness={0.95} />
       </mesh>
       {/* desk */}
       <group position={[-0.7, 0, -1.45]}>
@@ -732,11 +957,13 @@ export function StudyRoom3D({
   onStow,
   petEmoji,
   onShelfClick,
+  season = roomSeason(),
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
   petEmoji: string;
   onShelfClick?: () => void;
+  season?: RoomSeason;
 }) {
   return (
     <div className="h-48 w-full">
@@ -750,7 +977,13 @@ export function StudyRoom3D({
           camera={{ position: [9, 7.5, 9], zoom: 38, near: 0.1, far: 60 }}
           onCreated={({ camera }) => camera.lookAt(0, 0.75, 0)}
         >
-          <Room decor={decor} onStow={onStow} petEmoji={petEmoji} onShelfClick={onShelfClick} />
+          <Room
+            decor={decor}
+            onStow={onStow}
+            petEmoji={petEmoji}
+            onShelfClick={onShelfClick}
+            season={season}
+          />
         </Canvas>
       </Boundary>
     </div>

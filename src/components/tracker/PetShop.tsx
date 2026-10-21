@@ -23,6 +23,7 @@ import {
   MATERIALS,
   payRecipe,
   RECIPES,
+  petEmoji,
   type Recipe,
 } from "@/lib/tracker/extras";
 import { dateStr } from "@/lib/tracker/model";
@@ -65,7 +66,7 @@ export function PetShop() {
       },
     }));
     ting();
-    toast(`${SPECIES[pet.species].emoji} Măm măm! Cảm ơn ${it.emoji}`);
+    toast(`${petEmoji(pet)} Măm măm! Cảm ơn ${it.emoji}`);
   };
   const gem = (price: number, apply: (d: typeof data) => typeof data, msg: string) => {
     if (g.lizardGems < price) {

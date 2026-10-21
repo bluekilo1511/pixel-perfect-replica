@@ -1,7 +1,7 @@
 import type { Materials } from "./extras";
 // Pure gamification rules: pet, streak, shop, inventory. No browser APIs.
 
-export type Species = "cat" | "lizard" | "dog" | "owl";
+export type Species = "cat" | "lizard" | "dog" | "owl" | "whale";
 export type Accessory = "gradcap" | "sunglasses" | "crown" | "wings";
 export type DecorId =
   "lamp" | "plant" | "shelf" | "poster" | "teddy" | "fairy" | "galaxy" | "starClock";
@@ -49,6 +49,7 @@ export const SPECIES: Record<Species, { emoji: string; name: string; price: numb
   lizard: { emoji: "🦎", name: "Thằn Lằn", price: 10 },
   dog: { emoji: "🐶", name: "Cún", price: 12 },
   owl: { emoji: "🦉", name: "Cú", price: 15 },
+  whale: { emoji: "🐳", name: "Cá Voi Xanh", price: 20 },
 };
 
 export const ACCESSORIES: Record<

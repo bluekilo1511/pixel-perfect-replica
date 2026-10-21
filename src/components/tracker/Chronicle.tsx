@@ -8,6 +8,7 @@ import {
   TIER_BADGE,
   tierOf,
   weekSummary,
+  petEmoji,
   type AchievementId,
 } from "@/lib/tracker/extras";
 import { SPECIES } from "@/lib/tracker/gamify";
@@ -104,7 +105,7 @@ export function Chronicle() {
           <div className="grid gap-4 text-sm sm:grid-cols-2">
             <p>
               <b>
-                Phóng viên {SPECIES[pet.species].emoji} {petTitle(pet)}
+                Phóng viên {petEmoji(pet)} {petTitle(pet)}
               </b>{" "}
               (Lv {pet.petLevel}) đưa tin: chuỗi streak đang là <b>🔥 {data.streak.count} ngày</b>,{" "}
               {w.pomodoros} trận Pomodoro đã diễn ra.

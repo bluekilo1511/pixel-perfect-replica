@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { MOOD_META, moodOf, ACCESSORIES, SPECIES, type PetState } from "@/lib/tracker/gamify";
+import { petEmoji } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 import { AmbientControl } from "./AmbientControl";
 
@@ -49,7 +50,7 @@ export function FocusMode({
         <span
           className={`relative text-8xl leading-none ${running ? "animate-pet-idle" : "animate-pet-dance"}`}
         >
-          {SPECIES[pet.species].emoji}
+          {petEmoji(pet)}
           {pet.accessory && (
             <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-5xl">
               {ACCESSORIES[pet.accessory].emoji}

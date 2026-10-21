@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode, useEffect } from "react";
 import {
   CalendarDays,
   Check,
@@ -48,6 +48,12 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     }
     setActive(value);
   };
+  useEffect(() => {
+    const go = (e: Event) => change((e as CustomEvent<string>).detail);
+    window.addEventListener("ppr:goto-tab", go);
+    return () => window.removeEventListener("ppr:goto-tab", go);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
   return (
     <Tabs value={active} onValueChange={change}>
       <div className="constellation-navigation" ref={nav}>

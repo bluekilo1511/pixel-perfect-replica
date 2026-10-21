@@ -104,6 +104,10 @@ export function SettingsPanel() {
     <div className="grid gap-5 lg:grid-cols-2">
       <section className="glass p-5">
         <h2 className="mb-1 text-lg font-semibold">⚙️ Cài đặt</h2>
+        <p className="mb-4 text-xs text-muted-foreground">
+          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục Pomodoro · <b>N</b> thêm nhiệm vụ · <b>1–7</b>{" "}
+          chuyển tab
+        </p>
         <p className="mb-2 text-xs text-muted-foreground">
           Mọi thứ đang chạy, lưu thẳng vào file của bạn.
         </p>

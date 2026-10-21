@@ -20,6 +20,9 @@ export interface WeekSummary {
   thisWeek: WeekTotals;
   lastWeek: WeekTotals;
   diffMin: number; // thisWeek.focusMin - lastWeek.focusMin
+  diffPct: number | null; // % change in focus minutes vs last week (null when last week was 0)
+  diffTasks: number; // thisWeek.tasks - lastWeek.tasks
+  diffDays: number; // thisWeek.activeDays - lastWeek.activeDays
   bestDay: { date: string; focusMin: number } | null;
   topSubjects: SubjectTotal[]; // up to 3 subjects by focus minutes this week
 }
@@ -89,6 +92,12 @@ export function weekSummary(data: AppData, now = new Date()): WeekSummary {
     thisWeek,
     lastWeek,
     diffMin: thisWeek.focusMin - lastWeek.focusMin,
+    diffPct:
+      lastWeek.focusMin > 0
+        ? Math.round(((thisWeek.focusMin - lastWeek.focusMin) / lastWeek.focusMin) * 100)
+        : null,
+    diffTasks: thisWeek.tasks - lastWeek.tasks,
+    diffDays: thisWeek.activeDays - lastWeek.activeDays,
     bestDay,
     topSubjects,
   };

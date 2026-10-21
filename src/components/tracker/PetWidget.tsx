@@ -23,7 +23,14 @@ import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BOSS_MAX_HP, BOSS_REWARD, bossHp } from "@/lib/tracker/boss";
-import { ADVANCED_LINES, petTitle, petXpForLevel, TIER_BADGE, tierOf } from "@/lib/tracker/extras";
+import {
+  ADVANCED_LINES,
+  petEmoji,
+  petTitle,
+  petXpForLevel,
+  TIER_BADGE,
+  tierOf,
+} from "@/lib/tracker/extras";
 import {
   Select,
   SelectContent,
@@ -77,7 +84,7 @@ export function PetWidget() {
   const setFocus = useFocusSky();
   const { data, finishPomodoro, bossCancel, update } = useTracker();
   const pet = data.petState;
-  const petEmoji = SPECIES[pet.species].emoji;
+  const petForm = petEmoji(pet);
   const mood = moodOf(pet);
   const pomodoroMinutes = data.settings.pomodoroMinutes;
   const breakMinutes = data.settings.breakMinutes;
@@ -245,7 +252,7 @@ export function PetWidget() {
               </span>
             )}
             <span className={`relative text-7xl leading-none ${anim}`}>
-              {SPECIES[pet.species].emoji}
+              {petForm}
               {pet.accessory && (
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-4xl">
                   {ACCESSORIES[pet.accessory].emoji}
@@ -263,7 +270,7 @@ export function PetWidget() {
           >
             <StudyRoom3D
               decor={pet.decorActive}
-              petEmoji={petEmoji}
+              petEmoji={petForm}
               onShelfClick={() => setJournalOpen(true)}
               onStow={(id) =>
                 update((d) => {
