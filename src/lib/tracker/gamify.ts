@@ -41,8 +41,8 @@ export interface Inventory {
 export const STREAK_GOAL = 3;
 export const POMODORO_MINUTES = 25;
 export const POMODORO_REWARD = 5;
-export const HUNGER_DECAY = 5;
-export const HAPPY_DECAY = 3;
+export const HUNGER_DECAY = 2;
+export const HAPPY_DECAY = 1.5;
 
 export const SPECIES: Record<Species, { emoji: string; name: string; price: number }> = {
   cat: { emoji: "🐱", name: "Mèo", price: 0 },
@@ -100,7 +100,7 @@ export const CONSUMABLES: Record<
   string,
   { emoji: string; name: string; price: number; hunger: number; happiness: number }
 > = {
-  fish: { emoji: "🐟", name: "Cá khô", price: 3, hunger: 25, happiness: 0 },
+  fish: { emoji: "🐟", name: "Cá khô", price: 3, hunger: 30, happiness: 0 },
   cake: { emoji: "🍰", name: "Bánh thưởng", price: 5, hunger: 40, happiness: 5 },
   yarn: { emoji: "🧶", name: "Cuộn len", price: 4, hunger: 0, happiness: 20 },
   ball: { emoji: "⚽", name: "Bóng nảy", price: 8, hunger: 0, happiness: 40 },
@@ -152,7 +152,7 @@ export const defaultInventory = (): Inventory => ({
   materials: { magicFeather: 0, starShard: 0, mysticHerb: 0 },
 });
 
-/** -5% no, -3% vui for every full hour elapsed since lastDecayAt. `mult` scales the decay (weather debuff). */
+/** -2% no, -1.5% vui for every full hour elapsed since lastDecayAt. `mult` scales the decay (weather debuff). */
 export function decayPet(pet: PetState, now = new Date(), mult = 1): PetState {
   const last = new Date(pet.lastDecayAt).getTime();
   if (!Number.isFinite(last)) return { ...pet, lastDecayAt: now.toISOString() };
