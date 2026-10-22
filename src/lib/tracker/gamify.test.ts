@@ -34,11 +34,11 @@ describe("gamification rules", () => {
     expect(migrate({ streak: { freezeActive: "true" } }).streak.freezeActive).toBe(false);
     expect(migrate({ streak: { freezeActive: true } }).streak.freezeActive).toBe(true);
   });
-  it("pet loses 5% hunger and 3% happiness per hour", () => {
+  it("pet loses 2% hunger and 1.5% happiness per hour", () => {
     const p = { ...defaultPet(new Date(2026, 0, 1, 8)), hunger: 80, happiness: 80 };
     const d = decayPet(p, new Date(2026, 0, 1, 10, 30));
-    expect(d.hunger).toBe(70);
-    expect(d.happiness).toBe(74);
+    expect(d.hunger).toBe(76);
+    expect(d.happiness).toBe(77);
   });
 
   it("moods follow thresholds", () => {
