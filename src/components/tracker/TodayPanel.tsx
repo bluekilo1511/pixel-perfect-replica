@@ -28,7 +28,9 @@ import {
   type TaskKind,
 } from "@/lib/tracker/model";
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
-import { addExamPrepTasks, EXAM_PREP_PER_DAY, EXAM_PREP_WINDOW, nextPrepSuggestion } from "@/lib/tracker/tkb";
+import { addExamPrepTasks, EXAM_PREP_PER_DAY, EXAM_PREP_WINDOW, nextPrepSuggestion,
+  matchSubject,
+} from "@/lib/tracker/tkb";
 import { shiftDate } from "@/lib/tracker/gamify";
 import {
   addWeekGoal,
@@ -449,7 +451,7 @@ function PrepSuggestionBar() {
   const start = () => {
     const today = dateStr();
     const tomorrow = shiftDate(today, 1);
-    const subject = data.subjects.find((s) => s.toLowerCase() === pick.slot.title.toLowerCase());
+    const subject = matchSubject(data, pick.slot.title);
     const t = makeTask(`Ôn: ${pick.slot.title} (mai ${pick.slot.start})`, "pomodoro", pick.minutes, today, {
       prepSlotId: pick.slot.id,
       prepForDate: tomorrow,

@@ -219,9 +219,20 @@ export function tomorrowSlots(data: AppData, now = new Date()): Slot[] {
     : [];
 }
 
+/** Matches a study subject for a slot/prep title: exact name first, then any subject
+ * name contained in the title (longest first, e.g. "KHTN (Hóa)" → subject "Hóa"). */
+export function matchSubject(data: AppData, title: string): string | undefined {
+  const lower = title.toLowerCase();
+  const exact = data.subjects.find((s) => s.toLowerCase() === lower);
+  if (exact) return exact;
+  const sorted = [...data.subjects].sort((a, b) => b.length - a.length);
+  return sorted.find((s) => s.length > 0 && lower.includes(s.toLowerCase()));
+}
+
 /**
  * Creates "Ôn: {subject}" tasks dated today for the picked slots, once per
- * slot per day. Tags the subject when its name already exists in data.subjects.
+ * slot per day. Tags the subject when its name matches the slot title
+ * (exact or contained, e.g. "KHTN (Hóa)" → "Hóa").
  */
 export function addPrepTasks(
   data: AppData,
@@ -231,7 +242,6 @@ export function addPrepTasks(
   const today = dateStr(now);
   const tomorrow = shiftDate(today, 1);
   const newTasks: Task[] = [];
-  const subjectLower = data.subjects.map((s) => s.toLowerCase());
   picks.forEach(({ slot, minutes }) => {
     const dupe = data.tasks.some(
       (t) =>
@@ -242,12 +252,12 @@ export function addPrepTasks(
     );
     if (dupe) return;
     const mins = Math.min(240, Math.max(5, Math.round(minutes)));
-    const idx = subjectLower.indexOf(slot.title.toLowerCase());
+    const subject = matchSubject(data, slot.title);
     newTasks.push(
       makeTask(`Ôn: ${slot.title} (mai ${slot.start})`, "pomodoro", mins, today, {
         prepSlotId: slot.id,
         prepForDate: tomorrow,
-        ...(idx >= 0 ? { subject: data.subjects[idx] } : {}),
+        ...(subject ? { subject } : {}),
       }),
     );
   });

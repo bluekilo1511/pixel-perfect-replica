@@ -20,6 +20,7 @@ import {
   nextPrepSuggestion,
   tomorrowSlots,
   upcomingExtraSchedule,
+  matchSubject,
 } from "./tkb";
 
 const TKB_TEXT = `Thứ 2
@@ -103,6 +104,32 @@ describe("evening prep for tomorrow", () => {
     const prep = d.tasks.find((t) => t.title.startsWith("Ôn:"))!;
     expect(prep.minutes).toBe(30);
     expect(prep.prepForDate).toBe("2026-10-19");
+  });
+
+  it("matchSubject links partial titles like KHTN (Hóa) to the subject", () => {
+    const d = { ...defaultData(), subjects: ["Toán", "Hóa"] } as AppData;
+    expect(matchSubject(d, "Toán")).toBe("Toán"); // exact wins
+    expect(matchSubject(d, "KHTN (Hóa)")).toBe("Hóa"); // contained
+    expect(matchSubject(d, "Tiếng Anh")).toBeUndefined(); // no match
+    const d2 = { ...defaultData(), subjects: ["Hóa", "Hóa học"] } as AppData;
+    expect(matchSubject(d2, "Ôn Hóa học")).toBe("Hóa học"); // longest contained name wins
+  });
+
+  it("prep tasks get the subject tag for contained titles too", () => {
+    let d = defaultData();
+    d = applyTimetableImport(
+      d,
+      parseTimetableText("Thứ 2\nBuổi sáng\nKHTN (Hóa) - Cô Lan"),
+      "replace",
+      DEFAULT_TKB,
+      true,
+    );
+    d = { ...d, subjects: ["Hóa"] };
+    const now = new Date(2026, 9, 18, 19, 0); // Sunday evening → Monday's slots
+    const picks = tomorrowSlots(d, now).map((slot) => ({ slot, minutes: 25 }));
+    d = addPrepTasks(d, now, picks).data;
+    const prep = d.tasks.find((t) => t.title.startsWith("Ôn:"))!;
+    expect(prep.subject).toBe("Hóa");
   });
 
   it("skips display-only subjects like TNHN or PE", () => {
