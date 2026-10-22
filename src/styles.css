@@ -206,13 +206,43 @@
 }
 .ice-shatter-canvas { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
 
-.constellation-navigation { position: relative; width: fit-content; max-width: 100%; }
-.constellation-list { display: flex; height: auto; flex-wrap: wrap; justify-content: flex-start; gap: 8px; padding: 8px 0; background: transparent; }
-.constellation-tab { position: relative; gap: 9px; padding: 8px 12px; background: transparent; color: var(--muted-foreground); border: 1px solid transparent; }
-.constellation-tab[data-state=active] { background: var(--card); border-color: var(--border); color: var(--foreground); box-shadow: var(--glass-shadow); }
-.star-node { display: grid; place-items: center; width: 28px; height: 28px; position: relative; color: var(--primary); }
-.star-node::before { content: ""; position: absolute; width: 5px; height: 5px; top: -5px; left: calc(50% - 2.5px); border-radius: 50%; background: var(--primary); box-shadow: var(--neon-shadow); }
-.constellation-tab[data-state=active] .star-node { filter: drop-shadow(0 0 5px var(--primary)); }
+.star-node { display: grid; place-items: center; position: relative; color: var(--primary); }
+.star-node::before { content: ""; position: absolute; width: 4px; height: 4px; top: 0; left: calc(50% - 2px); border-radius: 50%; background: var(--primary); box-shadow: var(--neon-shadow); }
+
+/* ---- Zodiac navigation sky: the 7 tabs hang on the stars of one constellation ---- */
+.zodiac-sky-wrap { position: relative; width: 100%; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: color-mix(in oklab, var(--card) 55%, transparent); box-shadow: var(--glass-shadow); }
+.zodiac-sky { position: relative; height: 120px; }
+.zodiac-aurora { position: absolute; inset: -40%; background: linear-gradient(115deg, var(--aurora-3) 8%, var(--aurora-1) 32%, var(--aurora-2) 50%, var(--aurora-4) 68%, transparent 88%); animation: aurora-flow 28s ease-in-out infinite alternate; will-change: transform; }
+.zodiac-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.zodiac-lines line { stroke: color-mix(in oklab, var(--primary) 40%, transparent); stroke-width: 1.5; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.zodiac-star-list { display: block; position: absolute; inset: 0; background: transparent; }
+.zodiac-star { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; height: auto; width: auto; padding: 6px 8px; border-radius: 10px; background: transparent; border: 1px solid transparent; color: var(--muted-foreground); --tw: 0s; }
+.zodiac-star:nth-child(2n) { --tw: -2s; }
+.zodiac-star:nth-child(3n) { --tw: -4s; }
+.zodiac-star .star-node { width: calc(var(--node-r) * 2); height: calc(var(--node-r) * 2); font-size: calc(var(--node-r)); animation: star-twinkle 6s ease-in-out infinite; animation-delay: var(--tw); }
+.zodiac-star .star-node::before { display: none; }
+.zodiac-star:hover { color: var(--foreground); background: color-mix(in oklab, var(--card) 40%, transparent); }
+.zodiac-star[data-state=active] { color: var(--foreground); background: color-mix(in oklab, var(--card) 70%, transparent); border-color: var(--border); box-shadow: var(--glass-shadow); }
+.zodiac-star[data-state=active] .star-node { filter: drop-shadow(0 0 6px var(--primary)); animation: none; }
+.zodiac-star-label { font-size: 11px; white-space: nowrap; opacity: 0; transition: opacity .15s ease; text-shadow: 0 1px 4px oklch(0 0 0 / 55%); }
+.zodiac-star:hover .zodiac-star-label, .zodiac-star[data-state=active] .zodiac-star-label, .zodiac-star:focus-visible .zodiac-star-label { opacity: 1; }
+@keyframes star-twinkle { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+
+.personal-star { position: absolute; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; border: none; padding: 0; cursor: grab; touch-action: none; z-index: 5;
+  background: radial-gradient(circle, #ffd76a 0 35%, #f5a623 60%, transparent 72%);
+  box-shadow: 0 0 10px color-mix(in oklab, #f5a623 80%, transparent), 0 0 22px color-mix(in oklab, #ffd76a 45%, transparent);
+  animation: star-twinkle 4s ease-in-out infinite; }
+.personal-star:active { cursor: grabbing; }
+.personal-star-editor { position: absolute; left: 8px; bottom: 8px; z-index: 6; display: flex; flex-direction: column; gap: 6px; width: min(270px, 72%); padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--glass-shadow); }
+.personal-star-editor input { font-size: 12px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--background); color: var(--foreground); }
+.personal-star-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.personal-star-presets button { font-size: 11px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted-foreground); }
+.personal-star-presets button:hover { color: var(--foreground); border-color: var(--primary); }
+.personal-star-editor-note { font-size: 10px; color: var(--muted-foreground); }
+.personal-star-close { align-self: flex-end; font-size: 11px; padding: 4px 10px; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); }
+@media (max-width: 640px) { .zodiac-sky { height: 84px; } .zodiac-star-label { font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .zodiac-aurora, .zodiac-star .star-node, .personal-star { animation: none; } }
+
 .constellation-beam { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 3; }
 .constellation-beam line { stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1; filter: drop-shadow(0 0 4px var(--primary)); animation: laser-connect 850ms ease-out both; }
 @keyframes laser-connect { 0% { stroke-dashoffset: 1; opacity: 1; } 65% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }

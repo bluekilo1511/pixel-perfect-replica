@@ -13,6 +13,7 @@ import {
   type StreakState,
 } from "./gamify";
 import { defaultMarket, type MarketState } from "./market";
+import { DEFAULT_ZODIAC_ID, isValidZodiacId } from "./zodiac";
 import {
   addPetXp,
   bumpLifetime,
@@ -165,6 +166,9 @@ export interface AppSettings {
   fxSound: boolean; // play little effect sounds (tings, fanfares)
   chime: ChimeKind; // style of the Pomodoro-finished chime
   batterySaver: boolean; // lower 3D room resolution/effects to save battery
+  navZodiac: string; // constellation id shown by the tab navigation sky
+  personalStar: { name: string; x: number; y: number }; // the user's own star in the nav sky
+  admin: boolean; // admin test mode: trial data in memory, backup download locked
 }
 
 export interface AppData {
@@ -272,6 +276,9 @@ export function defaultSettings(): AppSettings {
     autoBreak: true,
     fxSound: true,
     chime: "soft",
+    navZodiac: DEFAULT_ZODIAC_ID,
+    personalStar: { name: "", x: 92, y: 18 },
+    admin: false,
   };
 }
 
@@ -400,6 +407,64 @@ export function normalizeExtraSchedule(input: unknown): ExtraScheduleItem[] {
 }
 
 /** Accepts any old/new JSON and fills missing fields without losing old tasks. */
+const clampPct = (v: unknown, d: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : d;
+
+export function normalizePersonalStar(v: unknown): { name: string; x: number; y: number } {
+  const raw = obj(v);
+  return {
+    name: typeof raw.name === "string" ? raw.name.slice(0, 24) : "",
+    x: clampPct(raw.x, 92),
+    y: clampPct(raw.y, 18),
+  };
+}
+
+export type AdminBoostKind = "xp" | "catCoins" | "lizardGems" | "spinTickets" | "streak" | "petXp";
+const ADMIN_KINDS: AdminBoostKind[] = [
+  "xp",
+  "catCoins",
+  "lizardGems",
+  "spinTickets",
+  "streak",
+  "petXp",
+];
+export function isAdminBoostKind(v: unknown): v is AdminBoostKind {
+  return (ADMIN_KINDS as readonly unknown[]).includes(v);
+}
+
+/** Admin test mode: directly grant resources. No rewards, no history entries. */
+export function applyAdminBoost(data: AppData, kind: AdminBoostKind, amount: number): AppData {
+  const n = Math.round(amount);
+  if (n === 0) return data;
+  switch (kind) {
+    case "xp":
+      return { ...data, game: { ...data.game, xp: Math.max(0, data.game.xp + n) } };
+    case "catCoins":
+      return { ...data, game: { ...data.game, catCoins: Math.max(0, data.game.catCoins + n) } };
+    case "lizardGems":
+      return { ...data, game: { ...data.game, lizardGems: Math.max(0, data.game.lizardGems + n) } };
+    case "spinTickets":
+      return {
+        ...data,
+        game: { ...data.game, spinTickets: Math.max(0, data.game.spinTickets + n) },
+      };
+    case "streak":
+      return {
+        ...data,
+        streak: {
+          ...data.streak,
+          count: Math.max(0, data.streak.count + n),
+          best: Math.max(data.streak.best, data.streak.count + n),
+        },
+      };
+    case "petXp":
+      return {
+        ...data,
+        petState: { ...data.petState, petXp: Math.max(0, data.petState.petXp + n) },
+      };
+  }
+}
+
 export function migrate(raw: unknown): AppData {
   const base = defaultData();
   if (!raw || typeof raw !== "object") return base;
@@ -486,6 +551,12 @@ export function migrate(raw: unknown): AppData {
       ? (rawSettings.chime as ChimeKind)
       : "soft",
     batterySaver: rawSettings.batterySaver === true,
+    navZodiac:
+      typeof rawSettings.navZodiac === "string" && isValidZodiacId(rawSettings.navZodiac)
+        ? rawSettings.navZodiac
+        : DEFAULT_ZODIAC_ID,
+    personalStar: normalizePersonalStar(rawSettings.personalStar),
+    admin: rawSettings.admin === true,
   };
   const backupRaw = obj(r.backup);
   const questsRaw = obj(r.quests);

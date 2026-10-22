@@ -27,7 +27,7 @@ export function LevelUpOverlay() {
 }
 
 export function Welcome() {
-  const { open, create, startOffline } = useTracker();
+  const { open, create, startOffline, startAdmin } = useTracker();
   const [fsa, setFsa] = useState(true);
   useEffect(() => setFsa(supportsFSA()), []);
   return (
@@ -48,6 +48,14 @@ export function Welcome() {
           </Button>
           <Button variant="ghost" onClick={startOffline}>
             Dùng thử không cần file
+          </Button>
+          <Button
+            variant="ghost"
+            className="text-muted-foreground/70 hover:text-muted-foreground"
+            title="Dữ liệu thử ngay trong bộ nhớ, có quyền admin để test chức năng — không đụng file"
+            onClick={startAdmin}
+          >
+            🧪 Chế độ test (Admin)
           </Button>
         </div>
         {!fsa && (

@@ -9,6 +9,8 @@ import {
   Settings,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTracker } from "@/lib/tracker/store";
+import { zodiacById, type NavTabKey } from "@/lib/tracker/zodiac";
 
 const items = [
   { value: "today", label: "Hôm nay", icon: Check },
@@ -18,6 +20,13 @@ const items = [
   { value: "wheel", label: "Vòng quay", icon: Sparkles },
   { value: "chronicle", label: "Nhật báo tuần", icon: Newspaper },
   { value: "settings", label: "Cài đặt", icon: Settings },
+] as const;
+
+const PRESETS = [
+  { name: "Trái trên", x: 12, y: 20 },
+  { name: "Phải trên", x: 88, y: 20 },
+  { name: "Trái dưới", x: 12, y: 80 },
+  { name: "Phải dưới", x: 88, y: 80 },
 ];
 
 export function ConstellationTabs({ children }: { children: ReactNode }) {
@@ -54,28 +63,150 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("ppr:goto-tab", go);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
+
+  const { data, update } = useTracker();
+  const s = data.settings;
+  const zodiac = zodiacById(s.navZodiac);
+  const personal = s.personalStar;
+
+  // Personal star: drag on desktop (committed on release), click opens its editor.
+  const [editing, setEditing] = useState(false);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const drag = useRef<{ moved: boolean; startX: number; startY: number } | null>(null);
+  const starPos = dragPos ?? { x: personal.x, y: personal.y };
+
+  const onStarDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    drag.current = { moved: false, startX: e.clientX, startY: e.clientY };
+    if (e.pointerType === "mouse") e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onStarMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    if (Math.abs(e.clientX - d.startX) + Math.abs(e.clientY - d.startY) > 5) d.moved = true;
+    if (!d.moved) return;
+    const box = nav.current?.getBoundingClientRect();
+    if (!box) return;
+    setDragPos({
+      x: ((e.clientX - box.left) / box.width) * 100,
+      y: ((e.clientY - box.top) / box.height) * 100,
+    });
+  };
+  const onStarUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d?.moved) {
+      if (dragPos)
+        update((d) => ({
+          ...d,
+          settings: { ...d.settings, personalStar: { ...d.settings.personalStar, ...dragPos } },
+        }));
+      setDragPos(null);
+    } else {
+      setEditing((v) => !v);
+    }
+  };
+
   return (
     <Tabs value={active} onValueChange={change}>
-      <div className="constellation-navigation" ref={nav}>
-        {beam && (
-          <svg className="constellation-beam" aria-hidden>
-            <line
-              key={beam.key}
-              {...{ x1: beam.x1, y1: beam.y1, x2: beam.x2, y2: beam.y2 }}
-              pathLength="1"
-            />
+      <div className="zodiac-sky-wrap">
+        <div className="zodiac-sky" ref={nav}>
+          <div className="zodiac-aurora" aria-hidden />
+          <svg
+            className="zodiac-lines"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            {zodiac.lines.map(([a, b], i) => {
+              const pa = zodiac.stars[a];
+              const pb = zodiac.stars[b];
+              if (!pa || !pb) return null;
+              return <line key={i} x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />;
+            })}
           </svg>
-        )}
-        <TabsList className="constellation-list">
-          {items.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} data-tab={value} className="constellation-tab">
-              <span className="star-node">
-                <Icon size={17} strokeWidth={1.8} />
-              </span>
-              <span>{label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+          <TabsList className="zodiac-star-list">
+            {zodiac.stars.map((star) => {
+              const item = items.find((i) => i.value === star.tab)!;
+              const Icon = item.icon;
+              return (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  data-tab={item.value}
+                  className="zodiac-star"
+                  title={`${item.label} · ${zodiac.name}`}
+                  style={{
+                    left: `${star.x}%`,
+                    top: `${star.y}%`,
+                    ["--node-r" as string]: `${star.r}px`,
+                  }}
+                >
+                  <span className="star-node">
+                    <Icon size={15} strokeWidth={1.8} aria-hidden />
+                  </span>
+                  <span className="zodiac-star-label">{item.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+          {/* The user's own star */}
+          <button
+            type="button"
+            className="personal-star"
+            title={personal.name ? `Ngôi sao của bạn: ${personal.name}` : "Ngôi sao của bạn"}
+            style={{ left: `${starPos.x}%`, top: `${starPos.y}%` }}
+            onPointerDown={onStarDown}
+            onPointerMove={onStarMove}
+            onPointerUp={onStarUp}
+            aria-label="Ngôi sao của bạn"
+          />
+          {editing && (
+            <div className="personal-star-editor">
+              <div className="text-xs font-semibold">⭐ Ngôi sao của bạn</div>
+              <input
+                value={personal.name}
+                maxLength={24}
+                placeholder="Đặt tên cho sao..."
+                onChange={(e) =>
+                  update((d) => ({
+                    ...d,
+                    settings: {
+                      ...d.settings,
+                      personalStar: { ...d.settings.personalStar, name: e.target.value },
+                    },
+                  }))
+                }
+              />
+              <div className="personal-star-presets">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() =>
+                      update((d) => ({
+                        ...d,
+                        settings: {
+                          ...d.settings,
+                          personalStar: { ...d.settings.personalStar, x: p.x, y: p.y },
+                        },
+                      }))
+                    }
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+              <div className="personal-star-editor-note">Kéo ngôi sao để tự chọn vị trí</div>
+              <button
+                type="button"
+                className="personal-star-close"
+                onClick={() => setEditing(false)}
+              >
+                Xong
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       {children}
     </Tabs>

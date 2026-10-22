@@ -26,6 +26,7 @@ import {
   upcomingSlots,
   type AppData,
 } from "./model";
+import { applyAdminBoost, type AdminBoostKind } from "./model";
 import { decayPet } from "./gamify";
 import {
   ACHIEVEMENT_REWARD,
@@ -82,6 +83,8 @@ interface Store {
   open: () => Promise<void>;
   create: () => Promise<void>;
   startOffline: () => void;
+  startAdmin: () => void;
+  adminBoost: (kind: AdminBoostKind, amount: number) => void;
   download: () => void;
   startTimer: (id: string) => void;
   pauseTimer: () => void;
@@ -214,7 +217,17 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     }
   };
   const startOffline = () => boot(null, null, null);
+  const startAdmin = () => {
+    boot(null, null, null);
+    setData((d) => ({ ...d, settings: { ...d.settings, admin: true } }));
+  };
+  const adminBoost = (kind: AdminBoostKind, amount: number) =>
+    setData((d) => applyAdminBoost(d, kind, amount));
   const download = () => {
+    if (dataRef.current.settings.admin) {
+      toast.error("Chế độ test (Admin) đang bật — tắt trong Cài đặt để tải backup.");
+      return;
+    }
     const now = new Date();
     setData((d) => ({ ...d, backup: { ...d.backup, lastBackupAt: now.toISOString() } }));
     downloadData(dataRef.current, fileName ?? undefined);
@@ -481,6 +494,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         open,
         create,
         startOffline,
+        startAdmin,
+        adminBoost,
         download,
         startTimer,
         pauseTimer,

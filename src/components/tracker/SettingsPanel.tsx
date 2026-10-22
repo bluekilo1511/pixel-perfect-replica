@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
+import { ZODIAC_LIST } from "@/lib/tracker/zodiac";
+import type { AdminBoostKind } from "@/lib/tracker/model";
 import { POMODORO_PRESETS, type AppSettings, type ThemeMode } from "@/lib/tracker/model";
 import { openFile } from "@/lib/tracker/storage";
 import { Button } from "@/components/ui/button";
@@ -37,7 +39,7 @@ function Row({
 }
 
 export function SettingsPanel() {
-  const { data, update, download, restore } = useTracker();
+  const { data, update, download, restore, adminBoost } = useTracker();
   const s = data.settings;
   const [name, setName] = useState(data.ownerName ?? "");
   const [preset, setPreset] = useState("");
@@ -285,6 +287,71 @@ export function SettingsPanel() {
       </section>
 
       <section className="glass p-5 lg:col-span-2">
+        <h2 className="mb-1 text-lg font-semibold">🌌 Chòm sao điều hướng</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Chọn hình chòm sao treo 7 tab của app — mỗi tab là một ngôi sao trong chòm thật.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {ZODIAC_LIST.map((z) => (
+            <button
+              key={z.id}
+              type="button"
+              onClick={() => set({ navZodiac: z.id })}
+              className={`rounded-xl border p-2 text-left text-xs transition-colors ${
+                s.navZodiac === z.id
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              }`}
+            >
+              <span className="block font-semibold">{z.name}</span>
+              <span className="text-[10px] opacity-70">{z.range}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {s.admin && (
+        <section className="glass p-5 lg:col-span-2">
+          <h2 className="mb-1 text-lg font-semibold">🧪 Chế độ test (Admin)</h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Đang chạy dữ liệu thử trong bộ nhớ. Nút tăng tài nguyên cộng thẳng vào số liệu, không
+            ghi lịch sử; tải backup bị khóa khi chế độ này bật.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["xp", "+100 XP"],
+                ["catCoins", "+100 Coin"],
+                ["lizardGems", "+10 Gem"],
+                ["spinTickets", "+5 Lượt quay"],
+                ["streak", "+1 Streak"],
+                ["petXp", "+50 XP Pet"],
+              ] as [AdminBoostKind, string][]
+            ).map(([kind, label]) => (
+              <Button
+                key={kind}
+                variant="outline"
+                size="sm"
+                onClick={() => adminBoost(kind, boostAmount(kind))}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              set({ admin: false });
+            }}
+          >
+            Tắt chế độ test
+          </Button>
+        </section>
+      )}
+
+      <section className="glass p-5 lg:col-span-2">
         <h2 className="mb-1 text-lg font-semibold">💾 Dữ liệu</h2>
         <StorageUsage />
         <p className="mb-3 text-xs text-muted-foreground">
@@ -293,8 +360,17 @@ export function SettingsPanel() {
             : "Chưa sao lưu lần nào — nên tải file JSON để giữ an toàn."}
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={download}>
-            ⬇️ Tải file JSON
+          <Button
+            variant="outline"
+            disabled={s.admin}
+            title={
+              s.admin
+                ? "Chế độ test (Admin) đang bật — tắt trước khi tải backup"
+                : "Tải dữ liệu hiện tại ra file JSON"
+            }
+            onClick={download}
+          >
+            {s.admin ? "🔒 Tải file JSON (khóa)" : "⬇️ Tải file JSON"}
           </Button>
           <Button
             variant="outline"
@@ -308,6 +384,23 @@ export function SettingsPanel() {
       </section>
     </div>
   );
+}
+
+function boostAmount(kind: AdminBoostKind): number {
+  switch (kind) {
+    case "xp":
+      return 100;
+    case "catCoins":
+      return 100;
+    case "lizardGems":
+      return 10;
+    case "spinTickets":
+      return 5;
+    case "streak":
+      return 1;
+    case "petXp":
+      return 50;
+  }
 }
 
 /** Rough estimate of how much localStorage the app occupies (limit is ~5 MB). */
