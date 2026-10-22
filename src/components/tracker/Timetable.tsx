@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META, uid, type Slot, type TaskKind } from "@/lib/tracker/model";
+import { TimetableQuickImport } from "./TimetableQuickImport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,14 @@ import {
 
 type Editing = { dayIndex: number; slot: Slot; isNew: boolean } | null;
 
+/** Drops an empty teacher label and trims a filled one before saving. */
+const cleanSlot = (s: Slot): Slot => {
+  if (s.teacher && s.teacher.trim()) return { ...s, teacher: s.teacher.trim() };
+  const out: Partial<Slot> = { ...s };
+  delete out.teacher;
+  return out as Slot;
+};
+
 const newSlot = (kind: TaskKind = "pomodoro"): Slot => ({
   id: uid("slot"),
   start: "08:00",
@@ -26,6 +35,7 @@ const newSlot = (kind: TaskKind = "pomodoro"): Slot => ({
 export function Timetable() {
   const { data, update } = useTracker();
   const [editing, setEditing] = useState<Editing>(null);
+  const [importing, setImporting] = useState(false);
   const todayIdx = new Date().getDay();
 
   const save = (e: NonNullable<Editing>, applyAllWeek: boolean) => {
@@ -65,12 +75,18 @@ export function Timetable() {
 
   return (
     <section className="glass p-5">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">🗓️ Thời khóa biểu tuần</h2>
-        <p className="text-sm text-muted-foreground">
-          Bắt đầu từ Chủ Nhật — lên kế hoạch cho cả tuần mới. Bấm vào khung giờ để sửa.
-        </p>
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold">🗓️ Thời khóa biểu tuần</h2>
+          <p className="text-sm text-muted-foreground">
+            Bắt đầu từ Chủ Nhật — lên kế hoạch cho cả tuần mới. Bấm vào khung giờ để sửa.
+          </p>
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
+          ⚡ Nhập nhanh
+        </Button>
       </div>
+      <TimetableQuickImport open={importing} onClose={() => setImporting(false)} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
         {data.timetable.days.map((day) => (
           <div
@@ -101,6 +117,7 @@ export function Timetable() {
                   <div className="mt-0.5 font-medium leading-snug">
                     {KIND_META[s.kind].emoji} {s.title}
                   </div>
+                  {s.teacher && <div className="text-muted-foreground">👩‍🏫 {s.teacher}</div>}
                 </button>
               ))}
             </div>
@@ -185,6 +202,15 @@ function SlotDialog({
               onChange={(e) => set({ title: e.target.value })}
             />
           </div>
+          <div>
+            <Label htmlFor="sv">Giáo viên (tùy chọn)</Label>
+            <Input
+              id="sv"
+              className="mt-1"
+              value={slot.teacher ?? ""}
+              onChange={(e) => set({ teacher: e.target.value })}
+            />
+          </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label htmlFor="ss">Bắt đầu</Label>
@@ -237,7 +263,7 @@ function SlotDialog({
           )}
           <Button
             disabled={!slot.title.trim() || !slot.start}
-            onClick={() => onSave({ ...editing, slot }, allWeek)}
+            onClick={() => onSave({ ...editing, slot: cleanSlot(slot) }, allWeek)}
           >
             Lưu
           </Button>

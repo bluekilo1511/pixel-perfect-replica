@@ -3,6 +3,8 @@ import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
 import { NextSlotCard } from "./NextSlotCard";
+import { TomorrowPrepCard } from "./TomorrowPrepCard";
+import { ExtraScheduleCard } from "./ExtraScheduleCard";
 import { NotesCard } from "./NotesCard";
 import { WeeklyGoalCard } from "./WeeklyGoalCard";
 import { SubjectsCard } from "./SubjectsCard";
@@ -676,10 +678,12 @@ export function TodayPanel() {
     <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
       <div className="space-y-5">
         <NextSlotCard />
+        <TomorrowPrepCard />
         <WeeklyGoalCard />
         <WeekReviewCard />
         <WaterCard />
         <NotesCard />
+        <ExtraScheduleCard />
         <SubjectsCard />
       </div>
       <div className="space-y-5">

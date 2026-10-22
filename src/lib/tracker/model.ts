@@ -112,6 +112,8 @@ export interface Slot {
   title: string;
   kind: TaskKind;
   minutes: number;
+  teacher?: string; // "Ngăn" — teacher shown under the subject
+  session?: "morning" | "afternoon"; // buổi in the school grid
 }
 
 export interface TimetableDay {
@@ -123,6 +125,19 @@ export interface TimetableDay {
 export interface Timetable {
   weekStartsOn: 0;
   days: TimetableDay[]; // always 7 items, days[0] = Sunday
+  morningStart: string; // "HH:MM" — first morning period (quick import)
+  afternoonStart: string; // "HH:MM" — first afternoon period (quick import)
+  slotMinutes: number; // length of one period when importing without times
+}
+
+/** A one-off reminder outside the weekly grid: "Họp nhóm 20h", "Nộp bài tuần sau". */
+export interface ExtraScheduleItem {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  time: string | null; // "HH:MM" or null for all-day
+  minutes: number; // 0 = no timer
+  createdAt: string;
 }
 
 export interface GameState {
@@ -184,6 +199,8 @@ export interface AppData {
   weekGoals: WeekGoal[]; // goals pinned for the whole week
   journal: JournalEntry[]; // hidden personal diary, opened from the wall bookshelf
   weeklyGoal: WeeklyGoalState;
+  extraSchedule: ExtraScheduleItem[]; // quick one-off reminders (see tkb.ts)
+  extraLog: string[]; // "YYYY-MM-DD:extraId" already pushed to the task list
   ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
 }
@@ -224,6 +241,9 @@ export function emptyTimetable(): Timetable {
   return {
     weekStartsOn: 0,
     days: DAY_LABELS.map((label, dayIndex) => ({ dayIndex, label, slots: [] })),
+    morningStart: "07:30",
+    afternoonStart: "13:00",
+    slotMinutes: 45,
   };
 }
 
@@ -284,6 +304,8 @@ export function defaultData(): AppData {
     weekGoals: [],
     journal: [],
     weeklyGoal: { minutes: 300, celebratedWeek: null },
+    extraSchedule: [],
+    extraLog: [],
   };
 }
 
@@ -342,7 +364,39 @@ function normalizeSlot(input: unknown): Slot {
     title: typeof s.title === "string" && s.title ? s.title : KIND_META[kind].label,
     kind,
     minutes: num(s.minutes, KIND_META[kind].minutes),
+    ...(typeof s.teacher === "string" && s.teacher.trim() ? { teacher: s.teacher.trim() } : {}),
+    ...(s.session === "morning" || s.session === "afternoon" ? { session: s.session } : {}),
   };
+}
+
+export const EXTRA_SCHEDULE_MAX = 200;
+export const EXTRA_TITLE_MAX = 80;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const HM_RE = /^([01]?\d|2[0-3]):[0-5]\d$/;
+
+function hmTime(v: unknown, fallback: string): string {
+  return typeof v === "string" && HM_RE.test(v.trim()) ? v.trim().padStart(5, "0") : fallback;
+}
+
+export function normalizeExtraSchedule(input: unknown): ExtraScheduleItem[] {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, EXTRA_SCHEDULE_MAX).flatMap((it) => {
+    const s = obj(it);
+    if (typeof s.title !== "string" || !s.title.trim()) return [];
+    return [
+      {
+        id: typeof s.id === "string" ? s.id : uid("extra"),
+        date: typeof s.date === "string" && DATE_RE.test(s.date) ? s.date : dateStr(),
+        title: s.title.trim().slice(0, EXTRA_TITLE_MAX),
+        time:
+          typeof s.time === "string" && HM_RE.test(s.time.trim())
+            ? s.time.trim().padStart(5, "0")
+            : null,
+        minutes: Math.min(600, Math.max(0, num(s.minutes, 0))),
+        createdAt: typeof s.createdAt === "string" ? s.createdAt : new Date().toISOString(),
+      },
+    ];
+  });
 }
 
 /** Accepts any old/new JSON and fills missing fields without losing old tasks. */
@@ -388,6 +442,11 @@ export function migrate(raw: unknown): AppData {
     });
   }
   tt.days.forEach((d) => d.slots.sort((a, b) => a.start.localeCompare(b.start)));
+  tt.morningStart = hmTime(srcObj.morningStart, tt.morningStart);
+  tt.afternoonStart = hmTime(srcObj.afternoonStart, tt.afternoonStart);
+  tt.slotMinutes = Array.isArray(srcRaw)
+    ? tt.slotMinutes
+    : Math.min(120, Math.max(15, num(srcObj.slotMinutes, tt.slotMinutes)));
 
   const { timetable: _old, ...gameRest } = oldGame;
   const game: GameState = {
@@ -440,6 +499,10 @@ export function migrate(raw: unknown): AppData {
     game,
     timetable: tt,
     timetableLog: Array.isArray(r.timetableLog) ? r.timetableLog : [],
+    extraSchedule: normalizeExtraSchedule(r.extraSchedule),
+    extraLog: Array.isArray(r.extraLog)
+      ? r.extraLog.filter((k): k is string => typeof k === "string")
+      : [],
     avatarBase64: typeof r.avatarBase64 === "string" ? r.avatarBase64 : null,
     petState: normalizePet(r.petState),
     streak:

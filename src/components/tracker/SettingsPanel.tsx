@@ -251,7 +251,10 @@ export function SettingsPanel() {
               <option value="birds">🐦 Chim hót</option>
             </select>
           </Row>
-          <Row label="Chế độ tiết kiệm pin" hint="Hạ độ nét phòng 3D, tắt bóng đổ & lấp lánh — máy yếu chạy mượt hơn hẳn">
+          <Row
+            label="Chế độ tiết kiệm pin"
+            hint="Hạ độ nét phòng 3D, tắt bóng đổ & lấp lánh — máy yếu chạy mượt hơn hẳn"
+          >
             <Switch
               checked={s.batterySaver}
               aria-label="Chế độ tiết kiệm pin"

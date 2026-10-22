@@ -48,6 +48,7 @@ import {
   markWaterNudged,
   shouldNudgeWater,
 } from "./model";
+import { pushDueExtras } from "./tkb";
 import { bossCounterAttack, defeatBoss } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import { celebrate, evolutionFx, levelUpFx, setFxEnabled, setChime, ting } from "./effects";
@@ -333,8 +334,16 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       ) {
         toast("🧊 Bình đóng băng đã cứu chuỗi streak của bạn!");
       }
-      // Smart Reminder: 5 minutes before each class.
+      // One-off reminders due today land in the task list once each.
       const now = new Date();
+      const ex = pushDueExtras(d1, now);
+      if (ex.data !== d1) d1 = ex.data;
+      if (ex.pushed.length) {
+        toast("📌 Nhắc việc hôm nay", {
+          description: ex.pushed.map((x) => x.title).join(", "),
+        });
+      }
+      // Smart Reminder: 5 minutes before each class.
       upcomingSlots(d1, now).forEach((s) => {
         const key = `${dateStr(now)}:${s.id}`;
         if (reminded.current.has(key)) return;
