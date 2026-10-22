@@ -35,6 +35,7 @@ export function TimetableQuickImport({ open, onClose }: { open: boolean; onClose
   const [afternoonStart, setAfternoonStart] = useState(DEFAULT_TKB.afternoonStart);
   const [slotMinutes, setSlotMinutes] = useState(DEFAULT_TKB.slotMinutes);
   const [mode, setMode] = useState<"replace" | "merge">("replace");
+  const [displayOnly, setDisplayOnly] = useState(true);
 
   const parsed: ParsedTkb = useMemo(
     () =>
@@ -46,9 +47,9 @@ export function TimetableQuickImport({ open, onClose }: { open: boolean; onClose
 
   const apply = () => {
     const defaults = { morningStart, afternoonStart, slotMinutes };
-    update((d) => applyTimetableImport(d, parsed, mode, defaults));
+    update((d) => applyTimetableImport(d, parsed, mode, defaults, !displayOnly));
     toast.success(`Đã nhập ${parsed.count} tiết học 🗓️`, {
-      description: parsed.touched.map((t) => DAY_LABELS[t.dayIndex]).join(", "),
+      description: `${parsed.touched.map((t) => DAY_LABELS[t.dayIndex]).join(", ")}${displayOnly ? " · chỉ hiển thị trên bảng, bật 📚 Học thật cho môn cần làm task" : ""}`,
     });
     onClose();
   };
@@ -110,6 +111,21 @@ export function TimetableQuickImport({ open, onClose }: { open: boolean; onClose
               />
             </div>
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={displayOnly}
+              onChange={(e) => setDisplayOnly(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Chỉ đưa lên bảng TKB</span>
+              <span className="block text-xs text-muted-foreground">
+                Cả tuần hiển thị như tờ TKB trường, không tự tạo task khi đến giờ. Môn nào muốn học
+                thật thì bật "Học thật" trong ô đó.
+              </span>
+            </span>
+          </label>
           <div>
             <Label className="mb-2 block">Cách nhập</Label>
             <div className="grid grid-cols-2 gap-2">

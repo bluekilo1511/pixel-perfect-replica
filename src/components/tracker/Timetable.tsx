@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META, uid, type Slot, type TaskKind } from "@/lib/tracker/model";
 import { TimetableQuickImport } from "./TimetableQuickImport";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 
 type Editing = { dayIndex: number; slot: Slot; isNew: boolean } | null;
+type View = "school" | "cards";
 
 /** Drops an empty teacher label and trims a filled one before saving. */
 const cleanSlot = (s: Slot): Slot => {
@@ -21,6 +22,21 @@ const cleanSlot = (s: Slot): Slot => {
   const out: Partial<Slot> = { ...s };
   delete out.teacher;
   return out as Slot;
+};
+
+/** Tracked slots omit the flag entirely; display-only ones carry tracked:false. */
+const withTracked = (s: Slot, tracked: boolean): Slot => {
+  if (tracked) {
+    const out: Partial<Slot> = { ...s };
+    delete out.tracked;
+    return out as Slot;
+  }
+  return { ...s, tracked: false };
+};
+
+const toMin = (hm: string) => {
+  const [h, m] = hm.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
 };
 
 const newSlot = (kind: TaskKind = "pomodoro"): Slot => ({
@@ -36,7 +52,10 @@ export function Timetable() {
   const { data, update } = useTracker();
   const [editing, setEditing] = useState<Editing>(null);
   const [importing, setImporting] = useState(false);
+  const [view, setView] = useState<View>("school");
   const todayIdx = new Date().getDay();
+  const today = new Date();
+  const nowMin = today.getHours() * 60 + today.getMinutes();
 
   const save = (e: NonNullable<Editing>, applyAllWeek: boolean) => {
     update((d) => ({
@@ -73,65 +92,202 @@ export function Timetable() {
     setEditing(null);
   };
 
+  const afternoonMin = toMin(data.timetable.afternoonStart || "13:00");
+  const sessionOf = (s: Slot): "morning" | "afternoon" =>
+    s.session ?? (toMin(s.start) >= afternoonMin ? "afternoon" : "morning");
+
+  const schoolRows = (["morning", "afternoon"] as const).map((sess) => ({
+    sess,
+    count: Math.max(
+      1,
+      ...data.timetable.days.map((d) => d.slots.filter((s) => sessionOf(s) === sess).length),
+    ),
+  }));
+
+  const isNow = (dayIndex: number, s: Slot) =>
+    dayIndex === todayIdx && toMin(s.start) <= nowMin && nowMin < toMin(s.end);
+
+  const openEdit = (dayIndex: number, s: Slot) =>
+    setEditing({ dayIndex, slot: { ...s }, isNew: false });
+
+  const cellBase =
+    "relative rounded-lg border p-1.5 text-left text-xs transition min-h-[52px] w-full";
+
+  const cellClass = (dayIndex: number, s: Slot) =>
+    [
+      cellBase,
+      s.tracked === false ? "border-dashed border-border/70 bg-muted/60" : "border-border bg-card",
+      s.tracked === false ? "hover:border-primary/60" : "hover:border-primary",
+      isNow(dayIndex, s) ? "ring-2 ring-primary border-primary" : "",
+      "overflow-hidden",
+    ].join(" ");
+
+  const cellBody = (s: Slot) => (
+    <>
+      <div className="font-display tabular-nums text-[10px] text-muted-foreground">
+        {s.start}–{s.end}
+      </div>
+      <div className="mt-0.5 truncate font-medium leading-tight">{s.title}</div>
+      {s.teacher && <div className="truncate text-[10px] text-muted-foreground">{s.teacher}</div>}
+      {s.tracked === false && (
+        <span className="absolute right-1 top-1 text-[9px] text-muted-foreground/70">👁</span>
+      )}
+    </>
+  );
+
   return (
     <section className="glass p-5">
-      <div className="mb-4 flex items-start justify-between gap-2">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">🗓️ Thời khóa biểu tuần</h2>
           <p className="text-sm text-muted-foreground">
-            Bắt đầu từ Chủ Nhật — lên kế hoạch cho cả tuần mới. Bấm vào khung giờ để sửa.
+            {view === "school"
+              ? "Dạng tờ TKB trường — bấm vào ô để sửa. Môn có 👁 chỉ hiển thị, không tự tạo task."
+              : "Bắt đầu từ Chủ Nhật — lên kế hoạch cho cả tuần mới. Bấm vào khung giờ để sửa."}
           </p>
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
-          ⚡ Nhập nhanh
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-lg border border-border">
+            <button
+              type="button"
+              onClick={() => setView("school")}
+              className={`px-2.5 py-1.5 text-xs font-medium transition ${view === "school" ? "bg-primary text-primary-foreground" : "bg-transparent hover:bg-muted"}`}
+            >
+              🏫 TKB trường
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("cards")}
+              className={`px-2.5 py-1.5 text-xs font-medium transition ${view === "cards" ? "bg-primary text-primary-foreground" : "bg-transparent hover:bg-muted"}`}
+            >
+              🗂️ Kiểu thẻ
+            </button>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
+            ⚡ Nhập nhanh
+          </Button>
+        </div>
       </div>
       <TimetableQuickImport open={importing} onClose={() => setImporting(false)} />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
-        {data.timetable.days.map((day) => (
-          <div
-            key={day.dayIndex}
-            className={`flex min-h-[220px] flex-col rounded-xl border p-2.5 ${day.dayIndex === todayIdx ? "border-primary bg-secondary glass-glow" : "border-border bg-muted"}`}
-          >
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h3 className={`text-sm font-semibold ${day.dayIndex === 0 ? "text-accent" : ""}`}>
-                {day.label}
-              </h3>
-              {day.dayIndex === todayIdx && (
-                <span className="text-[10px] font-semibold uppercase text-primary">Hôm nay</span>
-              )}
-            </div>
-            <div className="flex flex-1 flex-col gap-1.5">
-              {day.slots.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() =>
-                    setEditing({ dayIndex: day.dayIndex, slot: { ...s }, isNew: false })
-                  }
-                  className="rounded-lg border border-border bg-card p-2 text-left text-xs transition hover:border-primary"
+
+      {view === "school" ? (
+        <div className="overflow-x-auto pb-1">
+          <div className="min-w-[760px]">
+            <div
+              className="grid gap-1 text-xs"
+              style={{ gridTemplateColumns: "64px repeat(7, minmax(0, 1fr))" }}
+            >
+              <div />
+              {data.timetable.days.map((day) => (
+                <div
+                  key={day.dayIndex}
+                  className={`rounded-lg px-1 py-1.5 text-center font-semibold ${day.dayIndex === todayIdx ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}
                 >
-                  <div className="font-display tabular-nums text-muted-foreground">
-                    {s.start}–{s.end}
+                  {day.label}
+                  {day.dayIndex === todayIdx && (
+                    <div className="text-[9px] uppercase tracking-wide">hôm nay</div>
+                  )}
+                </div>
+              ))}
+              {schoolRows.map(({ sess, count }) => (
+                <Fragment key={sess}>
+                  <div
+                    className={`col-span-8 mt-2 rounded-md px-2 py-1 text-center text-[11px] font-semibold uppercase tracking-wide ${sess === "morning" ? "bg-amber-500/10 text-amber-500" : "bg-indigo-500/10 text-indigo-400"}`}
+                  >
+                    {sess === "morning" ? "🌞 Buổi sáng" : "🌇 Buổi chiều"}
                   </div>
-                  <div className="mt-0.5 font-medium leading-snug">
-                    {KIND_META[s.kind].emoji} {s.title}
-                  </div>
-                  {s.teacher && <div className="text-muted-foreground">👩‍🏫 {s.teacher}</div>}
-                </button>
+                  {Array.from({ length: count }, (_, i) => (
+                    <Fragment key={i}>
+                      <div className="flex items-center justify-center rounded-lg bg-muted/50 py-1 text-center text-[10px] font-medium text-muted-foreground">
+                        Tiết {i + 1}
+                      </div>
+                      {data.timetable.days.map((day) => {
+                        const slots = day.slots.filter((s) => sessionOf(s) === sess);
+                        const s = slots[i];
+                        if (!s)
+                          return (
+                            <button
+                              key={`${day.dayIndex}:${sess}:${i}`}
+                              type="button"
+                              onClick={() =>
+                                setEditing({
+                                  dayIndex: day.dayIndex,
+                                  slot: withTracked(newSlot(), false),
+                                  isNew: true,
+                                })
+                              }
+                              className="min-h-[52px] rounded-lg border border-dashed border-border/40 text-muted-foreground/30 transition hover:border-primary/50"
+                              aria-label={`Thêm tiết ${i + 1} ${day.label}`}
+                            >
+                              +
+                            </button>
+                          );
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => openEdit(day.dayIndex, s)}
+                            className={cellClass(day.dayIndex, s)}
+                          >
+                            {cellBody(s)}
+                          </button>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </Fragment>
               ))}
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="mt-2 w-full border border-dashed border-border"
-              onClick={() => setEditing({ dayIndex: day.dayIndex, slot: newSlot(), isNew: true })}
-            >
-              + Khung giờ
-            </Button>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+          {data.timetable.days.map((day) => (
+            <div
+              key={day.dayIndex}
+              className={`flex min-h-[220px] flex-col rounded-xl border p-2.5 ${day.dayIndex === todayIdx ? "border-primary bg-secondary glass-glow" : "border-border bg-muted"}`}
+            >
+              <div className="mb-2 flex items-center justify-between px-1">
+                <h3 className={`text-sm font-semibold ${day.dayIndex === 0 ? "text-accent" : ""}`}>
+                  {day.label}
+                </h3>
+                {day.dayIndex === todayIdx && (
+                  <span className="text-[10px] font-semibold uppercase text-primary">Hôm nay</span>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                {day.slots.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => openEdit(day.dayIndex, s)}
+                    className={`rounded-lg border p-2 text-left text-xs transition ${s.tracked === false ? "border-dashed border-border/70 bg-muted/60 hover:border-primary/60" : "border-border bg-card hover:border-primary"}`}
+                  >
+                    <div className="font-display tabular-nums text-muted-foreground">
+                      {s.start}–{s.end}
+                      {s.tracked === false && (
+                        <span className="ml-1 text-[10px] text-muted-foreground/70">👁 chỉ xem</span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 font-medium leading-snug">
+                      {KIND_META[s.kind].emoji} {s.title}
+                    </div>
+                    {s.teacher && <div className="text-muted-foreground">👩‍🏫 {s.teacher}</div>}
+                  </button>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2 w-full border border-dashed border-border"
+                onClick={() => setEditing({ dayIndex: day.dayIndex, slot: newSlot(), isNew: true })}
+              >
+                + Khung giờ
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
       {editing && (
         <SlotDialog
           editing={editing}
@@ -160,6 +316,7 @@ function SlotDialog({
 }) {
   const [slot, setSlot] = useState(editing.slot);
   const [allWeek, setAllWeek] = useState(false);
+  const [tracked, setTracked] = useState(editing.slot.tracked !== false);
   const set = (p: Partial<Slot>) => setSlot((s) => ({ ...s, ...p }));
 
   return (
@@ -244,6 +401,21 @@ function SlotDialog({
               />
             </div>
           </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={tracked}
+              onChange={(e) => setTracked(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">📚 Học thật</span>
+              <span className="block text-xs text-muted-foreground">
+                Đến giờ sẽ tự tạo task vào danh sách hôm nay. Tắt đi nếu môn đó chỉ cần nhìn trên
+                bảng TKB (👁 chỉ xem).
+              </span>
+            </span>
+          </label>
           {editing.isNew && (
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -263,7 +435,9 @@ function SlotDialog({
           )}
           <Button
             disabled={!slot.title.trim() || !slot.start}
-            onClick={() => onSave({ ...editing, slot: cleanSlot(slot) }, allWeek)}
+            onClick={() =>
+              onSave({ ...editing, slot: withTracked(cleanSlot(slot), tracked) }, allWeek)
+            }
           >
             Lưu
           </Button>

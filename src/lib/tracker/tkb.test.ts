@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultData, makeTask, migrate, type AppData } from "./model";
+import { defaultData, makeTask, migrate, pushDueSlots, type AppData } from "./model";
 import {
   DEFAULT_TKB,
   addExtraSchedule,
@@ -170,4 +170,20 @@ describe("one-off reminders", () => {
     expect(r.added).toBe(1);
     expect(r.data.tasks).toHaveLength(2);
   });
+  it("can import the whole school TKB as display-only periods", () => {
+    const p = parseTimetableText(TKB_TEXT);
+    let d = applyTimetableImport(defaultData(), p, "replace", DEFAULT_TKB, false);
+    const mon = d.timetable.days[1]!;
+    expect(mon.slots.length).toBe(4);
+    expect(mon.slots.every((s) => s.tracked === false)).toBe(true);
+    // Even hours later, nothing is auto-pushed into today's tasks.
+    const mondayEvening = new Date(2026, 9, 19, 20, 0); // Oct 19 2026 is a Monday
+    d = pushDueSlots(d, mondayEvening).data;
+    expect(d.tasks.some((t) => t.fromSlotId?.startsWith("slot_"))).toBe(false);
+
+    // The same import with markTracked stays fully tracked.
+    const d2 = applyTimetableImport(defaultData(), p, "replace", DEFAULT_TKB, true);
+    expect(d2.timetable.days[1]!.slots.every((s) => s.tracked === undefined)).toBe(true);
+  });
+
 });

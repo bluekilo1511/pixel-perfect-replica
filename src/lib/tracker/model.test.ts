@@ -12,6 +12,7 @@ import {
   migrate,
   needsBackupReminder,
   pushDueSlots,
+  syncTodaySlots,
   setTaskMood,
   shouldNudgeWater,
 } from "./model";
@@ -66,6 +67,28 @@ describe("tracker rules", () => {
     d = pushDueSlots(d, sunday8am).data;
     d = pushDueSlots(d, sunday8am).data;
     expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(1);
+  });
+
+  it("display-only slots never become tasks", () => {
+    let d = defaultData();
+    d.timetable.days[0]!.slots.push(
+      { id: "s1", start: "07:00", end: "07:25", title: "Học", kind: "pomodoro", minutes: 25 },
+      {
+        id: "s2",
+        start: "08:00",
+        end: "08:45",
+        title: "Sử",
+        kind: "pomodoro",
+        minutes: 25,
+        tracked: false,
+      },
+    );
+    const sunday8am = new Date(2026, 9, 18, 8, 0); // Oct 18 2026 is a Sunday
+    d = pushDueSlots(d, sunday8am).data;
+    expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(1);
+    expect(d.tasks.filter((t) => t.fromSlotId === "s2")).toHaveLength(0);
+    d = syncTodaySlots(d, sunday8am).data;
+    expect(d.tasks.filter((t) => t.fromSlotId === "s2")).toHaveLength(0);
   });
 
   it("migrates old files without losing tasks", () => {

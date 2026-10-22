@@ -166,12 +166,17 @@ export function parseTimetableText(text: string, defaults: TkbDefaults = DEFAULT
   };
 }
 
-/** Merges parsed days into the timetable, also saving the period defaults. */
+/**
+ * Merges parsed days into the timetable, also saving the period defaults.
+ * With markTracked=false the imported periods land as display-only school-grid
+ * entries: visible on the TKB, but never auto-pushed as tasks.
+ */
 export function applyTimetableImport(
   data: AppData,
   parsed: ParsedTkb,
   mode: "replace" | "merge",
   defaults: TkbDefaults,
+  markTracked = true,
 ): AppData {
   const map = new Map(parsed.touched.map((t) => [t.dayIndex, t]));
   return {
@@ -184,7 +189,8 @@ export function applyTimetableImport(
       days: data.timetable.days.map((day) => {
         const p = map.get(day.dayIndex);
         if (!p) return day;
-        const slots = mode === "replace" ? p.slots : [...day.slots, ...p.slots];
+        const imported = markTracked ? p.slots : p.slots.map((s) => ({ ...s, tracked: false }));
+        const slots = mode === "replace" ? imported : [...day.slots, ...imported];
         return {
           ...day,
           slots: [...slots].sort((a, b) => a.start.localeCompare(b.start)),

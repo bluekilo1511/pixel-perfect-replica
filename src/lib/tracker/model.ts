@@ -115,6 +115,7 @@ export interface Slot {
   minutes: number;
   teacher?: string; // "Ngăn" — teacher shown under the subject
   session?: "morning" | "afternoon"; // buổi in the school grid
+  tracked?: boolean; // false = display-only on the school grid: shown, but never auto-tasked
 }
 
 export interface TimetableDay {
@@ -381,6 +382,7 @@ function normalizeSlot(input: unknown): Slot {
     minutes: num(s.minutes, KIND_META[kind].minutes),
     ...(typeof s.teacher === "string" && s.teacher.trim() ? { teacher: s.teacher.trim() } : {}),
     ...(s.session === "morning" || s.session === "afternoon" ? { session: s.session } : {}),
+    ...(s.tracked === false ? { tracked: false } : {}),
   };
 }
 
@@ -1294,7 +1296,10 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
   if (!day) return { data, pushed: [] };
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const due = day.slots.filter(
-    (s) => toMin(s.start) <= nowMin && !data.timetableLog.includes(`${today}:${s.id}`),
+    (s) =>
+      s.tracked !== false &&
+      toMin(s.start) <= nowMin &&
+      !data.timetableLog.includes(`${today}:${s.id}`),
   );
   if (!due.length) return { data, pushed: [] };
   const newTasks = due.map((s) =>
@@ -1404,6 +1409,7 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
   if (!day) return { data, added: 0 };
   const todo = day.slots.filter(
     (s) =>
+      s.tracked !== false &&
       !data.timetableLog.includes(`${today}:${s.id}`) &&
       !data.tasks.some((t) => t.date === today && t.fromSlotId === s.id),
   );
