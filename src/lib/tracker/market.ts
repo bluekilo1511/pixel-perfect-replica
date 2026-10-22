@@ -6,7 +6,7 @@ import { grantPetXp, type Materials } from "./extras";
  * Pure logic: the caller owns the data object, this only reshapes it.
  */
 
-export type MarketItemId = "shield" | "honey" | "box" | "galaxy" | "starClock" | "heal";
+export type MarketItemId = "shield" | "honey" | "box" | "galaxy" | "starClock" | "heal" | "ticket";
 
 export interface MarketItem {
   id: MarketItemId;
@@ -59,6 +59,13 @@ export const MARKET_ITEMS: Record<MarketItemId, MarketItem> = {
     desc: "Decor hiếm cho góc học — chỉ có ở Chợ Hư Không",
     price: 25,
   },
+  ticket: {
+    id: "ticket",
+    emoji: "🎟️",
+    name: "Vé Quay",
+    desc: "+1 lượt quay may mắn — dành tiền lương mèo đổi vé",
+    price: 10,
+  },
 };
 
 // Rare decors are paid in the market, never in the Pet Shop.
@@ -68,9 +75,9 @@ export const isMarketDecor = (id: DecorId) => DECORATIONS[id]?.marketOnly === tr
 /** Stock rotations — one pool per week, cycling forever. */
 const POOLS: MarketItemId[][] = [
   ["shield", "honey", "box"],
-  ["honey", "galaxy", "box", "heal"],
+  ["honey", "galaxy", "box", "heal", "ticket"],
   ["shield", "starClock", "box"],
-  ["galaxy", "honey", "shield", "heal"],
+  ["galaxy", "honey", "shield", "heal", "ticket"],
   ["starClock", "box", "honey"],
 ];
 
@@ -102,7 +109,7 @@ export type MarketBuyResult<T> =
 
 /** Minimal shape the buyer needs. */
 export interface MarketData {
-  game: { catCoins: number };
+  game: { catCoins: number; spinTickets?: number };
   inventory: { freezes: number; materials: Materials };
   petState: PetState;
   market: MarketState;
@@ -142,6 +149,13 @@ export function buyMarket<T extends MarketData>(
         petState: { ...data.petState, decorOwned: [...data.petState.decorOwned, id] },
       },
       message: `${item.emoji} ${item.name} vào kho decor — bày ở Pet Shop nhé!`,
+    };
+  }
+  if (id === "ticket") {
+    return {
+      ok: true,
+      data: { ...base, game: { ...base.game, spinTickets: (base.game.spinTickets ?? 0) + 1 } },
+      message: "🎟️ +1 lượt quay may mắn!",
     };
   }
   if (id === "heal") {

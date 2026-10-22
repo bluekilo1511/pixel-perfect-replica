@@ -13,7 +13,6 @@ import {
   addMaterial,
   addWaterCup,
   applyAchievements,
-  applyPrize,
   claimAchievementReward,
   completePomodoroSession,
   completeTask,
@@ -22,9 +21,14 @@ import {
   ensureDailyPins,
   migrate,
   pushDueSlots,
-  WHEEL_PRIZES,
+  recordSpin,
+  beginSpin,
+  canSpin,
+  JACKPOT_PRIZE,
+  JACKPOT_TICKETS,
   upcomingSlots,
   type AppData,
+  type SpinMode,
 } from "./model";
 import { applyAdminBoost, type AdminBoostKind } from "./model";
 import { decayPet } from "./gamify";
@@ -90,7 +94,7 @@ interface Store {
   pauseTimer: () => void;
   finish: (id: string) => void;
   drinkWater: () => void;
-  spin: () => string | null;
+  spin: (mode?: SpinMode) => string | null;
   dismissLevelUp: () => void;
   dismissEvolution: () => void;
   restore: (raw: unknown) => void;
@@ -453,28 +457,24 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     onLevels(r.levelsGained, r.data.game.level);
   };
 
-  const spin = () => {
+  const spin = (mode: SpinMode = "normal") => {
     const d = dataRef.current;
-    if (d.game.spinTickets <= 0) return null;
-    const prize = WHEEL_PRIZES[Math.floor(Math.random() * WHEEL_PRIZES.length)] ?? WHEEL_PRIZES[0]!;
-    setData((cur) => ({ ...cur, game: { ...cur.game, spinTickets: cur.game.spinTickets - 1 } }));
+    if (!canSpin(d.game, mode)) return null;
+    const begun = beginSpin(d.game, mode);
+    setData({ ...d, game: begun.game });
+    const { prize, jackpot } = begun;
     // apply prize after the wheel animation
     setTimeout(() => {
       const cur = dataRef.current;
-      const r = applyPrize(cur.game, prize);
-      const game = {
-        ...r.game,
-        spinHistory: [{ at: new Date().toISOString(), prize }, ...cur.game.spinHistory].slice(
-          0,
-          20,
-        ),
-      };
+      const r = recordSpin(cur.game, prize, jackpot, mode);
       const drop = rollDrop();
-      setData(addMaterial({ ...cur, game }, drop));
+      setData(addMaterial({ ...cur, game: r.game }, drop));
       announceDrop(drop);
       ting();
-      toast.success(`🎡 Bạn nhận được ${prize}`);
-      onLevels(r.levelsGained, game.level);
+      toast.success(
+        jackpot ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!` : `🎡 Bạn nhận được ${prize}`,
+      );
+      onLevels(r.levelsGained, r.game.level);
     }, 2600);
     return prize;
   };

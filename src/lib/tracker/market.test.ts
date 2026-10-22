@@ -113,3 +113,16 @@ describe("buyMarket", () => {
     expect(r.data.petState.decorActive).not.toContain(decorId);
   });
 });
+
+describe("ticket item", () => {
+  it("grants a spin ticket once per week", () => {
+    expect(marketStock(nextMonday)).toContain("ticket");
+    const d = makeData(50);
+    const r = buyMarket(d, "ticket", nextMonday);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.game.spinTickets).toBe(1);
+    expect(r.data.game.catCoins).toBe(40);
+    expect(buyMarket(r.data, "ticket", nextMonday).ok).toBe(false);
+  });
+});

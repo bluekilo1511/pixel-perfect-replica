@@ -147,7 +147,11 @@ export interface GameState {
   catCoins: number;
   lizardGems: number;
   spinTickets: number;
-  spinHistory: { at: string; prize: string }[];
+  spinHistory: { at: string; prize: string; mode?: SpinMode }[];
+  freeSpinDate: string | null;
+  wheelPity: number;
+  totalSpins: number;
+  jackpotsWon: number;
   water: { date: string; cups: number; rewarded: boolean; lastNudgePomodoros?: number };
   lastDailyPinDate: string | null;
   [extra: string]: unknown;
@@ -259,6 +263,10 @@ export function defaultGame(today = dateStr()): GameState {
     lizardGems: 0,
     spinTickets: 0,
     spinHistory: [],
+    freeSpinDate: null,
+    wheelPity: 0,
+    totalSpins: 0,
+    jackpotsWon: 0,
     water: { date: today, cups: 0, rewarded: false },
     lastDailyPinDate: null,
   };
@@ -523,6 +531,10 @@ export function migrate(raw: unknown): AppData {
     lizardGems: num(oldGame.lizardGems, 0),
     spinTickets: num(oldGame.spinTickets, 0),
     spinHistory: Array.isArray(oldGame.spinHistory) ? oldGame.spinHistory : [],
+    freeSpinDate: typeof oldGame.freeSpinDate === "string" ? oldGame.freeSpinDate : null,
+    wheelPity: num(oldGame.wheelPity, 0),
+    totalSpins: num(oldGame.totalSpins, 0),
+    jackpotsWon: num(oldGame.jackpotsWon, 0),
     water: { ...base.game.water, ...obj(oldGame.water) },
   };
 
@@ -1298,12 +1310,23 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
   return { data: { ...data, tasks: [...data.tasks, ...newTasks], timetableLog: log }, pushed: due };
 }
 
-export const WHEEL_PRIZES = ["+10 XP", "+2 😺", "+1 🦎", "+30 XP", "+1 🎡", "+5 😺"];
+export const WHEEL_PRIZES = ["+10 XP", "+2 😺", "+1 🦎", "+30 XP", "+1 🎡", "+5 😺", "+15 XP"];
+
+/** Vòng quay mở rộng: jackpot + pity + mega cuối tuần + lượt miễn phí mỗi ngày. */
+export const JACKPOT_PRIZE = "🎰 JACKPOT";
+export const JACKPOT_TICKETS = 10;
+export const MEGA_PRIZES = ["+20 XP", "+4 😺", "+2 🦎", "+60 XP", "+2 🎡", "+10 😺", "+80 XP"];
+export const PITY_LIMIT = 25;
+export type SpinMode = "normal" | "free" | "mega";
+export const SPIN_COST: Record<SpinMode, number> = { normal: 1, free: 0, mega: 2 };
+export const FREE_SPIN_LABEL = "🎁 Lượt miễn phí";
 
 export function applyPrize(
   game: GameState,
   prize: string,
 ): { game: GameState; levelsGained: number } {
+  if (prize === JACKPOT_PRIZE)
+    return { game: { ...game, spinTickets: game.spinTickets + JACKPOT_TICKETS }, levelsGained: 0 };
   const n = parseInt(prize.replace(/[^0-9]/g, ""), 10) || 0;
   if (prize.includes("XP")) return addXp(game, n);
   if (prize.includes("😺"))
@@ -1311,6 +1334,67 @@ export function applyPrize(
   if (prize.includes("🦎"))
     return { game: { ...game, lizardGems: game.lizardGems + n }, levelsGained: 0 };
   return { game: { ...game, spinTickets: game.spinTickets + n }, levelsGained: 0 };
+}
+
+/** Weighted roll; jackpot is rare but guaranteed once pity reaches the limit. */
+export function rollWheel(
+  mode: SpinMode,
+  pity: number,
+  rng: () => number = Math.random,
+): { prize: string; jackpot: boolean } {
+  if (pity >= PITY_LIMIT - 1) return { prize: JACKPOT_PRIZE, jackpot: true };
+  const prizes = mode === "mega" ? MEGA_PRIZES : WHEEL_PRIZES;
+  const jackpotWeight = mode === "mega" ? 0.15 : 0.07;
+  const roll = rng() * (prizes.length + jackpotWeight);
+  if (roll >= prizes.length) return { prize: JACKPOT_PRIZE, jackpot: true };
+  return { prize: prizes[Math.floor(roll)]!, jackpot: false };
+}
+
+export function isWeekend(now = new Date()): boolean {
+  const d = now.getDay();
+  return d === 0 || d === 6;
+}
+
+/** Whether this spin mode is allowed right now (tickets, once-per-day free, weekend mega). */
+export function canSpin(game: GameState, mode: SpinMode, now = new Date()): boolean {
+  if (game.spinTickets < SPIN_COST[mode]) return false;
+  if (mode === "free") return game.freeSpinDate !== dateStr(now);
+  if (mode === "mega") return isWeekend(now);
+  return true;
+}
+
+/** Phase 1 of a spin: consume the cost, lock the free spin, roll the prize. Caller checked canSpin. */
+export function beginSpin(
+  game: GameState,
+  mode: SpinMode,
+  now = new Date(),
+  rng: () => number = Math.random,
+): { game: GameState; prize: string; jackpot: boolean } {
+  const { prize, jackpot } = rollWheel(mode, game.wheelPity, rng);
+  const next: GameState = { ...game, spinTickets: game.spinTickets - SPIN_COST[mode] };
+  if (mode === "free") next.freeSpinDate = dateStr(now);
+  return { game: next, prize, jackpot };
+}
+
+/** Phase 2 of a spin (after the wheel animation): grant the prize and record stats/history. */
+export function recordSpin(
+  game: GameState,
+  prize: string,
+  jackpot: boolean,
+  mode: SpinMode,
+  at = new Date().toISOString(),
+): { game: GameState; levelsGained: number } {
+  const r = applyPrize(game, prize);
+  return {
+    levelsGained: r.levelsGained,
+    game: {
+      ...r.game,
+      wheelPity: jackpot ? 0 : r.game.wheelPity + 1,
+      totalSpins: r.game.totalSpins + 1,
+      jackpotsWon: r.game.jackpotsWon + (jackpot ? 1 : 0),
+      spinHistory: [{ at, prize, mode }, ...r.game.spinHistory].slice(0, 50),
+    },
+  };
 }
 
 /** "Đồng bộ nhanh lịch hôm nay": add every slot of today's weekday not yet in the list. */
