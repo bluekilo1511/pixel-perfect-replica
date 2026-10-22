@@ -207,10 +207,15 @@ export interface PrepPick {
   minutes: number;
 }
 
-/** Tomorrow's weekday slots, sorted by start time. */
+/**
+ * Tomorrow's tracked weekday slots (subjects actually studied), sorted by
+ * start time. Display-only periods like TNHN or PE are skipped.
+ */
 export function tomorrowSlots(data: AppData, now = new Date()): Slot[] {
   const day = data.timetable.days[(now.getDay() + 1) % 7];
-  return day ? [...day.slots].sort((a, b) => a.start.localeCompare(b.start)) : [];
+  return day
+    ? day.slots.filter((s) => s.tracked !== false).sort((a, b) => a.start.localeCompare(b.start))
+    : [];
 }
 
 /**

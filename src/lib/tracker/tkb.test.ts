@@ -96,6 +96,38 @@ describe("evening prep for tomorrow", () => {
     expect(prep.prepForDate).toBe("2026-10-19");
   });
 
+  it("skips display-only subjects like TNHN or PE", () => {
+    let d = defaultData();
+    d = applyTimetableImport(
+      d,
+      parseTimetableText("Thứ 2\nBuổi sáng\nToán - Bình\nTNHN (DC) - Ngăn\nThể dục - Hùng"),
+      "replace",
+      DEFAULT_TKB,
+      true, // import tracked...
+    );
+    d = {
+      ...d,
+      timetable: {
+        ...d.timetable,
+        days: d.timetable.days.map((day, i) =>
+          i !== 1
+            ? day
+            : {
+                ...day,
+                slots: day.slots.map((s) =>
+                  s.title.startsWith("TNHN") || s.title.startsWith("Thể dục")
+                    ? { ...s, tracked: false }
+                    : s,
+                ),
+              },
+        ),
+      },
+    };
+    const now = new Date(2026, 9, 18, 19, 0); // Sunday evening → tomorrow is Monday
+    const slots = tomorrowSlots(d, now);
+    expect(slots.map((s) => s.title)).toEqual(["Toán"]);
+  });
+
   it("never duplicates the same slot for the same evening", () => {
     const d0 = withTkb();
     const now = new Date(2026, 9, 18, 19, 0);
