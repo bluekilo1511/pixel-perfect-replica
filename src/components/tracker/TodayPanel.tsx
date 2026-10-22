@@ -28,7 +28,11 @@ import {
   type TaskKind,
 } from "@/lib/tracker/model";
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
-import { addExamPrepTasks, EXAM_PREP_PER_DAY, EXAM_PREP_WINDOW, nextPrepSuggestion,
+import {
+  addExamPrepTasks,
+  EXAM_PREP_PER_DAY,
+  EXAM_PREP_WINDOW,
+  nextPrepSuggestion,
   matchSubject,
 } from "@/lib/tracker/tkb";
 import { shiftDate } from "@/lib/tracker/gamify";
@@ -93,6 +97,7 @@ function TaskRow({ task }: { task: Task }) {
     minutes: task.minutes,
     date: task.date,
     subject: task.subject ?? "",
+    remindAt: task.remindAt ?? "",
   });
   const openEditor = () => {
     setDraft({
@@ -101,13 +106,14 @@ function TaskRow({ task }: { task: Task }) {
       minutes: task.minutes,
       date: task.date,
       subject: task.subject ?? "",
+      remindAt: task.remindAt ?? "",
     });
     setEditing(true);
   };
   const saveEdit = () => {
     if (running) pauseTimer();
     update((d) => {
-      const edited = editTask(d, task.id, draft) ?? d;
+      const edited = editTask(d, task.id, { ...draft, remindAt: draft.remindAt || null }) ?? d;
       return setTaskSubject(edited, task.id, draft.subject || null) ?? edited;
     });
     setEditing(false);
@@ -154,6 +160,14 @@ function TaskRow({ task }: { task: Task }) {
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
             aria-label="Ngày"
           />
+          <Input
+            type="time"
+            className="w-28"
+            value={draft.remindAt}
+            onChange={(e) => setDraft({ ...draft, remindAt: e.target.value })}
+            aria-label="Giờ nhắc"
+            title="Giờ nhắc hôm nay (tuỳ chọn)"
+          />
           <select
             className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
             value={draft.subject}
@@ -198,6 +212,11 @@ function TaskRow({ task }: { task: Task }) {
           {task.timeRange && (
             <span className="mr-1.5 rounded-full bg-time-badge px-2 py-0.5 font-semibold text-primary-foreground">
               🕒 {task.timeRange}
+            </span>
+          )}
+          {task.remindAt && (
+            <span className="mr-1.5 rounded-full bg-secondary px-2 py-0.5 font-semibold">
+              ⏰ {task.remindAt}
             </span>
           )}
           {task.pinned ? "📌 Ghim hằng ngày · " : ""}
@@ -452,11 +471,17 @@ function PrepSuggestionBar() {
     const today = dateStr();
     const tomorrow = shiftDate(today, 1);
     const subject = matchSubject(data, pick.slot.title);
-    const t = makeTask(`Ôn: ${pick.slot.title} (mai ${pick.slot.start})`, "pomodoro", pick.minutes, today, {
-      prepSlotId: pick.slot.id,
-      prepForDate: tomorrow,
-      ...(subject ? { subject } : {}),
-    });
+    const t = makeTask(
+      `Ôn: ${pick.slot.title} (mai ${pick.slot.start})`,
+      "pomodoro",
+      pick.minutes,
+      today,
+      {
+        prepSlotId: pick.slot.id,
+        prepForDate: tomorrow,
+        ...(subject ? { subject } : {}),
+      },
+    );
     update((d) => ({ ...d, tasks: [...d.tasks, t] }));
     startTimer(t.id);
     toast(`🍅 Bắt đầu ôn ${pick.slot.title} cho mai`);
@@ -480,6 +505,7 @@ function AddTask() {
   const [kind, setKind] = useState<TaskKind>("pomodoro");
   const [minutes, setMinutes] = useState(25);
   const [examId, setExamId] = useState<string>("");
+  const [remind, setRemind] = useState("");
   const add = () => {
     const name = title.trim() || KIND_META[kind].label;
     update((d) => {
@@ -508,11 +534,13 @@ function AddTask() {
           makeTask(cleanName, kind, minutes, dateStr(), {
             ...(examId ? { examId } : {}),
             ...(subject ? { subject } : {}),
+            ...(remind ? { remindAt: remind } : {}),
           }),
         ],
       };
     });
     setTitle("");
+    setRemind("");
   };
   return (
     <div className="flex flex-wrap gap-2">
@@ -564,6 +592,14 @@ function AddTask() {
           ))}
         </select>
       )}
+      <Input
+        type="time"
+        className="w-28"
+        value={remind}
+        onChange={(e) => setRemind(e.target.value)}
+        aria-label="Giờ nhắc (tuỳ chọn)"
+        title="Tới giờ này hôm nay web sẽ nhắc (tuỳ chọn)"
+      />
       <Button onClick={add}>+ Thêm</Button>
       <Button
         variant="ghost"

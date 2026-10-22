@@ -53,6 +53,12 @@ import {
   type ExamScore,
 } from "./exams";
 import { normalizeJournal } from "./journal";
+import {
+  normalizeGradeEntries,
+  normalizeGradeExtras,
+  type GradeEntry,
+  type GradeExtra,
+} from "./grades";
 import { normalizeWeekGoals } from "./goals";
 import { normalizeSubjectNotes, removeSubjectNote, type SubjectNoteMap } from "./subjectNotes";
 import type { JournalEntry } from "./journal";
@@ -92,6 +98,7 @@ export interface Task {
   examId?: string | undefined; // linked exam countdown
   mood?: number; // 1..4 feeling after finishing a timed task (1 = tuyệt vời)
   subject?: string; // study subject tag (from data.subjects) used by the per-subject chart
+  remindAt?: string; // "HH:MM" — same-day reminder time; the app pings when it passes
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
 }
@@ -215,6 +222,8 @@ export interface AppData {
   subjects: string[]; // user-managed study subjects (max 12)
   subjectNotes: SubjectNoteMap; // per-subject note + weak/strong topic marks
   weekGoals: WeekGoal[]; // goals pinned for the whole week
+  gradeBook: GradeEntry[]; // teacher-style grade columns per subject/semester (see grades.ts)
+  gradeExtras: GradeExtra[]; // "điểm dư" side notes until promoted into a column
   journal: JournalEntry[]; // hidden personal diary, opened from the wall bookshelf
   weeklyGoal: WeeklyGoalState;
   extraSchedule: ExtraScheduleItem[]; // quick one-off reminders (see tkb.ts)
@@ -242,6 +251,8 @@ export const KIND_META: Record<TaskKind, { emoji: string; label: string; minutes
   pomodoro: { emoji: "📚", label: "Học bài 25p", minutes: 25 },
   custom: { emoji: "✍️", label: "Việc tự nhập", minutes: 0 },
 };
+
+export const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const uid = (p = "id") =>
   `${p}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -322,6 +333,8 @@ export function defaultData(): AppData {
     raid: defaultRaid(),
     exams: defaultExams(),
     examScores: [],
+    gradeBook: [],
+    gradeExtras: [],
     templates: defaultTemplates(),
     sessionLog: [],
     notes: [],
@@ -678,6 +691,8 @@ export function migrate(raw: unknown): AppData {
           : null,
     },
     subjectNotes: normalizeSubjectNotes(r.subjectNotes),
+    gradeBook: normalizeGradeEntries(r.gradeBook),
+    gradeExtras: normalizeGradeExtras(r.gradeExtras),
     weekGoals: normalizeWeekGoals(r.weekGoals),
     journal: normalizeJournal(r.journal),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
@@ -957,6 +972,7 @@ export interface TaskEdit {
   kind?: TaskKind;
   minutes?: number;
   date?: string;
+  remindAt?: string | null; // "HH:MM" or null to clear
 }
 
 /** Edits an unfinished task. Completed or already-rewarded tasks are locked. Returns null when not editable. */
@@ -979,6 +995,12 @@ export function editTask(
     typeof patch.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(patch.date)
       ? patch.date
       : task.date;
+  const remindAt =
+    patch.remindAt === undefined
+      ? task.remindAt
+      : patch.remindAt && HHMM_RE.test(patch.remindAt)
+        ? patch.remindAt
+        : undefined;
   const moved = date !== task.date;
   const retimed = minutes !== task.minutes || kind !== task.kind;
   return {
@@ -987,6 +1009,10 @@ export function editTask(
     tasks: data.tasks.map((t) => {
       if (t.id !== taskId) return t;
       const next = { ...t, title, kind, minutes, date };
+      if (patch.remindAt !== undefined) {
+        if (remindAt) next.remindAt = remindAt;
+        else delete next.remindAt;
+      }
       // New duration or kind → restart the countdown; moving days drops the old timetable badge.
       if (retimed) next.remainingSeconds = minutes * 60;
       if (moved) {
@@ -1459,12 +1485,13 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
 /** Slots starting in exactly <=5 minutes (and not yet started) today. */
 export function upcomingSlots(data: AppData, now = new Date(), leadMin = 5): Slot[] {
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  return [...(data.timetable.days[now.getDay()]?.slots ?? []), ...personalOf(data, now.getDay())].filter(
-    (s) => {
-      const d = toMin(s.start) - nowMin;
-      return d > 0 && d <= leadMin;
-    },
-  );
+  return [
+    ...(data.timetable.days[now.getDay()]?.slots ?? []),
+    ...personalOf(data, now.getDay()),
+  ].filter((s) => {
+    const d = toMin(s.start) - nowMin;
+    return d > 0 && d <= leadMin;
+  });
 }
 
 /** The slot running right now (start <= now < end), or null. */

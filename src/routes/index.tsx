@@ -4,8 +4,9 @@ import { TrackerProvider, useTracker } from "@/lib/tracker/store";
 import { HeaderHud } from "@/components/tracker/HeaderHud";
 import { TodayPanel } from "@/components/tracker/TodayPanel";
 import { WeeklyReportCard } from "@/components/tracker/WeeklyReport";
+import { HeatmapCard } from "@/components/tracker/HeatmapCard";
 import { SubjectChartCard } from "@/components/tracker/SubjectChartCard";
-import { ExamScoresCard } from "@/components/tracker/ExamScoresCard";
+import { GradeBookCard } from "@/components/tracker/GradeBookCard";
 import { FocusJournalCard } from "@/components/tracker/FocusJournal";
 import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
 import { FriendViewCard } from "@/components/tracker/FriendView";
@@ -22,6 +23,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
 import { BackupReminder } from "@/components/tracker/BackupReminder";
 import { QuickAdd } from "@/components/tracker/QuickAdd";
+import { TaskReminders } from "@/components/tracker/TaskReminders";
 import { SkyExperience } from "@/components/tracker/SkyExperience";
 import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/tracker/OnboardingTour";
@@ -88,6 +90,7 @@ function AppInner() {
       <HeaderHud />
       <BackupReminder />
       <QuickAdd />
+      <TaskReminders />
       <ConstellationTabs>
         <TabsContent value="today" className="mt-4 sm:mt-5">
           <TodayPanel />
@@ -95,7 +98,8 @@ function AppInner() {
         <TabsContent value="stats" className="mt-4 sm:mt-5">
           <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
             <WeeklyReportCard />
-            <ExamScoresCard />
+            <HeatmapCard />
+            <GradeBookCard />
             <SubjectChartCard />
             <FocusJournalCard />
             <MonthlyReportCard />
