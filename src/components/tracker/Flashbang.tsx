@@ -25,7 +25,7 @@ const META: Record<FlashbangKind, { icon: string; title: string; sub: string }> 
   done: {
     icon: "🍅",
     title: "HẾT PHIÊN!",
-    sub: "Pomodoro hoàn tất — thời gian nghỉ đây!",
+    sub: "Phiên học hoàn tất — thời gian nghỉ đây!",
   },
 };
 

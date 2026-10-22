@@ -191,6 +191,7 @@ export interface AppData {
   game: GameState;
   timetable: Timetable;
   timetableLog: string[]; // "YYYY-MM-DD:slotId" already pushed to today's list
+  personal: Timetable; // lịch riêng ngoài giờ học — cùng cấu trúc TKB trường
   avatarBase64: string | null;
   petState: PetState;
   streak: StreakState;
@@ -238,7 +239,7 @@ export const POMODORO_PRESETS = [15, 25, 50] as const;
 export const KIND_META: Record<TaskKind, { emoji: string; label: string; minutes: number }> = {
   water: { emoji: "💧", label: "Uống nước", minutes: 0 },
   exercise: { emoji: "🤸", label: "Tập thể dục 5p", minutes: 5 },
-  pomodoro: { emoji: "📚", label: "Học bài Pomodoro 25p", minutes: 25 },
+  pomodoro: { emoji: "📚", label: "Học bài 25p", minutes: 25 },
   custom: { emoji: "✍️", label: "Việc tự nhập", minutes: 0 },
 };
 
@@ -307,6 +308,7 @@ export function defaultData(): AppData {
     tasks: [],
     game: defaultGame(),
     timetable: emptyTimetable(),
+    personal: emptyTimetable(),
     timetableLog: [],
     avatarBase64: null,
     petState: defaultPet(),
@@ -532,6 +534,19 @@ export function migrate(raw: unknown): AppData {
     ? tt.slotMinutes
     : Math.min(120, Math.max(15, num(srcObj.slotMinutes, tt.slotMinutes)));
 
+  // Personal schedule (missing in older files → empty week).
+  const pRaw = obj(r.personal);
+  const ptt = emptyTimetable();
+  if (Array.isArray(pRaw.days)) {
+    pRaw.days.forEach((d, i) => {
+      const dd = obj(d);
+      const idx = typeof dd.dayIndex === "number" ? dd.dayIndex : i;
+      if (idx >= 0 && idx < 7)
+        ptt.days[idx]!.slots = (Array.isArray(dd.slots) ? dd.slots : []).map(normalizeSlot);
+    });
+  }
+  ptt.days.forEach((d) => d.slots.sort((a, b) => a.start.localeCompare(b.start)));
+
   const { timetable: _old, ...gameRest } = oldGame;
   const game: GameState = {
     ...base.game,
@@ -592,6 +607,7 @@ export function migrate(raw: unknown): AppData {
     tasks,
     game,
     timetable: tt,
+    personal: ptt,
     timetableLog: Array.isArray(r.timetableLog) ? r.timetableLog : [],
     extraSchedule: normalizeExtraSchedule(r.extraSchedule),
     extraLog: Array.isArray(r.extraLog)
@@ -1016,7 +1032,7 @@ export function completePomodoroSession(
   const focusToday = (data.dailyStats[today]?.focusMin ?? 0) + minutes;
   const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
   const record = makeTask(
-    kind === "warmup" ? `Khởi động (${minutes} phút)` : `Pomodoro tập trung (${minutes} phút)`,
+    kind === "warmup" ? `Khởi động (${minutes} phút)` : `Phiên tập trung (${minutes} phút)`,
     "pomodoro",
     minutes,
     today,
@@ -1299,18 +1315,26 @@ const toMin = (hm: string) => {
   return (h ?? 0) * 60 + (m ?? 0);
 };
 
+const personalOf = (data: AppData, dayIndex: number): Slot[] =>
+  data.personal?.days?.[dayIndex]?.slots ?? [];
+
 /** Pushes slots whose start time has arrived (for today's weekday) into today's tasks, once per day per slot. */
 export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; pushed: Slot[] } {
   const today = dateStr(now);
-  const day = data.timetable.days[now.getDay()];
-  if (!day) return { data, pushed: [] };
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const due = day.slots.filter(
+  const dueSchool = (data.timetable.days[now.getDay()]?.slots ?? []).filter(
     (s) =>
       s.tracked !== false &&
       toMin(s.start) <= nowMin &&
       !data.timetableLog.includes(`${today}:${s.id}`),
   );
+  const duePersonal = personalOf(data, now.getDay()).filter(
+    (s) =>
+      s.tracked !== false &&
+      toMin(s.start) <= nowMin &&
+      !data.timetableLog.includes(`${today}:p:${s.id}`),
+  );
+  const due = [...dueSchool, ...duePersonal];
   if (!due.length) return { data, pushed: [] };
   const newTasks = due.map((s) =>
     makeTask(s.title, s.kind, s.minutes, today, {
@@ -1320,7 +1344,8 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
   );
   const log = [
     ...data.timetableLog.filter((k) => k >= today.slice(0, 10)),
-    ...due.map((s) => `${today}:${s.id}`),
+    ...dueSchool.map((s) => `${today}:${s.id}`),
+    ...duePersonal.map((s) => `${today}:p:${s.id}`),
   ];
   return { data: { ...data, tasks: [...data.tasks, ...newTasks], timetableLog: log }, pushed: due };
 }
@@ -1415,16 +1440,18 @@ export function recordSpin(
 /** "Đồng bộ nhanh lịch hôm nay": add every slot of today's weekday not yet in the list. */
 export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData; added: number } {
   const today = dateStr(now);
-  const day = data.timetable.days[now.getDay()];
-  if (!day) return { data, added: 0 };
-  const todo = day.slots.filter(
-    (s) =>
-      s.tracked !== false &&
-      !data.timetableLog.includes(`${today}:${s.id}`) &&
-      !data.tasks.some((t) => t.date === today && t.fromSlotId === s.id),
-  );
+  const notPushed = (s: Slot, logKey: string) =>
+    !data.timetableLog.includes(logKey) &&
+    !data.tasks.some((t) => t.date === today && t.fromSlotId === s.id);
+  const todoSchool = (data.timetable.days[now.getDay()]?.slots ?? [])
+    .filter((s) => s.tracked !== false && notPushed(s, `${today}:${s.id}`))
+    .map((s) => ({ s, key: `${today}:${s.id}` }));
+  const todoPersonal = personalOf(data, now.getDay())
+    .filter((s) => s.tracked !== false && notPushed(s, `${today}:p:${s.id}`))
+    .map((s) => ({ s, key: `${today}:p:${s.id}` }));
+  const todo = [...todoSchool, ...todoPersonal];
   if (!todo.length) return { data, added: 0 };
-  const newTasks = todo.map((s) =>
+  const newTasks = todo.map(({ s }) =>
     makeTask(s.title, s.kind, s.minutes, today, {
       fromSlotId: s.id,
       timeRange: `${s.start} - ${s.end}`,
@@ -1434,7 +1461,7 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
     data: {
       ...data,
       tasks: [...data.tasks, ...newTasks],
-      timetableLog: [...data.timetableLog, ...todo.map((s) => `${today}:${s.id}`)],
+      timetableLog: [...data.timetableLog, ...todo.map(({ key }) => key)],
     },
     added: todo.length,
   };
@@ -1442,30 +1469,30 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
 
 /** Slots starting in exactly <=5 minutes (and not yet started) today. */
 export function upcomingSlots(data: AppData, now = new Date(), leadMin = 5): Slot[] {
-  const day = data.timetable.days[now.getDay()];
-  if (!day) return [];
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  return day.slots.filter((s) => {
-    const d = toMin(s.start) - nowMin;
-    return d > 0 && d <= leadMin;
-  });
+  return [...(data.timetable.days[now.getDay()]?.slots ?? []), ...personalOf(data, now.getDay())].filter(
+    (s) => {
+      const d = toMin(s.start) - nowMin;
+      return d > 0 && d <= leadMin;
+    },
+  );
 }
 
 /** The slot running right now (start <= now < end), or null. */
 export function runningSlotToday(data: AppData, now = new Date()): Slot | null {
-  const day = data.timetable.days[now.getDay()];
-  if (!day) return null;
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  return day.slots.find((s) => toMin(s.start) <= nowMin && nowMin < toMin(s.end)) ?? null;
+  return (
+    [...(data.timetable.days[now.getDay()]?.slots ?? []), ...personalOf(data, now.getDay())].find(
+      (s) => toMin(s.start) <= nowMin && nowMin < toMin(s.end),
+    ) ?? null
+  );
 }
 
 /** The next timetable slot today that has not started yet, or null when the day is done. */
 export function nextSlotToday(data: AppData, now = new Date()): Slot | null {
-  const day = data.timetable.days[now.getDay()];
-  if (!day) return null;
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return (
-    [...day.slots]
+    [...(data.timetable.days[now.getDay()]?.slots ?? []), ...personalOf(data, now.getDay())]
       .sort((a, b) => toMin(a.start) - toMin(b.start))
       .find((s) => toMin(s.start) > nowMin) ?? null
   );

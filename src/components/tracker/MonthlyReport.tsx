@@ -79,7 +79,7 @@ function drawReport(canvas: HTMLCanvasElement, s: MonthSummary, generatedAt: str
   const stats: [string, string][] = [
     ["Nhiệm vụ hoàn thành", String(s.tasksCompleted)],
     ["Phút tập trung", String(s.totals.focusMin)],
-    ["Pomodoro", String(s.totals.pomodoros)],
+    ["Phiên tập trung", String(s.totals.pomodoros)],
     ["Cốc nước", String(s.totals.water)],
     ["Ngày hoạt động", `${s.activeDays}/${s.days.length}`],
     ["Ngày tốt nhất", s.bestDay ? `${s.bestDay.date.slice(8)} (${s.bestDay.focusMin}p)` : "—"],

@@ -19,7 +19,7 @@ export function FocusJournalCard() {
       <p className="mb-3 text-xs text-muted-foreground">
         {g.total > 0
           ? `⭐ Giờ vàng: ${g.best}:00 — ${bestPct}% thời lượng focus 14 ngày qua rơi vào khung này`
-          : "Chưa có dữ liệu — hoàn thành Pomodoro để soi ra giờ vàng của bạn."}
+          : "Chưa có dữ liệu — hoàn thành phiên học để soi ra giờ vàng của bạn."}
       </p>
       {g.total > 0 && (
         <div className="mb-4 flex h-16 items-end gap-[3px]" aria-label="Focus theo giờ trong ngày">
@@ -51,7 +51,7 @@ export function FocusJournalCard() {
                 {new Date(s.at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
               </span>
               <span className="flex-1">
-                {s.kind === "warmup" ? "Khởi động chống trì hoãn" : "Pomodoro tập trung"}
+                {s.kind === "warmup" ? "Khởi động chống trì hoãn" : "Phiên tập trung"}
               </span>
               <span className="text-xs text-muted-foreground">{s.minutes}p</span>
               {s.mood ? <span>{MOOD_FACES[s.mood]}</span> : null}

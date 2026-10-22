@@ -11,6 +11,7 @@ import {
   markWaterNudged,
   migrate,
   needsBackupReminder,
+  nextSlotToday,
   pushDueSlots,
   syncTodaySlots,
   setTaskMood,
@@ -69,6 +70,37 @@ describe("tracker rules", () => {
     expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(1);
   });
 
+  it("pushes personal schedule slots into today with their own log key", () => {
+    let d = defaultData();
+    d.personal.days[0]!.slots.push({
+      id: "p1",
+      start: "19:00",
+      end: "19:25",
+      title: "Gia sư",
+      kind: "pomodoro",
+      minutes: 25,
+    });
+    const sunday7pm = new Date(2026, 9, 18, 19, 5); // Sunday evening
+    d = pushDueSlots(d, sunday7pm).data;
+    d = pushDueSlots(d, sunday7pm).data;
+    expect(d.tasks.filter((t) => t.fromSlotId === "p1")).toHaveLength(1);
+    expect(d.timetableLog).toContain("2026-10-18:p:p1");
+  });
+
+  it("nextSlotToday includes personal schedule entries", () => {
+    let d = defaultData();
+    d.personal.days[0]!.slots.push({
+      id: "p1",
+      start: "19:00",
+      end: "19:25",
+      title: "Gia sư",
+      kind: "pomodoro",
+      minutes: 25,
+    });
+    const sunday6pm = new Date(2026, 9, 18, 18, 0);
+    expect(nextSlotToday(d, sunday6pm)?.id).toBe("p1");
+  });
+
   it("display-only slots never become tasks", () => {
     let d = defaultData();
     d.timetable.days[0]!.slots.push(
@@ -107,7 +139,7 @@ describe("tracker rules", () => {
     const d = defaultData();
     const xpBefore = d.game.xp;
     const r = completePomodoroSession(d, 25, new Date(2026, 9, 18, 10, 0));
-    const rec = r.data.tasks.find((t) => t.title.includes("Pomodoro tập trung"));
+    const rec = r.data.tasks.find((t) => t.title.includes("Phiên tập trung"));
     expect(rec).toBeDefined();
     expect(rec!.completed).toBe(true);
     expect(rec!.rewardClaimed).toBe(true);

@@ -12,7 +12,7 @@ const STEPS = [
   {
     emoji: "🍅",
     title: "Học cùng thú cưng",
-    desc: "Bấm “Pomodoro 25p” cạnh thú cưng để bắt đầu. Xong tự nghỉ 5 phút, hoặc bấm “🚀 5p thôi” khi lười, và “🧘 Zen” để vào chế độ tập trung toàn màn hình.",
+    desc: "Bấm “Học bài 25p” cạnh thú cưng để bắt đầu. Xong tự nghỉ 5 phút, hoặc bấm “🚀 5p thôi” khi lười, và “🧘 Zen” để vào chế độ tập trung toàn màn hình.",
   },
   {
     emoji: "✅",

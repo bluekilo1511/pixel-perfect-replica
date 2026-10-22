@@ -34,7 +34,7 @@ export function SubjectChartCard() {
       </div>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Chưa có dữ liệu. Gắn môn ở tab Hôm nay rồi làm vài Pomodoro nhé!
+          Chưa có dữ liệu. Gắn môn ở tab Hôm nay rồi làm vài phiên học nhé!
         </p>
       ) : (
         <ul className="space-y-2">

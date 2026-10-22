@@ -108,7 +108,7 @@ export function Chronicle() {
                 Phóng viên {petEmoji(pet)} {petTitle(pet)}
               </b>{" "}
               (Lv {pet.petLevel}) đưa tin: chuỗi streak đang là <b>🔥 {data.streak.count} ngày</b>,{" "}
-              {w.pomodoros} trận Pomodoro đã diễn ra.
+              {w.pomodoros} trận tập trung đã diễn ra.
             </p>
             <p>
               {w.bestDay ? (

@@ -10,6 +10,7 @@ import { FocusJournalCard } from "@/components/tracker/FocusJournal";
 import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
 import { FriendViewCard } from "@/components/tracker/FriendView";
 import { Timetable } from "@/components/tracker/Timetable";
+import { PersonalScheduleCard } from "@/components/tracker/PersonalScheduleCard";
 import { PetShop } from "@/components/tracker/PetShop";
 import { Wheel } from "@/components/tracker/Wheel";
 import { Chronicle } from "@/components/tracker/Chronicle";
@@ -38,12 +39,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Quản lý nhiệm vụ, thời khóa biểu tuần từ Chủ Nhật, Pomodoro, uống nước và level XP — chạy offline, lưu vào file của bạn.",
+          "Quản lý nhiệm vụ, thời khóa biểu tuần từ Chủ Nhật, phiên học, uống nước và level XP — chạy offline, lưu vào file của bạn.",
       },
       { property: "og:title", content: "Task Tracker Pro" },
       {
         property: "og:description",
-        content: "Thời khóa biểu tuần, Pomodoro, XP và vòng quay — 100% offline.",
+        content: "Thời khóa biểu tuần, phiên học, XP và vòng quay — 100% offline.",
       },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "/og.png" },
@@ -103,6 +104,9 @@ function AppInner() {
         </TabsContent>
         <TabsContent value="week" className="mt-4 sm:mt-5">
           <Timetable />
+          <div className="mt-4 sm:mt-5">
+            <PersonalScheduleCard />
+          </div>
         </TabsContent>
         <TabsContent value="shop" className="mt-4 sm:mt-5">
           <PetShop />

@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 
 type Editing = { dayIndex: number; slot: Slot; isNew: boolean } | null;
-type View = "school" | "cards";
 
 /** Drops an empty teacher label and trims a filled one before saving. */
 const cleanSlot = (s: Slot): Slot => {
@@ -52,7 +51,6 @@ export function Timetable() {
   const { data, update } = useTracker();
   const [editing, setEditing] = useState<Editing>(null);
   const [importing, setImporting] = useState(false);
-  const [view, setView] = useState<View>("school");
   const todayIdx = new Date().getDay();
   const today = new Date();
   const nowMin = today.getHours() * 60 + today.getMinutes();
@@ -139,30 +137,13 @@ export function Timetable() {
     <section className="glass p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">🗓️ Thời khóa biểu tuần</h2>
+          <h2 className="text-lg font-semibold">🏫 TKB trường</h2>
           <p className="text-sm text-muted-foreground">
-            {view === "school"
-              ? "Dạng tờ TKB trường — bấm vào ô để sửa. Môn có 👁 chỉ hiển thị, không tự tạo task."
-              : "Bắt đầu từ Chủ Nhật — lên kế hoạch cho cả tuần mới. Bấm vào khung giờ để sửa."}
+            Dạng tờ TKB trường — bấm vào ô để sửa. Môn có 👁 chỉ hiển thị, không tự tạo task. Môn
+            📚 Học thật là nguồn cho thẻ “Học trước cho ngày mai”.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex overflow-hidden rounded-lg border border-border">
-            <button
-              type="button"
-              onClick={() => setView("school")}
-              className={`px-2.5 py-1.5 text-xs font-medium transition ${view === "school" ? "bg-primary text-primary-foreground" : "bg-transparent hover:bg-muted"}`}
-            >
-              🏫 TKB trường
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("cards")}
-              className={`px-2.5 py-1.5 text-xs font-medium transition ${view === "cards" ? "bg-primary text-primary-foreground" : "bg-transparent hover:bg-muted"}`}
-            >
-              🗂️ Kiểu thẻ
-            </button>
-          </div>
           <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
             ⚡ Nhập nhanh
           </Button>
@@ -170,8 +151,7 @@ export function Timetable() {
       </div>
       <TimetableQuickImport open={importing} onClose={() => setImporting(false)} />
 
-      {view === "school" ? (
-        <div className="overflow-x-auto pb-1">
+      <div className="overflow-x-auto pb-1">
           <div className="min-w-[760px]">
             <div
               className="grid gap-1 text-xs"
@@ -240,54 +220,6 @@ export function Timetable() {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
-          {data.timetable.days.map((day) => (
-            <div
-              key={day.dayIndex}
-              className={`flex min-h-[220px] flex-col rounded-xl border p-2.5 ${day.dayIndex === todayIdx ? "border-primary bg-secondary glass-glow" : "border-border bg-muted"}`}
-            >
-              <div className="mb-2 flex items-center justify-between px-1">
-                <h3 className={`text-sm font-semibold ${day.dayIndex === 0 ? "text-accent" : ""}`}>
-                  {day.label}
-                </h3>
-                {day.dayIndex === todayIdx && (
-                  <span className="text-[10px] font-semibold uppercase text-primary">Hôm nay</span>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col gap-1.5">
-                {day.slots.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => openEdit(day.dayIndex, s)}
-                    className={`rounded-lg border p-2 text-left text-xs transition ${s.tracked === false ? "border-dashed border-border/70 bg-muted/60 hover:border-primary/60" : "border-border bg-card hover:border-primary"}`}
-                  >
-                    <div className="font-display tabular-nums text-muted-foreground">
-                      {s.start}–{s.end}
-                      {s.tracked === false && (
-                        <span className="ml-1 text-[10px] text-muted-foreground/70">👁 chỉ xem</span>
-                      )}
-                    </div>
-                    <div className="mt-0.5 font-medium leading-snug">
-                      {KIND_META[s.kind].emoji} {s.title}
-                    </div>
-                    {s.teacher && <div className="text-muted-foreground">👩‍🏫 {s.teacher}</div>}
-                  </button>
-                ))}
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="mt-2 w-full border border-dashed border-border"
-                onClick={() => setEditing({ dayIndex: day.dayIndex, slot: newSlot(), isNew: true })}
-              >
-                + Khung giờ
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
       {editing && (
         <SlotDialog
           editing={editing}

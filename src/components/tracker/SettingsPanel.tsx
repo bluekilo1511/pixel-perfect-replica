@@ -108,7 +108,7 @@ export function SettingsPanel() {
       <section className="glass p-5">
         <h2 className="mb-1 text-lg font-semibold">⚙️ Cài đặt</h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục Pomodoro · <b>N</b> thêm nhiệm vụ · <b>1–7</b>{" "}
+          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục phiên học · <b>N</b> thêm nhiệm vụ · <b>1–7</b>{" "}
           chuyển tab
         </p>
         <p className="mb-2 text-xs text-muted-foreground">
@@ -183,19 +183,19 @@ export function SettingsPanel() {
       </section>
 
       <section className="glass p-5">
-        <h2 className="mb-1 text-lg font-semibold">⏱️ Pomodoro</h2>
+        <h2 className="mb-1 text-lg font-semibold">⏱️ Tập trung</h2>
         <p className="mb-2 text-xs text-muted-foreground">
           Độ dài mặc định và các preset của riêng bạn.
         </p>
         <div className="divide-y divide-border">
-          <Row label="Phút mặc định" hint="Áp dụng cho nhiệm vụ Pomodoro mới">
+          <Row label="Phút mặc định" hint="Áp dụng cho nhiệm vụ học mới">
             <Input
               type="number"
               min={1}
               max={180}
               className="h-9 w-20"
               value={s.pomodoroMinutes}
-              aria-label="Phút Pomodoro mặc định"
+              aria-label="Phút học mặc định"
               onChange={(e) =>
                 set({
                   pomodoroMinutes: Math.min(180, Math.max(1, Math.round(+e.target.value || 1))),
@@ -233,14 +233,14 @@ export function SettingsPanel() {
               </Button>
             </>
           </Row>
-          <Row label="Hiệu ứng âm thanh" hint="Tiếng ting khi Pomodoro xong, nhạc khai mở chòm sao">
+          <Row label="Hiệu ứng âm thanh" hint="Tiếng ting khi phiên học xong, nhạc khai mở chòm sao">
             <Switch
               checked={s.fxSound}
               aria-label="Hiệu ứng âm thanh"
               onCheckedChange={(v) => set({ fxSound: v })}
             />
           </Row>
-          <Row label="Kiểu chuông" hint="Âm báo khi hết phiên Pomodoro">
+          <Row label="Kiểu chuông" hint="Âm báo khi hết phiên học">
             <select
               className="h-8 rounded-md border border-input bg-popover px-2 text-sm"
               value={s.chime}
@@ -263,7 +263,7 @@ export function SettingsPanel() {
               onCheckedChange={(v) => set({ batterySaver: v })}
             />
           </Row>
-          <Row label="Nghỉ tự động" hint="Tự bắt đầu nghỉ sau mỗi Pomodoro">
+          <Row label="Nghỉ tự động" hint="Tự bắt đầu nghỉ sau mỗi phiên học">
             <Switch
               checked={s.autoBreak}
               aria-label="Nghỉ tự động"

@@ -66,7 +66,7 @@ export function FriendViewCard() {
             <dd className="font-semibold">{result.lifetimeFocusMin}p</dd>
           </div>
           <div>
-            <dt className="text-[10px] text-muted-foreground">Pomodoro</dt>
+            <dt className="text-[10px] text-muted-foreground">Phiên học</dt>
             <dd className="font-semibold">{result.lifetimePomodoros}</dd>
           </div>
           <div>

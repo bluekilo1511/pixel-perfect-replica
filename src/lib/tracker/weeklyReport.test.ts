@@ -44,7 +44,7 @@ describe("weekly report", () => {
       tasks: [
         mk("Học Toán", "2026-10-19", 50),
         mk("Học Toán", "2026-10-20", 25),
-        mk("Pomodoro tập trung (25 phút)", "2026-10-20", 25),
+        mk("Phiên tập trung (25 phút)", "2026-10-20", 25),
         mk("Học Văn", "2026-10-19", 40),
         mk("Việc nhà", "2026-10-20", 10),
         mk("Học Sử", "2026-10-12", 999), // last week — must be ignored
@@ -55,7 +55,7 @@ describe("weekly report", () => {
     expect(s.topSubjects).toEqual([
       { label: "Học Toán", minutes: 75 },
       { label: "Học Văn", minutes: 40 },
-      { label: "Pomodoro tập trung", minutes: 25 },
+      { label: "Phiên tập trung", minutes: 25 },
     ]);
   });
 

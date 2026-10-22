@@ -112,7 +112,7 @@ export function PetWidget() {
       },
     }));
     setCustomMin("");
-    toast.success(`Đã lưu Pomodoro ${m} phút 🍅`);
+    toast.success(`Đã lưu phiên học ${m} phút 🍅`);
   };
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -229,7 +229,7 @@ export function PetWidget() {
             );
             if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
           } else {
-            toast.success(`🍅 Xong Pomodoro cùng thú cưng! +${POMODORO_REWARD} 😺`);
+            toast.success(`🍅 Xong phiên học cùng thú cưng! +${POMODORO_REWARD} 😺`);
             if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
           }
           say("Giỏi quá! Mình tự hào về bạn! 🎉");

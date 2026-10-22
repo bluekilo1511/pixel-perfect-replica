@@ -100,7 +100,7 @@ export function RaidBossCard() {
         </div>
       </div>
       <p className="mb-3 text-xs text-muted-foreground">
-        Mỗi phiên Pomodoro trong tuần gây 12 sát thương. Hạ boss để nhận +10 😺 +3 🦎.
+        Mỗi phiên học trong tuần gây 12 sát thương. Hạ boss để nhận +10 😺 +3 🦎.
       </p>
       <Button className="w-full" disabled={!st.claimable} onClick={claimRaid}>
         {st.claimable
