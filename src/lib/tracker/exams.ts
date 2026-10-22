@@ -56,3 +56,88 @@ export function examLabel(daysLeft: number): string {
   if (daysLeft === 1) return "Ngày mai!";
   return `còn ${daysLeft} ngày`;
 }
+
+// ---- Exam scores (per subject) ----
+
+export interface ExamScore {
+  id: string;
+  subject: string;
+  title: string; // optional label like "giữa kỳ", "" when none
+  date: string; // YYYY-MM-DD
+  score: number;
+  max: number;
+  createdAt: string;
+}
+
+export const SCORES_MAX = 60;
+export const TREND_RATIO = 0.8; // two scores below 80% of max in a row = needs focus
+
+export function normalizeExamScores(raw: unknown): ExamScore[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, SCORES_MAX)
+    .filter((e) => !!e && typeof e === "object")
+    .map((e): ExamScore | null => {
+      const r = e as Record<string, unknown>;
+      const score = Number(r.score);
+      const max = Number(r.max);
+      const subject = String(r.subject ?? "").trim().slice(0, 24);
+      if (!subject || !Number.isFinite(score) || score < 0) return null;
+      const capped = Math.min(score, Number.isFinite(max) && max > 0 ? max : 10);
+      return {
+        id: typeof r.id === "string" && r.id ? r.id : newExamId(),
+        subject,
+        title: typeof r.title === "string" ? r.title.trim().slice(0, 40) : "",
+        date: typeof r.date === "string" && DATE_RE.test(r.date) ? r.date : "",
+        score: capped,
+        max: Number.isFinite(max) && max > 0 ? max : 10,
+        createdAt: typeof r.createdAt === "string" ? r.createdAt : new Date().toISOString(),
+      };
+    })
+    .filter((s): s is ExamScore => s !== null);
+}
+
+/** Appends a score. Returns null on a bad subject, score out of range, or a full list. */
+export function addExamScore(
+  list: ExamScore[],
+  input: { subject: string; score: number; max?: number; title?: string; date?: string },
+): ExamScore[] | null {
+  const subject = input.subject.trim().slice(0, 24);
+  const max = Math.max(1, Math.round(input.max ?? 10));
+  const score = Math.round(input.score * 100) / 100;
+  if (!subject || !Number.isFinite(score) || score < 0 || score > max) return null;
+  if (list.length >= SCORES_MAX) return null;
+  const item: ExamScore = {
+    id: newExamId(),
+    subject,
+    title: (input.title ?? "").trim().slice(0, 40),
+    date: input.date && DATE_RE.test(input.date) ? input.date : new Date().toISOString().slice(0, 10),
+    score,
+    max,
+    createdAt: new Date().toISOString(),
+  };
+  return [...list, item];
+}
+
+export function removeExamScore(list: ExamScore[], id: string): ExamScore[] {
+  return list.filter((s) => s.id !== id);
+}
+
+/** One subject's scores, oldest first. */
+export function subjectScores(scores: ExamScore[], subject: string): ExamScore[] {
+  return scores
+    .filter((s) => s.subject.toLowerCase() === subject.toLowerCase())
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+}
+
+/** A warning line when the subject's last two scores sit below TREND_RATIO of max. */
+export function needsFocusSubject(scores: ExamScore[], subject: string): string | null {
+  const list = subjectScores(scores, subject);
+  if (list.length < 2) return null;
+  const prev = list[list.length - 2]!;
+  const last = list[list.length - 1]!;
+  if (prev.score / prev.max < TREND_RATIO && last.score / last.max < TREND_RATIO) {
+    return `Hai bài liền dưới ${Math.round(TREND_RATIO * 100)}% — ưu tiên ôn môn này`;
+  }
+  return null;
+}

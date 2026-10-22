@@ -28,6 +28,8 @@ import {
   type TaskKind,
 } from "@/lib/tracker/model";
 import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
+import { addExamPrepTasks, EXAM_PREP_PER_DAY, EXAM_PREP_WINDOW, nextPrepSuggestion } from "@/lib/tracker/tkb";
+import { shiftDate } from "@/lib/tracker/gamify";
 import {
   addWeekGoal,
   currentWeekGoals,
@@ -338,6 +340,27 @@ function ExamCard() {
                 <p className="text-xs text-muted-foreground">
                   {e.date} · {examLabel(e.daysLeft)}
                 </p>
+                {e.daysLeft <= EXAM_PREP_WINDOW && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-1 h-7 text-xs"
+                    title="Tạo 2 pomodoro ôn thi hôm nay (chỉ 1 lần/ngày/kỳ thi)"
+                    onClick={() => {
+                      const r = addExamPrepTasks(data, e, today);
+                      if (!r.added) {
+                        toast("Đã có kế hoạch ôn cho kỳ thi này hôm nay 👍");
+                        return;
+                      }
+                      update((d) => addExamPrepTasks(d, e, today).data);
+                      toast.success(`Đã tạo ${r.added} việc ôn thi hôm nay 🌙`, {
+                        description: `Gợi ý: ôn ${EXAM_PREP_PER_DAY} pomodoro/ngày đến ngày thi.`,
+                      });
+                    }}
+                  >
+                    💡 Tạo {EXAM_PREP_PER_DAY} việc ôn hôm nay
+                  </Button>
+                )}
               </div>
               <Button
                 size="sm"
@@ -415,6 +438,36 @@ function TemplatesCard() {
           </Button>
         </span>
       ))}
+    </div>
+  );
+}
+
+function PrepSuggestionBar() {
+  const { data, update, startTimer } = useTracker();
+  const pick = nextPrepSuggestion(data, new Date());
+  if (!pick) return null;
+  const start = () => {
+    const today = dateStr();
+    const tomorrow = shiftDate(today, 1);
+    const subject = data.subjects.find((s) => s.toLowerCase() === pick.slot.title.toLowerCase());
+    const t = makeTask(`Ôn: ${pick.slot.title} (mai ${pick.slot.start})`, "pomodoro", pick.minutes, today, {
+      prepSlotId: pick.slot.id,
+      prepForDate: tomorrow,
+      ...(subject ? { subject } : {}),
+    });
+    update((d) => ({ ...d, tasks: [...d.tasks, t] }));
+    startTimer(t.id);
+    toast(`🍅 Bắt đầu ôn ${pick.slot.title} cho mai`);
+  };
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+      <span className="text-lg">💡</span>
+      <span className="min-w-0 flex-1 truncate">
+        Mai có tiết <b>{pick.slot.title}</b> ({pick.slot.start}) — {pick.minutes} phút ôn ngay?
+      </span>
+      <Button size="sm" onClick={start}>
+        ▶ Ôn luôn
+      </Button>
     </div>
   );
 }
@@ -721,6 +774,7 @@ export function TodayPanel() {
           >
             ⚡ Đồng bộ nhanh lịch hôm nay
           </Button>
+          <PrepSuggestionBar />
           <AddTask />
           <TemplatesCard />
           {(() => {

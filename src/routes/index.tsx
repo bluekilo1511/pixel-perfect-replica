@@ -5,6 +5,7 @@ import { HeaderHud } from "@/components/tracker/HeaderHud";
 import { TodayPanel } from "@/components/tracker/TodayPanel";
 import { WeeklyReportCard } from "@/components/tracker/WeeklyReport";
 import { SubjectChartCard } from "@/components/tracker/SubjectChartCard";
+import { ExamScoresCard } from "@/components/tracker/ExamScoresCard";
 import { FocusJournalCard } from "@/components/tracker/FocusJournal";
 import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
 import { FriendViewCard } from "@/components/tracker/FriendView";
@@ -93,6 +94,7 @@ function AppInner() {
         <TabsContent value="stats" className="mt-4 sm:mt-5">
           <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
             <WeeklyReportCard />
+            <ExamScoresCard />
             <SubjectChartCard />
             <FocusJournalCard />
             <MonthlyReportCard />

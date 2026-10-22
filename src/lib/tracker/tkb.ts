@@ -12,6 +12,7 @@ import {
   type Task,
 } from "./model";
 import { shiftDate } from "./gamify";
+import { type ExamEvent } from "./exams";
 
 export interface TkbDefaults {
   morningStart: string; // "HH:MM" — first morning period
@@ -349,4 +350,57 @@ export function pushDueExtras(
     },
     pushed: due,
   };
+}
+
+// ---- Exam prep: suggestion + one-tap review tasks ----
+
+/** Within this many days to the exam, prep starts being suggested. */
+export const EXAM_PREP_WINDOW = 5;
+/** Default review pomodoros per day while preparing for an exam. */
+export const EXAM_PREP_PER_DAY = 2;
+
+/**
+ * Creates `perDay` "Ôn thi: {name}" pomodoro tasks today for an upcoming exam,
+ * attached to it via examId. Idempotent per exam per day.
+ */
+export function addExamPrepTasks(
+  data: AppData,
+  exam: ExamEvent,
+  today = dateStr(),
+  perDay = EXAM_PREP_PER_DAY,
+): { data: AppData; added: number } {
+  const dupe = data.tasks.some(
+    (t) => t.date === today && t.examId === exam.id && t.title.startsWith("Ôn thi:"),
+  );
+  if (dupe) return { data, added: 0 };
+  const mins = Math.max(5, data.settings.pomodoroMinutes || 25);
+  const count = Math.min(4, Math.max(1, Math.round(perDay)));
+  const newTasks = Array.from({ length: count }, () =>
+    makeTask(`Ôn thi: ${exam.name}`, "pomodoro", mins, today, { examId: exam.id }),
+  );
+  return { data: { ...data, tasks: [...data.tasks, ...newTasks] }, added: newTasks.length };
+}
+
+/**
+ * Tonight's one-tap suggestion: the earliest tracked slot tomorrow that has no
+ * prep task yet today, sized to the user's Pomodoro length.
+ */
+export function nextPrepSuggestion(data: AppData, now = new Date()): PrepPick | null {
+  const today = dateStr(now);
+  const tomorrow = shiftDate(today, 1);
+  const day = data.timetable.days[(now.getDay() + 1) % 7];
+  const slots = day ? day.slots.filter((s) => s.tracked !== false) : [];
+  const slot = [...slots]
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .find(
+      (s) =>
+        !data.tasks.some(
+          (t) =>
+            t.date === today &&
+            t.prepSlotId === s.id &&
+            t.prepForDate === tomorrow &&
+            t.title.startsWith("Ôn:"),
+        ),
+    );
+  return slot ? { slot, minutes: Math.max(5, data.settings.pomodoroMinutes || 25) } : null;
 }

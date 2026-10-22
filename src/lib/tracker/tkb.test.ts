@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { defaultData, makeTask, migrate, pushDueSlots, type AppData } from "./model";
+import {
+  addExam,
+  defaultData,
+  makeTask,
+  migrate,
+  pushDueSlots,
+  type AppData,
+} from "./model";
 import {
   DEFAULT_TKB,
+  addExamPrepTasks,
   addExtraSchedule,
   addPrepTasks,
   applyTimetableImport,
@@ -9,6 +17,7 @@ import {
   parseTimetableText,
   pushDueExtras,
   removeExtraSchedule,
+  nextPrepSuggestion,
   tomorrowSlots,
   upcomingExtraSchedule,
 } from "./tkb";
@@ -218,4 +227,37 @@ describe("one-off reminders", () => {
     expect(d2.timetable.days[1]!.slots.every((s) => s.tracked === undefined)).toBe(true);
   });
 
+});
+describe("exam prep & tonight suggestion", () => {
+  it("adds two exam prep tasks once per day per exam", () => {
+    let d = defaultData();
+    d = addExam(d, "Giữa kỳ Toán", "2026-10-25");
+    const exam = d.exams[0]!;
+    const today = "2026-10-22";
+    const r = addExamPrepTasks(d, exam, today);
+    expect(r.added).toBe(2);
+    const tasks = r.data.tasks.filter((t) => t.date === today && t.examId === exam.id);
+    expect(tasks.every((t) => t.title.startsWith("Ôn thi:"))).toBe(true);
+    expect(addExamPrepTasks(r.data, exam, today).added).toBe(0);
+  });
+
+  it("suggests the earliest tracked slot tomorrow without a prep task", () => {
+    let d = defaultData();
+    d = applyTimetableImport(
+      d,
+      parseTimetableText("Thứ 2\nBuổi sáng\nSử - Duyên\nToán - Bình"),
+      "replace",
+      DEFAULT_TKB,
+      true,
+    );
+    const sunday = new Date(2026, 9, 18, 19, 0); // Sunday evening → Monday
+    const pick = nextPrepSuggestion(d, sunday);
+    expect(pick?.slot.title).toBe("Sử");
+    // After a prep task for Sử exists today, the suggestion moves to Toán.
+    d = addPrepTasks(d, sunday, [{ slot: pick!.slot, minutes: 25 }]).data;
+    expect(nextPrepSuggestion(d, sunday)?.slot.title).toBe("Toán");
+    // Display-only subjects never get suggested.
+    const d2 = applyTimetableImport(defaultData(), parseTimetableText("Thứ 2: Thể dục"), "replace", DEFAULT_TKB, false);
+    expect(nextPrepSuggestion(d2, sunday)).toBeNull();
+  });
 });

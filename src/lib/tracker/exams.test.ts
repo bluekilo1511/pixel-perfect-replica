@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { addExam, defaultData, makeTask, migrate, removeExam, setTaskExam } from "./model";
-import { daysUntil, examLabel, normalizeExams, upcomingExams } from "./exams";
+import {
+  addExamScore,
+  daysUntil,
+  examLabel,
+  needsFocusSubject,
+  normalizeExamScores,
+  normalizeExams,
+  upcomingExams,
+} from "./exams";
 
 describe("exam countdown", () => {
   it("counts whole days until the exam", () => {
@@ -80,5 +88,29 @@ describe("exam CRUD on the data model", () => {
     expect(setTaskExam(data, task.id, "ghost")).toBe(data);
     data = setTaskExam(data, task.id, null);
     expect(data.tasks[0]!.examId).toBeUndefined();
+  });
+});
+
+describe("exam scores", () => {
+  it("adds and rejects scores per subject", () => {
+    expect(addExamScore([], { subject: "Hóa", score: 8.5 })).toHaveLength(1);
+    expect(addExamScore([], { subject: "", score: 5 })).toBeNull();
+    expect(addExamScore([], { subject: "Toán", score: 12, max: 10 })).toBeNull();
+  });
+
+  it("needsFocusSubject warns after two consecutive low scores", () => {
+    let list = addExamScore([], { subject: "Hóa", score: 7 })!;
+    list = addExamScore(list, { subject: "Hóa", score: 6.5 })!;
+    expect(needsFocusSubject(list, "Hóa")).toContain("ưu tiên ôn");
+    list = addExamScore(list, { subject: "Hóa", score: 9 })!;
+    expect(needsFocusSubject(list, "Hóa")).toBeNull();
+    expect(needsFocusSubject(list, "Toán")).toBeNull();
+  });
+
+  it("normalizes old data and caps scores at max", () => {
+    const list = normalizeExamScores([{ subject: "Toán", score: 15, max: 10 }]);
+    expect(list[0]!.score).toBe(10);
+    expect(normalizeExamScores("junk")).toEqual([]);
+    expect(normalizeExamScores([{ subject: "  ", score: 5 }])).toEqual([]);
   });
 });

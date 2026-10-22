@@ -44,7 +44,14 @@ import {
   type QuestsState,
   type RaidState,
 } from "./quests";
-import { defaultExams, newExamId, normalizeExams, type ExamEvent } from "./exams";
+import {
+  defaultExams,
+  newExamId,
+  normalizeExamScores,
+  normalizeExams,
+  type ExamEvent,
+  type ExamScore,
+} from "./exams";
 import { normalizeJournal } from "./journal";
 import { normalizeWeekGoals } from "./goals";
 import { normalizeSubjectNotes, removeSubjectNote, type SubjectNoteMap } from "./subjectNotes";
@@ -199,6 +206,7 @@ export interface AppData {
   quests: QuestsState;
   raid: RaidState;
   exams: ExamEvent[];
+  examScores: ExamScore[]; // per-subject test scores (see exams.ts)
   templates: TaskTemplate[];
   sessionLog: SessionEntry[];
   notes: NoteItem[];
@@ -311,6 +319,7 @@ export function defaultData(): AppData {
     quests: defaultQuests(),
     raid: defaultRaid(),
     exams: defaultExams(),
+    examScores: [],
     templates: defaultTemplates(),
     sessionLog: [],
     notes: [],
@@ -630,6 +639,7 @@ export function migrate(raw: unknown): AppData {
       claimed: raidRaw.claimed === true,
     },
     exams: normalizeExams(r.exams),
+    examScores: normalizeExamScores(r.examScores),
     templates: normalizeTemplates(r.templates),
     sessionLog: normalizeSessionLog(r.sessionLog),
     notes: normalizeNotes(r.notes),
