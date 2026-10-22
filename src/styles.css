@@ -215,8 +215,8 @@
 .zodiac-aurora { position: absolute; inset: -40%; background: linear-gradient(115deg, var(--aurora-3) 8%, var(--aurora-1) 32%, var(--aurora-2) 50%, var(--aurora-4) 68%, transparent 88%); animation: aurora-flow 28s ease-in-out infinite alternate; will-change: transform; }
 .zodiac-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
 .zodiac-lines line { stroke: color-mix(in oklab, var(--primary) 40%, transparent); stroke-width: 1.5; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
-.zodiac-star-list { display: block; position: absolute; inset: 0; background: transparent; }
-.zodiac-star { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; height: auto; width: auto; padding: 6px 8px; border-radius: 10px; background: transparent; border: 1px solid transparent; color: var(--muted-foreground); --tw: 0s; }
+.zodiac-star-list { display: block; position: absolute; inset: 0; height: 100%; padding: 0; background: transparent; }
+.zodiac-star { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; height: auto; width: auto; padding: 6px 8px; border-radius: 10px; background: transparent; border: 1px solid transparent; color: var(--muted-foreground); --tw: 0s; }
 .zodiac-star:nth-child(2n) { --tw: -2s; }
 .zodiac-star:nth-child(3n) { --tw: -4s; }
 .zodiac-star .star-node { width: calc(var(--node-r) * 2); height: calc(var(--node-r) * 2); font-size: calc(var(--node-r)); animation: star-twinkle 6s ease-in-out infinite; animation-delay: var(--tw); }
@@ -224,7 +224,7 @@
 .zodiac-star:hover { color: var(--foreground); background: color-mix(in oklab, var(--card) 40%, transparent); }
 .zodiac-star[data-state=active] { color: var(--foreground); background: color-mix(in oklab, var(--card) 70%, transparent); border-color: var(--border); box-shadow: var(--glass-shadow); }
 .zodiac-star[data-state=active] .star-node { filter: drop-shadow(0 0 6px var(--primary)); animation: none; }
-.zodiac-star-label { font-size: 11px; white-space: nowrap; opacity: 0; transition: opacity .15s ease; text-shadow: 0 1px 4px oklch(0 0 0 / 55%); }
+.zodiac-star-label { position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease; text-shadow: 0 1px 4px oklch(0 0 0 / 55%); }
 .zodiac-star:hover .zodiac-star-label, .zodiac-star[data-state=active] .zodiac-star-label, .zodiac-star:focus-visible .zodiac-star-label { opacity: 1; }
 @keyframes star-twinkle { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
 
