@@ -116,13 +116,13 @@ describe("gamification rules", () => {
     expect(moved.completed).toBe(false);
   });
 
-  it("quick sync adds today's slots with a time badge, once", () => {
+  it("quick sync adds today's personal slots with a time badge, once", () => {
     let d = defaultData();
-    d.timetable.days[0]!.slots.push({
+    d.personal.days[0]!.slots.push({
       id: "s1",
       start: "07:30",
       end: "08:15",
-      title: "Toán",
+      title: "Gia sư",
       kind: "custom",
       minutes: 0,
     });

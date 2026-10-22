@@ -767,12 +767,12 @@ export function TodayPanel() {
                 return;
               }
               update((d) => syncTodaySlots(d).data);
-              toast.success(`Đã nạp ${r.added} tiết học hôm nay 🗓️`, {
-                description: "Sẽ nhắc bạn trước mỗi tiết 5 phút 🔔",
+              toast.success(`Đã nạp ${r.added} mục lịch riêng hôm nay 🗓️`, {
+                description: "Sẽ nhắc bạn trước mỗi mục 5 phút 🔔",
               });
             }}
           >
-            ⚡ Đồng bộ nhanh lịch hôm nay
+            ⚡ Đồng bộ nhanh lịch riêng hôm nay
           </Button>
           <PrepSuggestionBar />
           <AddTask />

@@ -54,7 +54,7 @@ describe("tracker rules", () => {
     expect(d.tasks.filter((t) => t.kind === "exercise" && t.minutes === 5)).toHaveLength(3);
   });
 
-  it("pushes due slot into today once", () => {
+  it("school TKB slots never auto-become tasks (even tracked ones)", () => {
     let d = defaultData();
     d.timetable.days[0]!.slots.push({
       id: "s1",
@@ -67,7 +67,8 @@ describe("tracker rules", () => {
     const sunday8am = new Date(2026, 9, 18, 8, 0); // Oct 18 2026 is a Sunday
     d = pushDueSlots(d, sunday8am).data;
     d = pushDueSlots(d, sunday8am).data;
-    expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(1);
+    d = syncTodaySlots(d, sunday8am).data;
+    expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(0);
   });
 
   it("pushes personal schedule slots into today with their own log key", () => {
@@ -117,9 +118,8 @@ describe("tracker rules", () => {
     );
     const sunday8am = new Date(2026, 9, 18, 8, 0); // Oct 18 2026 is a Sunday
     d = pushDueSlots(d, sunday8am).data;
-    expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(1);
-    expect(d.tasks.filter((t) => t.fromSlotId === "s2")).toHaveLength(0);
     d = syncTodaySlots(d, sunday8am).data;
+    expect(d.tasks.filter((t) => t.fromSlotId === "s1")).toHaveLength(0);
     expect(d.tasks.filter((t) => t.fromSlotId === "s2")).toHaveLength(0);
   });
 

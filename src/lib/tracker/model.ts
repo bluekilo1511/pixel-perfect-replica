@@ -1318,23 +1318,17 @@ const toMin = (hm: string) => {
 const personalOf = (data: AppData, dayIndex: number): Slot[] =>
   data.personal?.days?.[dayIndex]?.slots ?? [];
 
-/** Pushes slots whose start time has arrived (for today's weekday) into today's tasks, once per day per slot. */
+/** Pushes personal-schedule slots whose start time has arrived (for today's weekday) into today's tasks, once per day per slot.
+ * School TKB periods are display-only: they feed "Học trước cho ngày mai" but never auto-create tasks. */
 export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; pushed: Slot[] } {
   const today = dateStr(now);
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const dueSchool = (data.timetable.days[now.getDay()]?.slots ?? []).filter(
-    (s) =>
-      s.tracked !== false &&
-      toMin(s.start) <= nowMin &&
-      !data.timetableLog.includes(`${today}:${s.id}`),
-  );
-  const duePersonal = personalOf(data, now.getDay()).filter(
+  const due = personalOf(data, now.getDay()).filter(
     (s) =>
       s.tracked !== false &&
       toMin(s.start) <= nowMin &&
       !data.timetableLog.includes(`${today}:p:${s.id}`),
   );
-  const due = [...dueSchool, ...duePersonal];
   if (!due.length) return { data, pushed: [] };
   const newTasks = due.map((s) =>
     makeTask(s.title, s.kind, s.minutes, today, {
@@ -1344,8 +1338,7 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
   );
   const log = [
     ...data.timetableLog.filter((k) => k >= today.slice(0, 10)),
-    ...dueSchool.map((s) => `${today}:${s.id}`),
-    ...duePersonal.map((s) => `${today}:p:${s.id}`),
+    ...due.map((s) => `${today}:p:${s.id}`),
   ];
   return { data: { ...data, tasks: [...data.tasks, ...newTasks], timetableLog: log }, pushed: due };
 }
@@ -1437,19 +1430,15 @@ export function recordSpin(
   };
 }
 
-/** "Đồng bộ nhanh lịch hôm nay": add every slot of today's weekday not yet in the list. */
+/** "Đồng bộ nhanh lịch hôm nay": add every personal-schedule slot of today not yet in the list (school TKB stays display-only). */
 export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData; added: number } {
   const today = dateStr(now);
   const notPushed = (s: Slot, logKey: string) =>
     !data.timetableLog.includes(logKey) &&
     !data.tasks.some((t) => t.date === today && t.fromSlotId === s.id);
-  const todoSchool = (data.timetable.days[now.getDay()]?.slots ?? [])
-    .filter((s) => s.tracked !== false && notPushed(s, `${today}:${s.id}`))
-    .map((s) => ({ s, key: `${today}:${s.id}` }));
-  const todoPersonal = personalOf(data, now.getDay())
+  const todo = personalOf(data, now.getDay())
     .filter((s) => s.tracked !== false && notPushed(s, `${today}:p:${s.id}`))
     .map((s) => ({ s, key: `${today}:p:${s.id}` }));
-  const todo = [...todoSchool, ...todoPersonal];
   if (!todo.length) return { data, added: 0 };
   const newTasks = todo.map(({ s }) =>
     makeTask(s.title, s.kind, s.minutes, today, {
