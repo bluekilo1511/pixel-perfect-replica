@@ -108,8 +108,8 @@ export function SettingsPanel() {
       <section className="glass p-5">
         <h2 className="mb-1 text-lg font-semibold">⚙️ Cài đặt</h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục phiên học · <b>N</b> thêm nhiệm vụ · <b>1–7</b>{" "}
-          chuyển tab
+          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục phiên học · <b>N</b> thêm nhiệm vụ ·{" "}
+          <b>1–7</b> chuyển tab
         </p>
         <p className="mb-2 text-xs text-muted-foreground">
           Mọi thứ đang chạy, lưu thẳng vào file của bạn.
@@ -233,7 +233,10 @@ export function SettingsPanel() {
               </Button>
             </>
           </Row>
-          <Row label="Hiệu ứng âm thanh" hint="Tiếng ting khi phiên học xong, nhạc khai mở chòm sao">
+          <Row
+            label="Hiệu ứng âm thanh"
+            hint="Tiếng ting khi phiên học xong, nhạc khai mở chòm sao"
+          >
             <Switch
               checked={s.fxSound}
               aria-label="Hiệu ứng âm thanh"

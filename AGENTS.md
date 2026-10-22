@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,7 +8,9 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
+
 - Game rules live as pure functions in src/lib/tracker/{model,gamify,extras,boss}.ts with vitest tests; components/store only wire them, so rules stay testable without browser APIs.
 - Browser-only modules (timeCapsule.ts IndexedDB, ambient.ts Web Audio, html2canvas-pro dynamic import) are called only from effects/handlers to stay SSR-safe.
 - Every new persisted field must be normalized in migrate() so old JSON files load safely.

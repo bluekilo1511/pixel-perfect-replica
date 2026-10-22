@@ -84,7 +84,8 @@ export function PersonalScheduleCard() {
     setEditing(null);
   };
 
-  const cellBase = "relative rounded-lg border p-1.5 text-left text-xs transition min-h-[48px] w-full";
+  const cellBase =
+    "relative rounded-lg border p-1.5 text-left text-xs transition min-h-[48px] w-full";
 
   const cellClass = (dayIndex: number, s: Slot) =>
     [
@@ -128,7 +129,9 @@ export function PersonalScheduleCard() {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => setEditing({ dayIndex: day.dayIndex, slot: { ...s }, isNew: false })}
+                  onClick={() =>
+                    setEditing({ dayIndex: day.dayIndex, slot: { ...s }, isNew: false })
+                  }
                   className={cellClass(day.dayIndex, s)}
                 >
                   <div className="font-display tabular-nums text-[10px] text-muted-foreground">
@@ -145,9 +148,7 @@ export function PersonalScheduleCard() {
               size="sm"
               variant="ghost"
               className="mt-2 w-full border border-dashed border-border"
-              onClick={() =>
-                setEditing({ dayIndex: day.dayIndex, slot: newSlot(), isNew: true })
-              }
+              onClick={() => setEditing({ dayIndex: day.dayIndex, slot: newSlot(), isNew: true })}
             >
               + Thêm
             </Button>
@@ -268,8 +269,8 @@ function SlotDialog({
             <span>
               <span className="font-medium">⏰ Tự vào việc cần làm</span>
               <span className="block text-xs text-muted-foreground">
-                Đến giờ sẽ tự tạo mục trong danh sách hôm nay. Tắt nếu chỉ cần nhìn lên lịch (👁
-                chỉ xem).
+                Đến giờ sẽ tự tạo mục trong danh sách hôm nay. Tắt nếu chỉ cần nhìn lên lịch (👁 chỉ
+                xem).
               </span>
             </span>
           </label>

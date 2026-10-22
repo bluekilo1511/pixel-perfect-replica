@@ -81,7 +81,9 @@ export function normalizeExamScores(raw: unknown): ExamScore[] {
       const r = e as Record<string, unknown>;
       const score = Number(r.score);
       const max = Number(r.max);
-      const subject = String(r.subject ?? "").trim().slice(0, 24);
+      const subject = String(r.subject ?? "")
+        .trim()
+        .slice(0, 24);
       if (!subject || !Number.isFinite(score) || score < 0) return null;
       const capped = Math.min(score, Number.isFinite(max) && max > 0 ? max : 10);
       return {
@@ -111,7 +113,8 @@ export function addExamScore(
     id: newExamId(),
     subject,
     title: (input.title ?? "").trim().slice(0, 40),
-    date: input.date && DATE_RE.test(input.date) ? input.date : new Date().toISOString().slice(0, 10),
+    date:
+      input.date && DATE_RE.test(input.date) ? input.date : new Date().toISOString().slice(0, 10),
     score,
     max,
     createdAt: new Date().toISOString(),

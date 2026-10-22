@@ -89,7 +89,7 @@ describe("tracker rules", () => {
   });
 
   it("nextSlotToday includes personal schedule entries", () => {
-    let d = defaultData();
+    const d = defaultData();
     d.personal.days[0]!.slots.push({
       id: "p1",
       start: "19:00",

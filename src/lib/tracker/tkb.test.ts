@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  addExam,
-  defaultData,
-  makeTask,
-  migrate,
-  pushDueSlots,
-  type AppData,
-} from "./model";
+import { addExam, defaultData, makeTask, migrate, pushDueSlots, type AppData } from "./model";
 import {
   DEFAULT_TKB,
   addExamPrepTasks,
@@ -253,7 +246,6 @@ describe("one-off reminders", () => {
     const d2 = applyTimetableImport(defaultData(), p, "replace", DEFAULT_TKB, true);
     expect(d2.timetable.days[1]!.slots.every((s) => s.tracked === undefined)).toBe(true);
   });
-
 });
 describe("exam prep & tonight suggestion", () => {
   it("adds two exam prep tasks once per day per exam", () => {
@@ -284,7 +276,13 @@ describe("exam prep & tonight suggestion", () => {
     d = addPrepTasks(d, sunday, [{ slot: pick!.slot, minutes: 25 }]).data;
     expect(nextPrepSuggestion(d, sunday)?.slot.title).toBe("Toán");
     // Display-only subjects never get suggested.
-    const d2 = applyTimetableImport(defaultData(), parseTimetableText("Thứ 2: Thể dục"), "replace", DEFAULT_TKB, false);
+    const d2 = applyTimetableImport(
+      defaultData(),
+      parseTimetableText("Thứ 2: Thể dục"),
+      "replace",
+      DEFAULT_TKB,
+      false,
+    );
     expect(nextPrepSuggestion(d2, sunday)).toBeNull();
   });
 });
