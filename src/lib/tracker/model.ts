@@ -56,6 +56,7 @@ import { normalizeJournal } from "./journal";
 import {
   normalizeGradeEntries,
   normalizeGradeExtras,
+  normalizeGradeTargets,
   type GradeEntry,
   type GradeExtra,
 } from "./grades";
@@ -224,6 +225,7 @@ export interface AppData {
   weekGoals: WeekGoal[]; // goals pinned for the whole week
   gradeBook: GradeEntry[]; // teacher-style grade columns per subject/semester (see grades.ts)
   gradeExtras: GradeExtra[]; // "điểm dư" side notes until promoted into a column
+  gradeTargets: Record<string, number>; // per-subject target grade (see grades.ts)
   journal: JournalEntry[]; // hidden personal diary, opened from the wall bookshelf
   weeklyGoal: WeeklyGoalState;
   extraSchedule: ExtraScheduleItem[]; // quick one-off reminders (see tkb.ts)
@@ -335,6 +337,7 @@ export function defaultData(): AppData {
     examScores: [],
     gradeBook: [],
     gradeExtras: [],
+    gradeTargets: {},
     templates: defaultTemplates(),
     sessionLog: [],
     notes: [],
@@ -693,6 +696,7 @@ export function migrate(raw: unknown): AppData {
     subjectNotes: normalizeSubjectNotes(r.subjectNotes),
     gradeBook: normalizeGradeEntries(r.gradeBook),
     gradeExtras: normalizeGradeExtras(r.gradeExtras),
+    gradeTargets: normalizeGradeTargets(r.gradeTargets),
     weekGoals: normalizeWeekGoals(r.weekGoals),
     journal: normalizeJournal(r.journal),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()

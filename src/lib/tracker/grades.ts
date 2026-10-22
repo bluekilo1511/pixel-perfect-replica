@@ -333,3 +333,35 @@ export function convertExamScores(scores: ExamScore[]): GradeEntry[] {
     createdAt: s.createdAt,
   }));
 }
+
+/** Per-subject target grades — key is the subject name as shown in the book, value on the 10-point scale. */
+export const GRADE_TARGETS_MAX = 30;
+
+/** Accepts old/new JSON and keeps only well-formed subject → target pairs. */
+export function normalizeGradeTargets(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>).slice(
+    0,
+    GRADE_TARGETS_MAX,
+  )) {
+    const subject = String(key).trim().slice(0, SUBJECT_FIELD_MAX);
+    const n = Number(value);
+    if (subject && Number.isFinite(n) && n > 0 && n <= 10) out[subject] = round1(n);
+  }
+  return out;
+}
+
+/** Sets one subject's target, ignoring invalid input. Returns a new record. */
+export function setGradeTarget(
+  targets: Record<string, number>,
+  subject: string,
+  value: number,
+): Record<string, number> {
+  if (!subject || !Number.isFinite(value) || value <= 0 || value > 10) return targets;
+  return { ...targets, [subject]: round1(value) };
+}
+
+/** The target for one subject — 8 when the subject has no saved target yet. */
+export const gradeTarget = (targets: Record<string, number>, subject: string): number =>
+  targets[subject] ?? 8;

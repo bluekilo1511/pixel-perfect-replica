@@ -11,11 +11,13 @@ import {
   convertExamScores,
   GRADE_TYPE_META,
   gradeAdvice,
+  gradeTarget,
   gradeBand,
   guessSemester,
   removeGradeEntry,
   removeGradeExtra,
   semesterEntries,
+  setGradeTarget,
   subjectGrade,
   type GradeType,
   type Semester,
@@ -47,7 +49,6 @@ export function GradeBookCard() {
   const [max, setMax] = useState("10");
   const [title, setTitle] = useState("");
   const [newSubject, setNewSubject] = useState("");
-  const [target, setTarget] = useState("8");
   const [extraLabel, setExtraLabel] = useState("");
   const [extraScore, setExtraScore] = useState("");
 
@@ -59,7 +60,7 @@ export function GradeBookCard() {
     ? data.gradeExtras.filter((e) => e.subject === active && e.semester === semester)
     : [];
   const grade = active ? subjectGrade(data.gradeBook, active, semester) : null;
-  const targetNum = Number(target);
+  const targetNum = active ? gradeTarget(data.gradeTargets, active) : 8;
   const advice = active ? gradeAdvice(data.gradeBook, active, semester, targetNum) : null;
   const legacyCount = data.examScores.length;
 
@@ -193,10 +194,10 @@ export function GradeBookCard() {
     if (!active) return null;
     if (advice) {
       if (advice.done)
-        return `Mục tiêu ${targetNum}: cột ${GRADE_TYPE_META[advice.column].short} chỉ cần bất kỳ điểm nào — mục tiêu đã chắc ✅`;
+        return `Mục tiêu ${active} ${targetNum}: cột ${GRADE_TYPE_META[advice.column].short} chỉ cần bất kỳ điểm nào — mục tiêu đã chắc ✅`;
       if (advice.impossible)
-        return `Mục tiêu ${targetNum}: ngay cả khi ${GRADE_TYPE_META[advice.column].short} đạt 10 cũng không đủ 😥 — cân nhắc mục tiêu thấp hơn`;
-      return `Mục tiêu ${targetNum}: ${GRADE_TYPE_META[advice.column].short} cần ≥ ${advice.need} để môn đạt mục tiêu 🎯`;
+        return `Mục tiêu ${active} ${targetNum}: ngay cả khi ${GRADE_TYPE_META[advice.column].short} đạt 10 cũng không đủ 😥 — cân nhắc mục tiêu thấp hơn`;
+      return `Mục tiêu ${active} ${targetNum}: ${GRADE_TYPE_META[advice.column].short} cần ≥ ${advice.need} để môn đạt mục tiêu 🎯`;
     }
     if (grade !== null) return `Tất cả cột đã có điểm — điểm môn hiện tại là ${grade}.`;
     return null;
@@ -355,15 +356,21 @@ export function GradeBookCard() {
               )}
             </span>
             <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-              Mục tiêu
+              Mục tiêu {active && <span className="text-foreground/80">{active}</span>}
               <Input
                 type="number"
                 step="0.5"
                 min={1}
                 max={10}
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                aria-label="Điểm mục tiêu"
+                value={active ? String(gradeTarget(data.gradeTargets, active)) : ""}
+                onChange={(e) =>
+                  active &&
+                  update((d) => ({
+                    ...d,
+                    gradeTargets: setGradeTarget(d.gradeTargets, active, Number(e.target.value)),
+                  }))
+                }
+                aria-label={`Điểm mục tiêu ${active}`}
                 className="h-7 w-14 text-xs tabular-nums"
               />
             </span>

@@ -6,13 +6,16 @@ import {
   convertExamScores,
   gradeAdvice,
   gradeBand,
+  gradeTarget,
   guessSemester,
   guessTypeFromTitle,
   groupAverage,
   normalizeGradeEntries,
   normalizeGradeExtras,
+  normalizeGradeTargets,
   removeGradeEntry,
   semesterEntries,
+  setGradeTarget,
   subjectGrade,
   tenPoint,
 } from "./grades";
@@ -275,5 +278,34 @@ describe("legacy migration guesses", () => {
     expect(rows[0]!.type).toBe("gk");
     expect(rows[0]!.semester).toBe(1);
     expect(normalizeGradeEntries(rows)).toHaveLength(1);
+  });
+});
+
+describe("per-subject grade targets", () => {
+  it("keeps one target per subject, independent across subjects", () => {
+    let targets = normalizeGradeTargets({ Văn: 7, Toán: 9 });
+    expect(gradeTarget(targets, "Văn")).toBe(7);
+    expect(gradeTarget(targets, "Toán")).toBe(9);
+    targets = setGradeTarget(targets, "Văn", 7.5);
+    expect(gradeTarget(targets, "Văn")).toBe(7.5);
+    expect(gradeTarget(targets, "Toán")).toBe(9);
+  });
+
+  it("defaults to 8 for a subject without a saved target", () => {
+    expect(gradeTarget(normalizeGradeTargets({ Văn: 7 }), "Toán")).toBe(8);
+    expect(gradeTarget(normalizeGradeTargets(null), "Văn")).toBe(8);
+  });
+
+  it("drops malformed targets and ignores invalid setGradeTarget input", () => {
+    expect(normalizeGradeTargets({ Văn: 7, Toán: 99, "": 5, X: "abc" })).toEqual({ Văn: 7 });
+    expect(normalizeGradeTargets([1])).toEqual({});
+    const before = { Văn: 7 };
+    expect(setGradeTarget(before, "Toán", 20)).toBe(before);
+    expect(setGradeTarget(before, "", 7)).toBe(before);
+    expect(setGradeTarget(before, "Toán", Number.NaN)).toBe(before);
+  });
+
+  it("rounds stored targets to 0.1", () => {
+    expect(setGradeTarget({}, "Toán", 8.55)).toEqual({ Toán: 8.6 });
   });
 });
