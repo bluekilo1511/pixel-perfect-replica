@@ -117,6 +117,47 @@ export function celebrate() {
   confetti({ particleCount: 90, spread: 80, origin: { y: 0.3 }, gravity: 1.1 });
 }
 
+const GOLD = ["#FFD700", "#FFB300", "#FFE066", "#FF8A00"];
+
+/** Wheel prize burst — a cheerful pop for normal prizes, a golden storm for the jackpot. */
+export function wheelWinFx(jackpot = false) {
+  if (!jackpot) {
+    celebrate();
+    return;
+  }
+  ting(true);
+  const end = Date.now() + 2200;
+  (function frame() {
+    confetti({
+      particleCount: 7,
+      angle: 60,
+      spread: 70,
+      origin: { x: 0 },
+      colors: GOLD,
+      gravity: 1.1,
+      scalar: 1.2,
+    });
+    confetti({
+      particleCount: 7,
+      angle: 120,
+      spread: 70,
+      origin: { x: 1 },
+      colors: GOLD,
+      gravity: 1.1,
+      scalar: 1.2,
+    });
+    confetti({
+      particleCount: 30,
+      spread: 100,
+      origin: { y: 0.4 },
+      colors: GOLD,
+      gravity: 1.1,
+      scalar: 1.2,
+    });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
+}
+
 /** Dramatic ascending arpeggio + boom for pet evolution. */
 export function evolutionFx() {
   if (!enabled) return;
