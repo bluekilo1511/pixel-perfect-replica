@@ -1497,12 +1497,12 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
   return { data: { ...data, tasks: [...data.tasks, ...newTasks], timetableLog: log }, pushed: due };
 }
 
-export const WHEEL_PRIZES = ["+10 XP", "+2 😺", "+1 🦎", "+30 XP", "+1 🎡", "+5 😺", "+15 XP"];
+export const WHEEL_PRIZES = ["+10 XP", "+2 😺", "+1 🦎", "+30 XP", "+2 🎡", "+5 😺", "+15 XP"];
 
 /** Vòng quay mở rộng: jackpot + pity + mega cuối tuần + lượt miễn phí mỗi ngày. */
 export const JACKPOT_PRIZE = "🎰 JACKPOT";
 export const JACKPOT_TICKETS = 10;
-export const MEGA_PRIZES = ["+20 XP", "+4 😺", "+2 🦎", "+60 XP", "+2 🎡", "+10 😺", "+80 XP"];
+export const MEGA_PRIZES = ["+20 XP", "+4 😺", "+2 🦎", "+60 XP", "+4 🎡", "+10 😺", "+80 XP"];
 export const PITY_LIMIT = 25;
 export type SpinMode = "normal" | "free" | "mega";
 export const SPIN_COST: Record<SpinMode, number> = { normal: 1, free: 0, mega: 2 };

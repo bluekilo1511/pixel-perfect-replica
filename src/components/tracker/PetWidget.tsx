@@ -186,6 +186,8 @@ export function PetWidget() {
   const today = dateStr();
   const tasksToday = data.dailyStats[today]?.tasks ?? 0;
   const bossTaskHp = dailyBossHpLeft(data.dailyBoss, today, tasksToday);
+  // The HP bar shows the worst of both: the running session AND damage already dealt by tasks.
+  const shownHp = Math.min(hp, bossTaskHp);
   // Fresh session, fresh break-in counter.
   useEffect(() => {
     if (endAt) {
@@ -420,7 +422,7 @@ export function PetWidget() {
                     bossCancel();
                     setHit(true);
                     setTimeout(() => setHit(false), 600);
-                    toast.error("👹 Boss phản đòn! Thú cưng mất 15% hạnh phúc");
+                    toast.error("👹 Boss phản đòn! Thú cưng mất 8 hạnh phúc");
                     say("Huhu, bị Boss đánh rồi 😢");
                   }
                   setEndAt(null);
@@ -531,23 +533,23 @@ export function PetWidget() {
               <div className="mb-1.5 flex items-center justify-between font-mono text-xs uppercase tracking-wider">
                 <span>
                   <span className={`inline-block text-2xl ${endAt ? "animate-pet-idle" : ""}`}>
-                    {hp > 0 ? "👹" : "💀"}
+                    {shownHp > 0 ? "👹" : "💀"}
                   </span>{" "}
                   Quái Vật Xao Nhãng
                 </span>
                 <span>
-                  HP {hp}/{BOSS_MAX_HP}
+                  HP {shownHp}/{BOSS_MAX_HP}
                 </span>
               </div>
               <div className="boss-hp-track h-4 overflow-hidden">
                 <div
                   className="boss-hp-fill h-full transition-all duration-500"
-                  style={{ width: `${hp}%` }}
+                  style={{ width: `${shownHp}%` }}
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 Thắng: x2 thưởng ({BOSS_REWARD.catCoins} 😺 + {BOSS_REWARD.lizardGems} 🦎). Bỏ cuộc:
-                Boss phản đòn −15% 💖.
+                Boss phản đòn −8 💖.
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 🗡 Nhiệm vụ hôm nay cũng bắn Boss:{" "}
@@ -612,7 +614,7 @@ export function PetWidget() {
         running={!!endAt}
         pet={pet}
         bossActive={bossActive}
-        bossHpPct={hp}
+        bossHpPct={shownHp}
         strikes={strikes}
         onClose={() => setZen(false)}
       />

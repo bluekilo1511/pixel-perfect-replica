@@ -11,7 +11,7 @@ describe("boss raid", () => {
   it("defeat awards 2x coins (10) and 2 gems", () => {
     expect(defeatBoss({ catCoins: 1, lizardGems: 1 })).toEqual({ catCoins: 11, lizardGems: 3 });
   });
-  it("cancel reduces pet happiness by 15", () => {
+  it("cancel reduces pet happiness by 8", () => {
     const p = { ...defaultPet(), happiness: 50 };
     expect(bossCounterAttack(p).happiness).toBe(42);
     expect(bossCounterAttack({ ...p, happiness: 5 }).happiness).toBe(0);

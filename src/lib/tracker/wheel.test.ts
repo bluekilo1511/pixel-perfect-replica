@@ -113,6 +113,8 @@ describe("applyPrize", () => {
     const g = defaultGame("2026-10-22");
     expect(applyPrize(g, "+10 XP").game.xp).toBeGreaterThan(0);
     expect(applyPrize(g, "+2 😺").game.catCoins).toBe(2);
-    expect(applyPrize(g, "+1 🎡").game.spinTickets).toBe(1);
+    expect(applyPrize(g, "+2 🎡").game.spinTickets).toBe(2);
+    expect(WHEEL_PRIZES).toContain("+2 🎡"); // spin prize now gives 2 tickets (net +1 after the paid spin)
+    expect(MEGA_PRIZES).toContain("+4 🎡");
   });
 });
