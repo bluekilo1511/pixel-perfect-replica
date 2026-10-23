@@ -13,6 +13,8 @@ import {
 } from "@/lib/tracker/extras";
 import { SPECIES } from "@/lib/tracker/gamify";
 import { Button } from "@/components/ui/button";
+import { canvasToPng, downloadUrl, exportFailedToast, inIframe } from "@/lib/tracker/exportImage";
+import { ImageExportDialog, type ImageShot } from "./ImageExportDialog";
 import { useWeather, WEATHER_LABEL } from "./WeatherLayer";
 import { ConstellationMap } from "./ConstellationMap";
 
@@ -35,6 +37,7 @@ export function Chronicle() {
   const { data } = useTracker();
   const card = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  const [shot, setShot] = useState<ImageShot | null>(null);
   const weather = useWeather();
   const today = dateStr();
   const w = weekSummary(data.dailyStats, today);
@@ -56,19 +59,33 @@ export function Chronicle() {
         backgroundColor: null,
         useCORS: true,
       });
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = `weekly-chronicle-${w.days[0]}.png`;
-      a.click();
-      toast.success("Đã tải thẻ tuần 📰");
-    } catch {
-      toast.error("Không xuất được ảnh");
+      const blob = await canvasToPng(canvas);
+      if (!blob) throw new Error("Canvas trống");
+      const url = URL.createObjectURL(blob);
+      const filename = `weekly-chronicle-${w.days[0]}.png`;
+      if (inIframe()) {
+        setShot({ url, filename });
+        toast.info("Bản xem trước chặn tải tự động — bấm “Tải ảnh” trong hộp thoại để lưu");
+      } else {
+        downloadUrl(url, filename);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        toast.success("Đã tải thẻ tuần 📰");
+      }
+    } catch (err) {
+      exportFailedToast(err);
     }
     setBusy(false);
   };
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <ImageExportDialog
+        shot={shot}
+        onClose={() => {
+          if (shot) URL.revokeObjectURL(shot.url);
+          setShot(null);
+        }}
+      />
       <div className="space-y-3">
         <div ref={card} className="chronicle rounded-2xl p-6">
           <div className="text-center">

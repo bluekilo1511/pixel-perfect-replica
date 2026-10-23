@@ -1,7 +1,10 @@
 import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { monthSummary, type MonthSummary } from "@/lib/tracker/monthlyReport";
 import { Button } from "@/components/ui/button";
+import { downloadUrl, exportFailedToast, inIframe } from "@/lib/tracker/exportImage";
+import { ImageExportDialog, type ImageShot } from "./ImageExportDialog";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -151,18 +154,30 @@ export function MonthlyReportCard() {
   }, [offset, baseYear, baseMonth]);
   const s = useMemo(() => monthSummary(data, year, month), [data, year, month]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [shot, setShot] = useState<ImageShot | null>(null);
 
   const download = () => {
     const c = canvasRef.current ?? document.createElement("canvas");
-    drawReport(c, s, new Date().toLocaleString("vi-VN"));
+    try {
+      drawReport(c, s, new Date().toLocaleString("vi-VN"));
+    } catch (err) {
+      exportFailedToast(err);
+      return;
+    }
     c.toBlob((blob) => {
-      if (!blob) return;
+      if (!blob) {
+        exportFailedToast(new Error("Canvas trống"));
+        return;
+      }
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `bao-cao-${s.year}-${pad2(s.month)}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const filename = `bao-cao-${s.year}-${pad2(s.month)}.png`;
+      if (inIframe()) {
+        setShot({ url, filename });
+        toast.info("Bản xem trước chặn tải tự động — bấm “Tải ảnh” trong hộp thoại để lưu");
+      } else {
+        downloadUrl(url, filename);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
     }, "image/png");
   };
 
@@ -212,6 +227,13 @@ export function MonthlyReportCard() {
       <Button className="mt-4 w-full" variant="outline" onClick={download}>
         ⬇️ Tải báo cáo tháng này (.png)
       </Button>
+      <ImageExportDialog
+        shot={shot}
+        onClose={() => {
+          if (shot) URL.revokeObjectURL(shot.url);
+          setShot(null);
+        }}
+      />
       <p className="mt-2 text-center text-xs text-muted-foreground">
         Ảnh chỉ để xem/chia sẻ, không phải bản sao lưu dữ liệu.
       </p>
