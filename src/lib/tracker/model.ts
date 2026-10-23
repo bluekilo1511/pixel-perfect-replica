@@ -190,6 +190,7 @@ export interface AppSettings {
   navZodiac: string; // constellation id shown by the tab navigation sky
   personalStar: { name: string; x: number; y: number }; // the user's own star in the nav sky
   admin: boolean; // admin test mode: trial data in memory, backup download locked
+  dragonTheme: boolean; // dragon skin: shimmering dragon-scale borders on buttons + starry-sky background
 }
 
 export interface AppData {
@@ -298,6 +299,9 @@ export function defaultGame(today = dateStr()): GameState {
 }
 
 const clamp01 = (v: number, d: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : d);
+/** Player level that permanently unlocks the dragon theme. */
+export const DRAGON_UNLOCK_LEVEL = 5;
+
 export function defaultSettings(): AppSettings {
   return {
     themeMode: "auto",
@@ -312,6 +316,7 @@ export function defaultSettings(): AppSettings {
     navZodiac: DEFAULT_ZODIAC_ID,
     personalStar: { name: "", x: 92, y: 18 },
     admin: false,
+    dragonTheme: false,
   };
 }
 
@@ -591,6 +596,7 @@ export function migrate(raw: unknown): AppData {
       rawSettings.themeMode === "light" || rawSettings.themeMode === "dark"
         ? rawSettings.themeMode
         : "auto",
+    dragonTheme: rawSettings.dragonTheme === true,
     pomodoroMinutes: clampPomodoroMinutes(rawSettings.pomodoroMinutes),
     customPresets: normalizeCustomPresets(rawSettings.customPresets),
     ambient: {

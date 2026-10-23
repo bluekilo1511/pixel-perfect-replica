@@ -3,7 +3,12 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { ZODIAC_LIST } from "@/lib/tracker/zodiac";
 import type { AdminBoostKind } from "@/lib/tracker/model";
-import { POMODORO_PRESETS, type AppSettings, type ThemeMode } from "@/lib/tracker/model";
+import {
+  DRAGON_UNLOCK_LEVEL,
+  POMODORO_PRESETS,
+  type AppSettings,
+  type ThemeMode,
+} from "@/lib/tracker/model";
 import { openFile } from "@/lib/tracker/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,6 +147,21 @@ export function SettingsPanel() {
                 <SelectItem value="dark">🌙 Tối</SelectItem>
               </SelectContent>
             </Select>
+          </Row>
+          <Row
+            label="Theme Rồng 🐉"
+            hint={
+              data.game.level >= DRAGON_UNLOCK_LEVEL
+                ? "Viền rồng lung linh quanh nút + nền bầu trời sao"
+                : `Mở khóa vĩnh viễn khi đạt Lv.${DRAGON_UNLOCK_LEVEL}`
+            }
+          >
+            <Switch
+              checked={s.dragonTheme === true}
+              disabled={data.game.level < DRAGON_UNLOCK_LEVEL}
+              onCheckedChange={(v) => set({ dragonTheme: v })}
+              aria-label="Bật/tắt theme rồng"
+            />
           </Row>
           <Row label="Âm thanh nền" hint="Mưa hoặc sóng biển khi học">
             <AmbientControl />

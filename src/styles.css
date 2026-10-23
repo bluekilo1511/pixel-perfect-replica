@@ -1224,3 +1224,78 @@
   font-size: 12px;
   letter-spacing: 0.15em;
 }
+
+/* ---- Dragon theme (unlocked at player Lv.5, toggled in Settings) ----
+   Starry-sky background + a shimmering dragon-scale ring animated around every button,
+   in the spirit of the animated decor items. Static when reduced-motion or battery saver. */
+html.theme-dragon .aurora {
+  background: #060b22 url("/dragon-sky-bg.jpg") center / cover no-repeat fixed;
+  transition: none;
+}
+html.theme-dragon .aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: oklch(0.16 0.05 265 / 0.45);
+  pointer-events: none;
+}
+html.theme-dragon button:not(:disabled) {
+  position: relative;
+}
+html.theme-dragon button:not(:disabled)::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background:
+    repeating-conic-gradient(
+        from 0deg,
+        rgb(125 211 252 / 0.35) 0deg 12deg,
+        transparent 12deg 24deg
+      )
+      0 0 / 14px 14px,
+    linear-gradient(120deg, #38bdf8, #2563eb, #a78bfa, #fbbf24, #38bdf8) 0 0 / 300% 100%;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  box-shadow:
+    0 0 10px -3px rgb(56 189 248 / 0.6),
+    inset 0 0 4px -1px rgb(167 139 250 / 0.5);
+  animation:
+    dragon-border 6s linear infinite,
+    dragon-glow 3.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes dragon-border {
+  to {
+    background-position:
+      14px 0,
+      300% 0;
+  }
+}
+@keyframes dragon-glow {
+  from {
+    box-shadow:
+      0 0 8px -3px rgb(56 189 248 / 0.45),
+      inset 0 0 4px -1px rgb(167 139 250 / 0.35);
+  }
+  to {
+    box-shadow:
+      0 0 14px -2px rgb(167 139 250 / 0.65),
+      inset 0 0 5px -1px rgb(251 191 36 / 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theme-dragon button:not(:disabled)::before {
+    animation: none;
+  }
+}
+html.theme-dragon.fx-lite button:not(:disabled)::before {
+  animation: none;
+}

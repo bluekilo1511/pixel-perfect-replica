@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DRAGON_UNLOCK_LEVEL,
   addWaterCup,
   addXp,
   completePomodoroSession,
@@ -384,5 +385,21 @@ describe("display names & theme", () => {
   it("migrate clears empty pet names", () => {
     const d = migrate({ petState: { petName: "   " } });
     expect(d.petState.petName).toBeUndefined();
+  });
+
+  it("dragon theme defaults off and persists through migration", () => {
+    expect(defaultData().settings.dragonTheme).toBe(false);
+    expect(migrate({}).settings.dragonTheme).toBe(false);
+    expect(migrate({ settings: { dragonTheme: true } }).settings.dragonTheme).toBe(true);
+    expect(migrate({ settings: { dragonTheme: "yes" } }).settings.dragonTheme).toBe(false);
+  });
+
+  it("dragon theme unlocks permanently at level 5", () => {
+    expect(DRAGON_UNLOCK_LEVEL).toBe(5);
+    const low = defaultData();
+    low.game.level = 4;
+    expect(low.game.level >= DRAGON_UNLOCK_LEVEL).toBe(false);
+    low.game.level = 5;
+    expect(low.game.level >= DRAGON_UNLOCK_LEVEL).toBe(true);
   });
 });
