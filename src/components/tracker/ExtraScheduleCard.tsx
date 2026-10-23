@@ -11,6 +11,7 @@ import {
 } from "@/lib/tracker/tkb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInputVN } from "./DateInputVN";
 
 const viDate = (date: string) => {
   const d = new Date(`${date}T00:00:00`);
@@ -65,12 +66,7 @@ export function ExtraScheduleCard() {
           className="col-span-2"
           aria-label="Tên nhắc việc"
         />
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          aria-label="Ngày"
-        />
+        <DateInputVN value={date} onChange={(iso) => setDate(iso)} ariaLabel="Ngày" />
         <Input
           type="time"
           value={time}

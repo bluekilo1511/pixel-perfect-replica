@@ -25,7 +25,7 @@ export function TimeCapsuleButton() {
         🕰️ Khôi phục từ Time Capsule
       </Button>
       {snaps && (
-        <div className="glass absolute right-0 top-full z-30 mt-2 w-72 space-y-1 p-3">
+        <div className="glass absolute right-0 top-full z-50 mt-2 w-72 space-y-1 p-3">
           <p className="mb-1 text-xs font-semibold">Bản sao lưu trong trình duyệt</p>
           {snaps.length === 0 && (
             <p className="text-xs text-muted-foreground">Chưa có bản sao lưu nào.</p>

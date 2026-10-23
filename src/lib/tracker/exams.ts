@@ -4,6 +4,10 @@ export interface ExamEvent {
   id: string;
   name: string;
   date: string; // YYYY-MM-DD
+  buoi?: string; // "Sáng" | "Chiều" | "" (optional session, Vietnamese school style)
+  gioBatDau?: string; // "07:30" (optional start time)
+  thoiGian?: string; // free text, e.g. "90 phút" (optional duration)
+  khoi?: string; // free text, e.g. "8, 9" (optional grade)
 }
 
 export const defaultExams = (): ExamEvent[] => [];
@@ -12,21 +16,74 @@ let examSeq = 0;
 export const newExamId = () => `exam_${Date.now().toString(36)}_${(examSeq++).toString(36)}`;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{1,2}:\d{2}$/;
+const capStr = (v: unknown, max: number): string | undefined => {
+  if (typeof v !== "string") return undefined;
+  const t = v.trim().slice(0, max);
+  return t || undefined;
+};
+
+/** Parses Vietnamese "dd/mm/yyyy" (also dd-mm-yyyy, dd.mm.yyyy, dd/mm/yy) into YYYY-MM-DD. */
+export function parseDateVN(input: string): string | null {
+  const t = input.trim();
+  if (!t) return null;
+  if (DATE_RE.test(t)) return t;
+  const m = t.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/);
+  if (!m) return null;
+  const d = Number(m[1]);
+  const mo = Number(m[2]);
+  let y = Number(m[3]);
+  if (y < 100) y += 2000;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const iso = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const probe = new Date(Date.UTC(y, mo - 1, d));
+  return probe.getUTCMonth() === mo - 1 && probe.getUTCDate() === d ? iso : null;
+}
+
+/** Formats YYYY-MM-DD as Vietnamese "dd/mm/yyyy" ("" when the input is not ISO). */
+export function formatDateVN(iso: string): string {
+  const m = iso.match(DATE_RE);
+  if (!m) return "";
+  const [y, mo, d] = iso.split("-");
+  return `${d}/${mo}/${y}`;
+}
 
 /** Accepts old/new JSON and keeps only well-formed exam events. */
 export function normalizeExams(raw: unknown): ExamEvent[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((e) => !!e && typeof e === "object")
-    .map((e) => {
-      const r = e as { id?: unknown; name?: unknown; date?: unknown };
-      return {
+    .map((e): ExamEvent | null => {
+      const r = e as {
+        id?: unknown;
+        name?: unknown;
+        date?: unknown;
+        buoi?: unknown;
+        gioBatDau?: unknown;
+        thoiGian?: unknown;
+        khoi?: unknown;
+      };
+      const date = typeof r.date === "string" && DATE_RE.test(r.date) ? r.date : "";
+      if (date === "") return null;
+      const out: ExamEvent = {
         id: typeof r.id === "string" && r.id ? r.id : newExamId(),
         name: String(r.name ?? "Kỳ thi"),
-        date: typeof r.date === "string" && DATE_RE.test(r.date) ? r.date : "",
+        date,
       };
+      const buoi = capStr(r.buoi, 8);
+      const thoiGian = capStr(r.thoiGian, 20);
+      const khoi = capStr(r.khoi, 20);
+      const time =
+        typeof r.gioBatDau === "string" && TIME_RE.test(r.gioBatDau.trim())
+          ? r.gioBatDau.trim()
+          : "";
+      if (buoi) out.buoi = buoi;
+      if (time) out.gioBatDau = time;
+      if (thoiGian) out.thoiGian = thoiGian;
+      if (khoi) out.khoi = khoi;
+      return out;
     })
-    .filter((e) => e.date !== "");
+    .filter((e): e is ExamEvent => e !== null);
 }
 
 const utcDay = (date: string) => {

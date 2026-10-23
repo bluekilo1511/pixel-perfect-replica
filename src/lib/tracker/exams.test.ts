@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { addExam, defaultData, makeTask, migrate, removeExam, setTaskExam } from "./model";
+import {
+  addExam,
+  defaultData,
+  makeTask,
+  migrate,
+  removeExam,
+  setTaskExam,
+  updateExam,
+} from "./model";
 import {
   addExamScore,
   daysUntil,
   examLabel,
+  formatDateVN,
   needsFocusSubject,
   normalizeExamScores,
   normalizeExams,
+  parseDateVN,
   upcomingExams,
 } from "./exams";
 
@@ -50,6 +60,46 @@ describe("exam countdown", () => {
   });
 });
 
+describe("Vietnamese date helpers", () => {
+  it("parseDateVN reads dd/mm/yyyy (and dd-mm-yyyy, dd.mm.yyyy, dd/mm/yy)", () => {
+    expect(parseDateVN("04/11/2026")).toBe("2026-11-04");
+    expect(parseDateVN("4-11-26")).toBe("2026-11-04");
+    expect(parseDateVN("06.11.2026")).toBe("2026-11-06");
+    expect(parseDateVN("2026-11-04")).toBe("2026-11-04"); // ISO passes through
+    expect(parseDateVN("")).toBeNull();
+    expect(parseDateVN("32/13/2026")).toBeNull();
+    expect(parseDateVN("31/02/2026")).toBeNull();
+    expect(parseDateVN("hnăm sau")).toBeNull();
+  });
+
+  it("formatDateVN renders ISO dates as dd/mm/yyyy", () => {
+    expect(formatDateVN("2026-11-04")).toBe("04/11/2026");
+    expect(formatDateVN("junk")).toBe("");
+  });
+
+  it("normalizeExams keeps the optional session fields", () => {
+    const out = normalizeExams([
+      {
+        name: "Ngữ văn Tin",
+        date: "2026-11-04",
+        buoi: "Sáng",
+        gioBatDau: "07:30",
+        thoiGian: "90 phút",
+        khoi: "8, 9",
+      },
+      { name: "Toán", date: "2026-11-05", buoi: "  ", gioBatDau: "không phải giờ" },
+    ]);
+    expect(out[0]).toMatchObject({
+      buoi: "Sáng",
+      gioBatDau: "07:30",
+      thoiGian: "90 phút",
+      khoi: "8, 9",
+    });
+    expect(out[1]?.buoi).toBeUndefined();
+    expect(out[1]?.gioBatDau).toBeUndefined();
+  });
+});
+
 describe("exam CRUD on the data model", () => {
   it("migrates old files with empty exams and keeps provided ones", () => {
     expect(migrate({}).exams).toEqual([]);
@@ -65,6 +115,39 @@ describe("exam CRUD on the data model", () => {
     expect(added.exams[0]!.name).toBe("Thi cuối kỳ");
     expect(addExam(base, "", "2026-11-02")).toBe(base);
     expect(addExam(base, "Thi", "11-02")).toBe(base);
+  });
+
+  it("addExam stores the optional session details and updateExam edits an event", () => {
+    let data = addExam(defaultData(), "Ngữ văn Tin", "2026-11-04", {
+      buoi: "Sáng",
+      gioBatDau: "07:30",
+      thoiGian: "90 phút",
+      khoi: "8, 9",
+    });
+    const exam = data.exams[0]!;
+    expect(exam).toMatchObject({
+      buoi: "Sáng",
+      gioBatDau: "07:30",
+      thoiGian: "90 phút",
+      khoi: "8, 9",
+    });
+
+    data = updateExam(data, exam.id, { date: "2026-11-06", buoi: "Chiều", gioBatDau: "13:30" });
+    expect(data.exams[0]).toMatchObject({
+      date: "2026-11-06",
+      buoi: "Chiều",
+      gioBatDau: "13:30",
+      thoiGian: "90 phút",
+    });
+
+    // unknown id / bad date / blank name are no-ops
+    expect(updateExam(data, "nope", { name: "X" })).toBe(data);
+    expect(updateExam(data, exam.id, { date: "11-02" })).toBe(data);
+    expect(updateExam(data, exam.id, { name: "  " })).toBe(data);
+    // clearing optional fields works
+    data = updateExam(data, exam.id, { buoi: "", thoiGian: "" });
+    expect(data.exams[0]?.buoi).toBeUndefined();
+    expect(data.exams[0]?.thoiGian).toBeUndefined();
   });
 
   it("removeExam deletes the event and untags its tasks", () => {

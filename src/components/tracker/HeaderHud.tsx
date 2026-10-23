@@ -41,7 +41,7 @@ export function HeaderHud() {
   }, []);
 
   return (
-    <header className="glass glass-glow p-4 sm:p-5">
+    <header className="glass glass-glow z-40 p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-3">
           <button

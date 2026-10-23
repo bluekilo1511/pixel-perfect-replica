@@ -1163,11 +1163,81 @@ export function claimRaid(data: AppData, now = new Date()): { data: AppData; ok:
 // ---- Backup reminder ----
 // ---- Exam countdown ----
 /** Adds an exam event. No-op when the name or date is invalid. */
-export function addExam(data: AppData, name: string, date: string, now = new Date()): AppData {
+export function addExam(
+  data: AppData,
+  name: string,
+  date: string,
+  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">> = {},
+  now = new Date(),
+): AppData {
   const clean = name.trim();
   if (!clean || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return data;
-  const exam: ExamEvent = { id: newExamId(), name: clean, date };
+  const exam: ExamEvent = {
+    id: newExamId(),
+    name: clean,
+    date,
+    ...normalizeExamExtras(extra),
+  };
   return { ...data, exams: [...data.exams, exam], updatedAt: now.toISOString() };
+}
+
+/** Edits an exam event (name, date, session details). No-op for unknown ids or a bad date. */
+export function updateExam(
+  data: AppData,
+  examId: string,
+  patch: Partial<Pick<ExamEvent, "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi">>,
+  now = new Date(),
+): AppData {
+  if (!data.exams.some((e) => e.id === examId)) return data;
+  if (patch.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(patch.date)) return data;
+  if (patch.name !== undefined && !patch.name.trim()) return data;
+  const extras = normalizeExamExtras(patch);
+  return {
+    ...data,
+    exams: data.exams.map((e) => {
+      if (e.id !== examId) return e;
+      const out: ExamEvent = { ...e };
+      if (patch.name !== undefined) out.name = patch.name.trim();
+      if (patch.date !== undefined) out.date = patch.date;
+      // a present-but-invalid/empty optional field clears it instead of keeping the old value
+      if (patch.buoi !== undefined) {
+        if (extras.buoi) out.buoi = extras.buoi;
+        else delete out.buoi;
+      }
+      if (patch.gioBatDau !== undefined) {
+        if (extras.gioBatDau) out.gioBatDau = extras.gioBatDau;
+        else delete out.gioBatDau;
+      }
+      if (patch.thoiGian !== undefined) {
+        if (extras.thoiGian) out.thoiGian = extras.thoiGian;
+        else delete out.thoiGian;
+      }
+      if (patch.khoi !== undefined) {
+        if (extras.khoi) out.khoi = extras.khoi;
+        else delete out.khoi;
+      }
+      return out;
+    }),
+    updatedAt: now.toISOString(),
+  };
+}
+
+/** Trims/validates the optional exam session fields; unknown fields are dropped. */
+function normalizeExamExtras(
+  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">>,
+): Partial<ExamEvent> {
+  const out: Partial<ExamEvent> = {};
+  const buoi = typeof extra.buoi === "string" ? extra.buoi.trim().slice(0, 8) : undefined;
+  const thoiGian =
+    typeof extra.thoiGian === "string" ? extra.thoiGian.trim().slice(0, 20) : undefined;
+  const khoi = typeof extra.khoi === "string" ? extra.khoi.trim().slice(0, 20) : undefined;
+  if (buoi) out.buoi = buoi;
+  if (typeof extra.gioBatDau === "string" && /^\d{1,2}:\d{2}$/.test(extra.gioBatDau.trim())) {
+    out.gioBatDau = extra.gioBatDau.trim();
+  }
+  if (thoiGian) out.thoiGian = thoiGian;
+  if (khoi) out.khoi = khoi;
+  return out;
 }
 
 /** Removes an exam event and untags its tasks. No-op for unknown ids. */

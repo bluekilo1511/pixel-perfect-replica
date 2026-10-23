@@ -23,11 +23,18 @@ import {
   setTaskMood,
   syncTodaySlots,
   taskFromTemplate,
+  updateExam,
   WATER_GOAL,
   type Task,
   type TaskKind,
 } from "@/lib/tracker/model";
-import { daysUntil, examLabel, upcomingExams } from "@/lib/tracker/exams";
+import {
+  daysUntil,
+  examLabel,
+  formatDateVN,
+  upcomingExams,
+  type ExamEvent,
+} from "@/lib/tracker/exams";
 import {
   addExamPrepTasks,
   EXAM_PREP_PER_DAY,
@@ -48,6 +55,7 @@ import { mondayOf } from "@/lib/tracker/weeklyReport";
 import { weakTopics } from "@/lib/tracker/subjectNotes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInputVN } from "./DateInputVN";
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -153,12 +161,11 @@ function TaskRow({ task }: { task: Task }) {
             onChange={(e) => setDraft({ ...draft, minutes: Math.max(0, +e.target.value) })}
             aria-label="Số phút"
           />
-          <Input
-            type="date"
+          <DateInputVN
             className="w-36"
             value={draft.date}
-            onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-            aria-label="Ngày"
+            onChange={(iso) => setDraft({ ...draft, date: iso })}
+            ariaLabel="Ngày"
           />
           <Input
             type="time"
@@ -197,7 +204,7 @@ function TaskRow({ task }: { task: Task }) {
     >
       {exam && (
         <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-          📝 {exam.name} · {examLabel(daysUntil(exam.date, dateStr()))}
+          📝 {exam.name} · {formatDateVN(exam.date)} · {examLabel(daysUntil(exam.date, dateStr()))}
         </span>
       )}
       {task.subject && (
@@ -331,17 +338,137 @@ function TaskRow({ task }: { task: Task }) {
   );
 }
 
+type ExamDraft = {
+  name: string;
+  date: string;
+  buoi: string;
+  gioBatDau: string;
+  thoiGian: string;
+  khoi: string;
+};
+
+const emptyExamDraft = (): ExamDraft => ({
+  name: "",
+  date: "",
+  buoi: "",
+  gioBatDau: "",
+  thoiGian: "",
+  khoi: "",
+});
+
+const examDraftOf = (e: ExamEvent): ExamDraft => ({
+  name: e.name,
+  date: e.date,
+  buoi: e.buoi ?? "",
+  gioBatDau: e.gioBatDau ?? "",
+  thoiGian: e.thoiGian ?? "",
+  khoi: e.khoi ?? "",
+});
+
+function ExamForm({ draft, setDraft }: { draft: ExamDraft; setDraft: (d: ExamDraft) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input
+        className="min-w-[160px] flex-1"
+        placeholder="Môn thi / tên kỳ thi… (VD: Ngữ văn Tin)"
+        value={draft.name}
+        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        aria-label="Môn thi"
+      />
+      <DateInputVN
+        className="w-36"
+        value={draft.date}
+        onChange={(iso) => setDraft({ ...draft, date: iso })}
+        ariaLabel="Ngày thi (dd/mm/yyyy)"
+      />
+      <select
+        className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
+        value={draft.buoi}
+        onChange={(e) => setDraft({ ...draft, buoi: e.target.value })}
+        aria-label="Buổi thi"
+      >
+        <option value="">— buổi? —</option>
+        <option value="Sáng">Sáng</option>
+        <option value="Chiều">Chiều</option>
+      </select>
+      <Input
+        type="time"
+        className="w-28"
+        value={draft.gioBatDau}
+        onChange={(e) => setDraft({ ...draft, gioBatDau: e.target.value })}
+        aria-label="Giờ vào thi"
+        title="Giờ vào thi (tuỳ chọn)"
+      />
+      <Input
+        className="w-28"
+        placeholder="90 phút"
+        value={draft.thoiGian}
+        onChange={(e) => setDraft({ ...draft, thoiGian: e.target.value })}
+        aria-label="Thời gian làm bài"
+        title="Thời gian làm bài (tuỳ chọn)"
+      />
+      <Input
+        className="w-24"
+        placeholder="Khối 8, 9"
+        value={draft.khoi}
+        onChange={(e) => setDraft({ ...draft, khoi: e.target.value })}
+        aria-label="Khối"
+        title="Khối (tuỳ chọn)"
+      />
+    </div>
+  );
+}
+
+function ExamDetail({ e }: { e: ExamEvent }) {
+  const bits = [e.buoi, e.gioBatDau, e.thoiGian, e.khoi ? `Khối ${e.khoi}` : ""].filter(
+    Boolean,
+  ) as string[];
+  if (!bits.length) return null;
+  return <p className="text-xs text-muted-foreground">{bits.join(" · ")}</p>;
+}
+
 function ExamCard() {
   const { data, update } = useTracker();
-  const [name, setName] = useState("");
-  const [date, setDate] = useState("");
+  const [draft, setDraft] = useState<ExamDraft>(emptyExamDraft);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<ExamDraft>(emptyExamDraft);
   const today = dateStr();
   const upcoming = upcomingExams(data.exams, today);
+  const past = data.exams
+    .filter((e) => daysUntil(e.date, today) < 0)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name));
   const add = () => {
-    if (!name.trim() || !date) return;
-    update((d) => addExam(d, name, date));
-    setName("");
-    setDate("");
+    if (!draft.name.trim() || !draft.date) {
+      toast.error("Cần tên môn thi và ngày thi (dd/mm/yyyy).");
+      return;
+    }
+    update((d) =>
+      addExam(d, draft.name, draft.date, {
+        buoi: draft.buoi,
+        gioBatDau: draft.gioBatDau,
+        thoiGian: draft.thoiGian,
+        khoi: draft.khoi,
+      }),
+    );
+    setDraft(emptyExamDraft());
+  };
+  const saveEdit = (id: string) => {
+    if (!editDraft.name.trim() || !editDraft.date) {
+      toast.error("Cần tên môn thi và ngày thi (dd/mm/yyyy).");
+      return;
+    }
+    update((d) =>
+      updateExam(d, id, {
+        name: editDraft.name,
+        date: editDraft.date,
+        buoi: editDraft.buoi,
+        gioBatDau: editDraft.gioBatDau,
+        thoiGian: editDraft.thoiGian,
+        khoi: editDraft.khoi,
+      }),
+    );
+    setEditingId(null);
+    toast.success("Đã sửa kỳ thi ✏️");
   };
   return (
     <section className="glass p-5">
@@ -351,69 +478,109 @@ function ExamCard() {
       </div>
       {upcoming.length ? (
         <ul className="mb-3 space-y-2">
-          {upcoming.map((e) => (
-            <li
-              key={e.id}
-              className={`flex items-center gap-2 rounded-xl border border-border p-3 ${e.daysLeft <= 3 ? "bg-destructive/10" : "bg-muted"}`}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{e.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {e.date} · {examLabel(e.daysLeft)}
-                </p>
-                {e.daysLeft <= EXAM_PREP_WINDOW && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-1 h-7 text-xs"
-                    title="Tạo 2 pomodoro ôn thi hôm nay (chỉ 1 lần/ngày/kỳ thi)"
-                    onClick={() => {
-                      const r = addExamPrepTasks(data, e, today);
-                      if (!r.added) {
-                        toast("Đã có kế hoạch ôn cho kỳ thi này hôm nay 👍");
-                        return;
-                      }
-                      update((d) => addExamPrepTasks(d, e, today).data);
-                      toast.success(`Đã tạo ${r.added} việc ôn thi hôm nay 🌙`, {
-                        description: `Gợi ý: ôn ${EXAM_PREP_PER_DAY} pomodoro/ngày đến ngày thi.`,
-                      });
-                    }}
-                  >
-                    💡 Tạo {EXAM_PREP_PER_DAY} việc ôn hôm nay
+          {upcoming.map((e) =>
+            editingId === e.id ? (
+              <li key={e.id} className="rounded-xl border border-primary/50 bg-muted p-3">
+                <ExamForm draft={editDraft} setDraft={setEditDraft} />
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm" onClick={() => saveEdit(e.id)}>
+                    💾 Lưu
                   </Button>
-                )}
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={`Xóa ${e.name}`}
-                onClick={() => update((d) => removeExam(d, e.id))}
+                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                    Hủy
+                  </Button>
+                </div>
+              </li>
+            ) : (
+              <li
+                key={e.id}
+                className={`flex flex-wrap items-center gap-2 rounded-xl border border-border p-3 ${e.daysLeft <= 3 ? "bg-destructive/10" : "bg-muted"}`}
               >
-                ✕
-              </Button>
-            </li>
-          ))}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{e.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateVN(e.date)} · {examLabel(e.daysLeft)}
+                  </p>
+                  <ExamDetail e={e} />
+                  {e.daysLeft <= EXAM_PREP_WINDOW && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-1 h-7 text-xs"
+                      title="Tạo 2 pomodoro ôn thi hôm nay (chỉ 1 lần/ngày/kỳ thi)"
+                      onClick={() => {
+                        const r = addExamPrepTasks(data, e, today);
+                        if (!r.added) {
+                          toast("Đã có kế hoạch ôn cho kỳ thi này hôm nay 👍");
+                          return;
+                        }
+                        update((d) => addExamPrepTasks(d, e, today).data);
+                        toast.success(`Đã tạo ${r.added} việc ôn thi hôm nay 🌙`, {
+                          description: `Gợi ý: ôn ${EXAM_PREP_PER_DAY} pomodoro/ngày đến ngày thi.`,
+                        });
+                      }}
+                    >
+                      💡 Tạo {EXAM_PREP_PER_DAY} việc ôn hôm nay
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Sửa ${e.name}`}
+                  onClick={() => {
+                    setEditingId(e.id);
+                    setEditDraft(examDraftOf(e));
+                  }}
+                >
+                  ✏️
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Xóa ${e.name}`}
+                  onClick={() => update((d) => removeExam(d, e.id))}
+                >
+                  ✕
+                </Button>
+              </li>
+            ),
+          )}
         </ul>
       ) : (
         <p className="mb-3 text-sm text-muted-foreground">
           Chưa có kỳ thi nào. Thêm để thấy đếm ngược nhé!
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Input
-          className="min-w-[140px] flex-1"
-          placeholder="Tên kỳ thi…"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <Input
-          type="date"
-          className="w-40"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          aria-label="Ngày thi"
-        />
-        <Button onClick={add}>+ Thêm</Button>
+      {past.length > 0 && (
+        <details className="mb-3 rounded-xl border border-border bg-muted/40 p-3">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+            Đã qua / sai ngày ({past.length}) — xóa nếu lỡ nhập nhầm
+          </summary>
+          <ul className="mt-2 space-y-1">
+            {past.map((e) => (
+              <li key={e.id} className="flex items-center gap-2 text-xs">
+                <span className="min-w-0 flex-1 truncate">
+                  {e.name} · {formatDateVN(e.date)} · {e.buoi ? `${e.buoi} ` : ""}
+                  {e.gioBatDau ?? ""}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7"
+                  aria-label={`Xóa ${e.name}`}
+                  onClick={() => update((d) => removeExam(d, e.id))}
+                >
+                  ✕
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <div className="space-y-2">
+        <ExamForm draft={draft} setDraft={setDraft} />
+        <Button onClick={add}>+ Thêm kỳ thi</Button>
       </div>
     </section>
   );

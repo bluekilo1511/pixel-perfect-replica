@@ -10,6 +10,7 @@ import {
 } from "@/lib/tracker/journal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInputVN } from "./DateInputVN";
 
 /** Hidden personal diary: opens by clicking the little bookshelf on the study-room wall. */
 export function JournalModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -68,13 +69,12 @@ export function JournalModal({ open, onClose }: { open: boolean; onClose: () => 
           đọc được thôi.
         </p>
         <div className="mb-2 flex flex-wrap gap-2">
-          <Input
-            type="date"
+          <DateInputVN
             className="h-9 w-40"
             value={date}
             max={today}
-            onChange={(e) => setDate(e.target.value)}
-            aria-label="Ngày của trang sổ"
+            onChange={(iso) => setDate(iso)}
+            ariaLabel="Ngày của trang sổ (dd/mm/yyyy)"
           />
           <Input
             className="h-9 min-w-[140px] flex-1"
