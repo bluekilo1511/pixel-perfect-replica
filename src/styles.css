@@ -1226,8 +1226,9 @@
 }
 
 /* ---- Dragon theme (unlocked at player Lv.5, toggled in Settings) ----
-   Starry-sky background + a shimmering dragon-scale ring animated around every button,
-   in the spirit of the animated decor items. Static when reduced-motion or battery saver. */
+   Hand-picked night-sky art as the background, plus a dragon sprite wrapping the
+   big glass panels, the header plate and primary buttons - like animated decor.
+   The sprite itself is static (a gentle float when motion is allowed). */
 html.theme-dragon .aurora {
   background: #060b22 url("/dragon-sky-bg.jpg") center / cover no-repeat fixed;
   transition: none;
@@ -1236,13 +1237,36 @@ html.theme-dragon .aurora::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: oklch(0.16 0.05 265 / 0.45);
+  background: oklch(0.16 0.05 265 / 0.22);
   pointer-events: none;
 }
-html.theme-dragon button:not(:disabled) {
-  position: relative;
+
+/* Dragon sprite wrapped over the top edge of major panels (feet on the rim) */
+html.theme-dragon .glass::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  right: -4px;
+  width: 96px;
+  height: 36px;
+  background: url("/dragon-wrap.png") right bottom / contain no-repeat;
+  pointer-events: none;
+  z-index: 6;
+  filter: drop-shadow(0 2px 5px rgb(2 6 23 / 0.5));
+  animation: dragon-float 6s ease-in-out infinite;
 }
-html.theme-dragon button:not(:disabled)::before {
+
+/* Header name plate: a bigger dragon crawling along the top edge */
+html.theme-dragon header.glass::before {
+  top: -20px;
+  right: 10px;
+  width: 130px;
+  height: 34px;
+}
+
+
+/* Primary buttons keep the shimmering dragon-scale ring around them */
+html.theme-dragon button.bg-primary:not(:disabled)::before {
   content: "";
   position: absolute;
   inset: -2px;
@@ -1284,7 +1308,7 @@ html.theme-dragon button:not(:disabled)::before {
     box-shadow:
       0 0 8px -3px rgb(56 189 248 / 0.45),
       inset 0 0 4px -1px rgb(167 139 250 / 0.35);
-  }
+    }
   to {
     box-shadow:
       0 0 14px -2px rgb(167 139 250 / 0.65),
@@ -1292,10 +1316,47 @@ html.theme-dragon button:not(:disabled)::before {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  html.theme-dragon button:not(:disabled)::before {
+  html.theme-dragon button.bg-primary:not(:disabled)::before {
     animation: none;
   }
 }
-html.theme-dragon.fx-lite button:not(:disabled)::before {
+html.theme-dragon.fx-lite button.bg-primary:not(:disabled)::before {
+  animation: none;
+}
+
+/* Primary buttons: a small dragon perched on the top-right corner */
+html.theme-dragon button.bg-primary:not(:disabled) {
+  position: relative;
+}
+html.theme-dragon button.bg-primary:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  top: -12px;
+  right: -2px;
+  width: 42px;
+  height: 15px;
+  background: url("/dragon-wrap.png") right bottom / contain no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgb(2 6 23 / 0.5));
+  animation: dragon-float 7s ease-in-out infinite;
+}
+
+@keyframes dragon-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theme-dragon .glass::before,
+  html.theme-dragon button.bg-primary:not(:disabled)::after {
+    animation: none;
+  }
+}
+html.theme-dragon.fx-lite .glass::before,
+html.theme-dragon.fx-lite button.bg-primary:not(:disabled)::after {
   animation: none;
 }
