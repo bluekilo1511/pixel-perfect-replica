@@ -170,6 +170,7 @@ export interface GameState {
   jackpotsWon: number;
   water: { date: string; cups: number; rewarded: boolean; lastNudgePomodoros?: number };
   lastDailyPinDate: string | null;
+  lastSalaryDate: string | null;
   [extra: string]: unknown;
 }
 
@@ -292,6 +293,7 @@ export function defaultGame(today = dateStr()): GameState {
     jackpotsWon: 0,
     water: { date: today, cups: 0, rewarded: false },
     lastDailyPinDate: null,
+    lastSalaryDate: null,
   };
 }
 
@@ -578,6 +580,7 @@ export function migrate(raw: unknown): AppData {
     totalSpins: num(oldGame.totalSpins, 0),
     jackpotsWon: num(oldGame.jackpotsWon, 0),
     water: { ...base.game.water, ...obj(oldGame.water) },
+    lastSalaryDate: typeof oldGame.lastSalaryDate === "string" ? oldGame.lastSalaryDate : null,
   };
 
   const { gameState: _g, ...rest } = r;
@@ -1084,6 +1087,26 @@ export function completePomodoroSession(
     sessionLog,
   };
   return applyAchievements(d, { nightOwl: isNightOwlHour(now) }, now);
+}
+
+// ---- Daily salary ----
+/** Wages for simply showing up: 1 + level, capped at 15 😺/day. */
+export const dailySalary = (level: number) => Math.min(15, 1 + level);
+
+/** Pays the daily salary once per calendar day. Pure: returns the updated data. */
+export function claimDailySalary(
+  data: AppData,
+  today = dateStr(),
+): { data: AppData; coins: number } {
+  if (data.game.lastSalaryDate === today) return { data, coins: 0 };
+  const coins = dailySalary(data.game.level);
+  return {
+    data: {
+      ...data,
+      game: { ...data.game, catCoins: data.game.catCoins + coins, lastSalaryDate: today },
+    },
+    coins,
+  };
 }
 
 // ---- Daily quests & weekly raid ----

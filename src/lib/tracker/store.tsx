@@ -18,6 +18,7 @@ import {
   completeTask,
   dateStr,
   defaultData,
+  claimDailySalary,
   ensureDailyPins,
   migrate,
   pushDueSlots,
@@ -338,6 +339,11 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     const check = () => {
       const d0 = ensureDailyPins(dataRef.current, dateStr());
+      const sal = claimDailySalary(d0, dateStr());
+      if (sal.coins > 0) {
+        ting();
+        toast.success(`💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`);
+      }
       const { data: dp, pushed } = pushDueSlots(d0);
       const pet = decayPet(
         dp.petState,

@@ -6,7 +6,19 @@ import { grantPetXp, type Materials } from "./extras";
  * Pure logic: the caller owns the data object, this only reshapes it.
  */
 
-export type MarketItemId = "shield" | "honey" | "box" | "galaxy" | "starClock" | "heal" | "ticket";
+export type MarketItemId =
+  | "shield"
+  | "honey"
+  | "box"
+  | "galaxy"
+  | "starClock"
+  | "heal"
+  | "ticket"
+  | "tome"
+  | "megaBox"
+  | "moonLamp"
+  | "phoenix"
+  | "gemPouch";
 
 export interface MarketItem {
   id: MarketItemId;
@@ -14,6 +26,8 @@ export interface MarketItem {
   name: string;
   desc: string;
   price: number; // 😺 cat coins
+  minLevel?: number; // rare goods: locked until the player reaches this level
+  rare?: boolean; // only up to 2 rares are stocked each week
 }
 
 export const MARKET_ITEMS: Record<MarketItemId, MarketItem> = {
@@ -66,20 +80,101 @@ export const MARKET_ITEMS: Record<MarketItemId, MarketItem> = {
     desc: "+1 lượt quay may mắn — dành tiền lương mèo đổi vé",
     price: 10,
   },
+  tome: {
+    id: "tome",
+    emoji: "📕",
+    name: "Sách Cổ Chép",
+    desc: "+80 ⭐ kinh nghiệm cho chính bạn — đường tắt lên cấp",
+    price: 20,
+    minLevel: 2,
+    rare: true,
+  },
+  megaBox: {
+    id: "megaBox",
+    emoji: "🧰",
+    name: "Rương Thần Kì",
+    desc: "Ngẫu nhiên 3–6 nguyên liệu luyện chế — bản lớn của Hộp May Mắn",
+    price: 25,
+    minLevel: 3,
+    rare: true,
+  },
+  moonLamp: {
+    id: "moonLamp",
+    emoji: "🌙",
+    name: "Đèn Trăng Non",
+    desc: "Decor hiếm phát sáng cho góc học — chỉ có ở Chợ Hư Không",
+    price: 40,
+    minLevel: 4,
+    rare: true,
+  },
+  phoenix: {
+    id: "phoenix",
+    emoji: "🔥",
+    name: "Tranh Phượng Hoàng",
+    desc: "Decor hiếm: bức họa phượng hoàng lửa — chỉ có ở Chợ Hư Không",
+    price: 45,
+    minLevel: 5,
+    rare: true,
+  },
+  gemPouch: {
+    id: "gemPouch",
+    emoji: "💎",
+    name: "Túi Ngọc Rồng",
+    desc: "+2 🦎 ngọc thằn lằn — đổi xu lấy ngọc hiếm",
+    price: 35,
+    minLevel: 6,
+    rare: true,
+  },
 };
 
 // Rare decors are paid in the market, never in the Pet Shop.
 export const MARKET_DECOR: DecorId[] = ["galaxy", "starClock"];
 export const isMarketDecor = (id: DecorId) => DECORATIONS[id]?.marketOnly === true;
 
-/** Stock rotations — one pool per week, cycling forever. */
-const POOLS: MarketItemId[][] = [
-  ["shield", "honey", "box"],
-  ["honey", "galaxy", "box", "heal", "ticket"],
-  ["shield", "starClock", "box"],
-  ["galaxy", "honey", "shield", "heal", "ticket"],
-  ["starClock", "box", "honey"],
-];
+/**
+ * Random restock — the shop reshuffles its shelves every Monday.
+ * The draw is seeded by the week's Monday so the stock stays the same
+ * all week (no refresh-spam), yet is genuinely random week to week.
+ * Every week guarantees 2 rare goods + 3 everyday goods.
+ */
+
+/** FNV-1a hash of a string, as a uint32 seed. */
+function hashSeed(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h = (h ^ s.charCodeAt(i)) * 16777619;
+  }
+  return h >>> 0;
+}
+
+/** Mulberry32 — tiny deterministic PRNG, enough for shop shelves. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWith<T>(arr: T[], rnd: () => number): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]!] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
+export function marketStock(now: Date): MarketItemId[] {
+  const rnd = mulberry32(hashSeed(weekStart(now)));
+  const ids = Object.keys(MARKET_ITEMS) as MarketItemId[];
+  const commons = ids.filter((id) => !MARKET_ITEMS[id]!.rare);
+  const rares = ids.filter((id) => MARKET_ITEMS[id]!.rare);
+  const picked = [...shuffleWith(rares, rnd).slice(0, 2), ...shuffleWith(commons, rnd).slice(0, 3)];
+  return shuffleWith(picked, rnd);
+}
 
 /** The Monday (YYYY-MM-DD) of the week containing `d`. */
 export function weekStart(d: Date): string {
@@ -91,11 +186,6 @@ export function weekStart(d: Date): string {
   return shiftDate(date, -back);
 }
 
-export function marketStock(now: Date): MarketItemId[] {
-  const weeks = daysBetween("2024-01-01", weekStart(now)) / 7; // 2024-01-01 is a Monday
-  return POOLS[Math.max(0, Math.floor(weeks)) % POOLS.length]!;
-}
-
 export interface MarketState {
   lastWeek: string | null;
   bought: Partial<Record<MarketItemId, string>>; // itemId -> weekStart it was bought in
@@ -105,11 +195,17 @@ export const defaultMarket = (): MarketState => ({ lastWeek: null, bought: {} })
 
 export type MarketBuyResult<T> =
   | { ok: true; data: T; message: string }
-  | { ok: false; reason: "not-in-stock" | "already-bought" | "not-enough-coins" };
+  | { ok: false; reason: "not-in-stock" | "already-bought" | "not-enough-coins" | "locked" };
 
 /** Minimal shape the buyer needs. */
 export interface MarketData {
-  game: { catCoins: number; spinTickets?: number };
+  game: {
+    catCoins: number;
+    spinTickets?: number;
+    level: number;
+    xp?: number;
+    lizardGems?: number;
+  };
   inventory: { freezes: number; materials: Materials };
   petState: PetState;
   market: MarketState;
@@ -125,6 +221,8 @@ export function buyMarket<T extends MarketData>(
   const week = weekStart(now);
   if (!marketStock(now).includes(id)) return { ok: false, reason: "not-in-stock" };
   if (data.market.bought[id] === week) return { ok: false, reason: "already-bought" };
+  const minLevel = MARKET_ITEMS[id].minLevel;
+  if (minLevel != null && data.game.level < minLevel) return { ok: false, reason: "locked" };
   const item = MARKET_ITEMS[id];
   if (data.game.catCoins < item.price) return { ok: false, reason: "not-enough-coins" };
 
@@ -180,9 +278,60 @@ export function buyMarket<T extends MarketData>(
       message: levelsGained > 0 ? "🍯 Thú cưng +60 💫 và tăng cấp!" : "🍯 Thú cưng +60 💫!",
     };
   }
+  if (id === "tome") {
+    // XP book: same rule as addXp in model.ts, inlined to avoid an import cycle.
+    let level = data.game.level;
+    let xp = (data.game.xp ?? 0) + 80;
+    while (xp >= level * 100) {
+      xp -= level * 100;
+      level += 1;
+    }
+    return {
+      ok: true,
+      data: { ...base, game: { ...base.game, level, xp } },
+      message: level > data.game.level ? "📕 +80 ⭐ và TĂNG CẤP!" : "📕 +80 ⭐ kinh nghiệm!",
+    };
+  }
+  if (id === "gemPouch") {
+    return {
+      ok: true,
+      data: {
+        ...base,
+        game: { ...base.game, lizardGems: ((base.game.lizardGems as number) ?? 0) + 2 },
+      },
+      message: "💎 +2 🦎 ngọc thằn lằn!",
+    };
+  }
+  if (id === "moonLamp" || id === "phoenix") {
+    return {
+      ok: true,
+      data: {
+        ...base,
+        petState: { ...data.petState, decorOwned: [...data.petState.decorOwned, id] },
+      },
+      message: `${item.emoji} ${item.name} vào kho decor — bày ở Pet Shop nhé!`,
+    };
+  }
   // Mystery box: 1–3 of one random material kind.
   const kinds: (keyof Materials)[] = ["magicFeather", "starShard", "mysticHerb"];
   const matId = kinds[Math.floor(random() * kinds.length)]!;
+  if (id === "megaBox") {
+    const n2 = 3 + Math.floor(random() * 4); // 3–6
+    return {
+      ok: true,
+      data: {
+        ...base,
+        inventory: {
+          ...data.inventory,
+          materials: {
+            ...data.inventory.materials,
+            [matId]: data.inventory.materials[matId] + n2,
+          },
+        },
+      },
+      message: `🧰 Rương Thần Kì: +${n2} nguyên liệu!`,
+    };
+  }
   const n = 1 + Math.floor(random() * 3);
   return {
     ok: true,

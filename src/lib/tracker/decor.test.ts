@@ -42,6 +42,6 @@ describe("pet room decorations", () => {
     });
     expect(pet.decorOwned).toEqual(["lamp"]);
     expect(pet.decorActive).toEqual(["lamp"]);
-    expect(Object.keys(DECORATIONS)).toHaveLength(8); // 6 shop decors + 2 market-only rare decors
+    expect(Object.keys(DECORATIONS)).toHaveLength(10); // 6 shop decors + 4 market-only rare decors
   });
 });

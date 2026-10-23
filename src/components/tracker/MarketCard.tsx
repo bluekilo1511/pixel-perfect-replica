@@ -25,23 +25,29 @@ export function MarketCard() {
         </span>
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
-        Chợ xoay hàng mỗi thứ Hai, mỗi món mua 1 lần/tuần — hàng hiếm chỉ có ở đây.
+        Chợ nạp hàng ngẫu nhiên mỗi thứ Hai, mỗi món mua 1 lần/tuần — hàng hiếm cần đủ cấp độ và chỉ
+        có ở đây.
       </p>
       <ul className="grid gap-2 sm:grid-cols-3">
         {stock.map((id: MarketItemId) => {
           const m = MARKET_ITEMS[id];
           const soldOut = data.market.bought[id] === week;
+          const locked = m.minLevel != null && data.game.level < m.minLevel;
           return (
             <li
               key={id}
-              className={`rounded-xl p-3 text-center ${soldOut ? "bg-muted opacity-70" : "bg-muted"}`}
+              className={`rounded-xl p-3 text-center ${soldOut || locked ? "bg-muted opacity-70" : "bg-muted"}`}
             >
-              <div className="text-3xl">{m.emoji}</div>
+              <div className="text-3xl">{locked ? "🔒" : m.emoji}</div>
               <p className="my-1 text-xs font-medium">{m.name}</p>
               <p className="mb-2 text-[11px] text-muted-foreground">{m.desc}</p>
               {soldOut ? (
                 <Button size="sm" variant="outline" disabled>
                   Đã mua tuần này
+                </Button>
+              ) : locked ? (
+                <Button size="sm" variant="outline" disabled>
+                  🔒 Cần Lv {m.minLevel}
                 </Button>
               ) : (
                 <Button
@@ -52,7 +58,9 @@ export function MarketCard() {
                       toast.error(
                         r.reason === "not-enough-coins"
                           ? "Chưa đủ 😺 — làm nhiệm vụ thêm nào!"
-                          : "Hiện không mua được món này",
+                          : r.reason === "locked"
+                            ? `🔒 Cần Lv ${m.minLevel} mới mua được món này`
+                            : "Hiện không mua được món này",
                       );
                       return;
                     }

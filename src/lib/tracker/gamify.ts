@@ -4,7 +4,16 @@ import type { Materials } from "./extras";
 export type Species = "cat" | "lizard" | "dog" | "owl" | "whale";
 export type Accessory = "gradcap" | "sunglasses" | "crown" | "wings";
 export type DecorId =
-  "lamp" | "plant" | "shelf" | "poster" | "teddy" | "fairy" | "galaxy" | "starClock";
+  | "lamp"
+  | "plant"
+  | "shelf"
+  | "poster"
+  | "teddy"
+  | "fairy"
+  | "galaxy"
+  | "starClock"
+  | "moonLamp"
+  | "phoenix";
 export type Mood = "excited" | "normal" | "hungry" | "sulky";
 
 export interface PetState {
@@ -77,6 +86,8 @@ export const DECORATIONS: Record<
   fairy: { emoji: "🧚", name: "Đèn sao treo", price: 10 },
   galaxy: { emoji: "🌌", name: "Tranh dải ngân hà", price: 30, marketOnly: true },
   starClock: { emoji: "🪐", name: "Đồng hồ sao", price: 25, marketOnly: true },
+  moonLamp: { emoji: "🌙", name: "Đèn Trăng Non", price: 40, marketOnly: true },
+  phoenix: { emoji: "🔥", name: "Tranh Phượng Hoàng", price: 45, marketOnly: true },
 };
 
 /** Buys a room decoration; returns null when it is already owned. Payment stays in the caller. */

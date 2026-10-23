@@ -107,6 +107,62 @@ function galaxyTexture() {
   return t;
 }
 
+/** Pixel-art phoenix painting on a night background. */
+function phoenixTexture() {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 384;
+  const g = c.getContext("2d");
+  if (g) {
+    const grad = g.createLinearGradient(0, 0, 0, 384);
+    grad.addColorStop(0, "#1a0a2e");
+    grad.addColorStop(1, "#3b0713");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 384);
+    // pixel phoenix: 16-wide grid, 0 empty / 1 dark red / 2 red / 3 orange / 4 gold
+    const rows = [
+      "0000004000000000",
+      "0000004400000000",
+      "0000034430000000",
+      "0000032230000000",
+      "0003022220300000",
+      "0033022220330000",
+      "0333022220333000",
+      "0333022320333000",
+      "0033022320330000",
+      "0003023320300000",
+      "0000323323000000",
+      "0000034430000000",
+      "0000043340000000",
+      "0000043..4300000",
+      "0000043..4300000",
+      "0000004..4000000",
+      "0000004444000000",
+      "0000000440000000",
+      "0000000440000000",
+      "0000000400000000",
+    ];
+    const colors = ["", "#7f1d1d", "#dc2626", "#f97316", "#fbbf24"];
+    const cell = 13;
+    const ox = (256 - 16 * cell) / 2;
+    const oy = (384 - rows.length * cell) / 2;
+    rows.forEach((row, y) => {
+      [...row].forEach((ch, x) => {
+        if (ch === "0" || ch === ".") return;
+        g.fillStyle = colors[Number(ch)]!;
+        g.fillRect(ox + x * cell, oy + y * cell, cell, cell);
+      });
+    });
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.5})`;
+      g.fillRect(Math.random() * 256, Math.random() * 384, 2, 2);
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function posterTexture() {
   const c = document.createElement("canvas");
   c.width = c.height = 256;
@@ -627,6 +683,7 @@ function Room({
   const S = SEASON_PALETTE[season];
   const wood = useMemo(() => woodTexture(), []);
   const galaxyTex = useMemo(() => galaxyTexture(), []);
+  const phoenixTex = useMemo(() => phoenixTexture(), []);
   const posterTex = useMemo(() => posterTexture(), []);
   const has = (id: DecorId) => decor.includes(id);
   return (
@@ -861,6 +918,35 @@ function Room({
       {has("starClock") && (
         <Clickable id="starClock" position={[1.05, 1.9, BACK_Z + 0.075]} onStow={onStow}>
           <StarClock />
+        </Clickable>
+      )}
+      {has("phoenix") && (
+        <Clickable id="phoenix" position={[-1.7, 2.0, BACK_Z + 0.075]} onStow={onStow}>
+          <RoundedBox args={[0.7, 1.0, 0.03]} radius={0.01}>
+            <meshStandardMaterial color="#3f2a12" roughness={0.8} />
+          </RoundedBox>
+          <mesh position={[0, 0, 0.02]}>
+            <planeGeometry args={[0.6, 0.9]} />
+            <meshBasicMaterial map={phoenixTex} toneMapped={false} />
+          </mesh>
+        </Clickable>
+      )}
+      {has("moonLamp") && (
+        <Clickable id="moonLamp" position={[1.15, 0.03, 0.55]} onStow={onStow}>
+          <mesh position={[0, 0.35, 0]}>
+            <cylinderGeometry args={[0.02, 0.09, 0.7, 8]} />
+            <meshStandardMaterial color="#52525b" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.82, 0]}>
+            <sphereGeometry args={[0.16, 20, 20]} />
+            <meshStandardMaterial
+              color="#fef9c3"
+              emissive="#fde68a"
+              emissiveIntensity={1.4}
+              roughness={0.3}
+            />
+          </mesh>
+          <pointLight position={[0, 0.85, 0]} intensity={1.6} distance={3.2} color="#fde68a" />
         </Clickable>
       )}
       {has("fairy") && (
