@@ -1226,52 +1226,36 @@
 }
 
 /* ---- Dragon theme (unlocked at player Lv.5, toggled in Settings) ----
-   Hand-picked night-sky art as the background, plus a dragon sprite wrapping the
-   big glass panels, the header plate and primary buttons - like animated decor.
-   The sprite itself is static (a gentle float when motion is allowed). */
+   Hand-picked night-sky art replaces the aurora entirely, and a single dragon
+   rests inside the header name plate as its background layer. No sprite wraps
+   on panels or buttons - the only dragon decor is the name plate. */
 html.theme-dragon .aurora {
   background: #060b22 url("/dragon-sky-bg.jpg") center / cover no-repeat fixed;
   transition: none;
+}
+/* The animated gradient layers painted on top of the sky are dropped, so the
+   starry art is actually visible instead of being hidden behind the aurora. */
+html.theme-dragon .aurora::before {
+  content: none;
 }
 html.theme-dragon .aurora::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: oklch(0.16 0.05 265 / 0.22);
+  background: oklch(0.16 0.05 265 / 0.18);
   pointer-events: none;
 }
 
-/* Dragon sprite: the new art is one big S-curved dragon. Each surface shows a
-   pre-rotated variant leaning a different way, so the wraps don't all read as
-   the same horizontal pose. */
-html.theme-dragon .glass::before {
-  content: "";
-  position: absolute;
-  top: -58px;
-  right: -12px;
-  width: 92px;
-  height: 82px;
-  background: url("/dragon-wrap-up.png") center bottom / contain no-repeat;
-  pointer-events: none;
-  z-index: 6;
-  filter: drop-shadow(0 2px 5px rgb(2 6 23 / 0.5));
-  animation: dragon-float 6s ease-in-out infinite;
+/* Header name plate: the dragon sits inside the plate, full strength */
+html.theme-dragon header.glass {
+  background:
+    var(--card) url("/dragon-wrap-lay.png") right center / auto 92% no-repeat;
 }
-
-/* Every other panel leans the dragon the opposite way, over its left corner */
-html.theme-dragon .glass:nth-child(even)::before {
-  right: auto;
-  left: -12px;
-  background-image: url("/dragon-wrap-down.png");
-}
-
-/* Header name plate: the dragon stretched out, gliding along the top edge */
-html.theme-dragon header.glass::before {
-  top: -40px;
-  right: 16px;
-  width: 158px;
-  height: 72px;
-  background-image: url("/dragon-wrap-lay.png");
+@media (max-width: 640px) {
+  html.theme-dragon header.glass {
+    background:
+      var(--card) url("/dragon-wrap-lay.png") right center / auto 70% no-repeat;
+  }
 }
 
 /* Primary buttons keep the shimmering dragon-scale ring around them */
@@ -1333,62 +1317,7 @@ html.theme-dragon.fx-lite button.bg-primary:not(:disabled)::before {
   animation: none;
 }
 
-/* Primary buttons: a small dragon curled over the top-right corner */
+/* Primary buttons need a positioned box for the ring above */
 html.theme-dragon button.bg-primary:not(:disabled) {
   position: relative;
-}
-html.theme-dragon button.bg-primary:not(:disabled)::after {
-  content: "";
-  position: absolute;
-  top: -22px;
-  right: -6px;
-  width: 44px;
-  height: 28px;
-  background: url("/dragon-wrap-down.png") center bottom / contain no-repeat;
-  pointer-events: none;
-  filter: drop-shadow(0 1px 3px rgb(2 6 23 / 0.5));
-  animation: dragon-float 7s ease-in-out infinite;
-}
-
-@keyframes dragon-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  html.theme-dragon .glass::before,
-  html.theme-dragon button.bg-primary:not(:disabled)::after {
-    animation: none;
-  }
-}
-html.theme-dragon.fx-lite .glass::before,
-html.theme-dragon.fx-lite button.bg-primary:not(:disabled)::after {
-  animation: none;
-}
-
-@media (max-width: 640px) {
-  html.theme-dragon .glass::before {
-    top: -40px;
-    right: -8px;
-    width: 64px;
-    height: 58px;
-  }
-  html.theme-dragon .glass:nth-child(even)::before {
-    right: auto;
-    left: -8px;
-  }
-  html.theme-dragon header.glass::before {
-    top: -30px;
-    width: 112px;
-    height: 52px;
-  }
-  html.theme-dragon button.bg-primary:not(:disabled)::after {
-    top: -16px;
-    width: 34px;
-    height: 22px;
-  }
 }
