@@ -12,6 +12,7 @@ import {
   type SpinMode,
 } from "@/lib/tracker/model";
 import { Badge } from "@/components/ui/badge";
+import { wheelWinFx } from "@/lib/tracker/effects";
 import { Button } from "@/components/ui/button";
 
 const fills = [
@@ -49,12 +50,15 @@ export function Wheel() {
   const go = (m: SpinMode) => {
     const prize = spin(m);
     if (!prize) return;
-    setLastPrize(prize);
     const i = display.indexOf(prize);
     const target = i >= 0 ? 360 - (i * seg + seg / 2) : 360 - seg / 2;
     setBusy(true);
     setRot((r) => r - (r % 360) + 360 * 5 + target);
-    setTimeout(() => setBusy(false), 2700);
+    setTimeout(() => {
+      setBusy(false);
+      setLastPrize(prize); // reveal + pop + FX only once the wheel has stopped
+      wheelWinFx(prize === JACKPOT_PRIZE);
+    }, 2700);
   };
 
   const bg = `conic-gradient(${display
@@ -103,8 +107,10 @@ export function Wheel() {
 
         {lastPrize && (
           <p
+            key={lastPrize + game.totalSpins}
             className={
-              "text-sm font-semibold " + (lastPrize === JACKPOT_PRIZE ? "text-amber-500" : "")
+              "win-pop text-sm font-semibold " +
+              (lastPrize === JACKPOT_PRIZE ? "text-amber-500" : "")
             }
           >
             Kết quả: {lastPrize}
@@ -167,21 +173,21 @@ export function Wheel() {
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold">📊 Thống kê</h3>
             <span className="text-xs text-muted-foreground">
-              🎡 {game.spinTickets} lượt · 🎰 {game.jackpotsWon} jackpot
+              🎟️ Còn {game.spinTickets} lượt quay · 🎰 {game.jackpotsWon} jackpot
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-sm">
-            <div className="rounded-lg bg-secondary/60 p-2">
+            <div className="min-w-0 rounded-lg bg-secondary/60 p-2">
               <div className="text-lg font-bold">{game.totalSpins}</div>
-              <div className="text-xs text-muted-foreground">tổng lượt quay</div>
+              <div className="truncate text-xs text-muted-foreground">tổng lượt quay</div>
             </div>
-            <div className="rounded-lg bg-secondary/60 p-2">
+            <div className="min-w-0 rounded-lg bg-secondary/60 p-2">
               <div className="text-lg font-bold">{game.jackpotsWon}</div>
-              <div className="text-xs text-muted-foreground">jackpot</div>
+              <div className="truncate text-xs text-muted-foreground">jackpot</div>
             </div>
-            <div className="rounded-lg bg-secondary/60 p-2">
+            <div className="min-w-0 rounded-lg bg-secondary/60 p-2">
               <div className="text-lg font-bold">{pityLeft}</div>
-              <div className="text-xs text-muted-foreground">lượt tới jackpot</div>
+              <div className="truncate text-xs text-muted-foreground">lượt tới jackpot</div>
             </div>
           </div>
         </div>
