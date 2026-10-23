@@ -344,7 +344,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         ting();
         toast.success(`💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`);
       }
-      const { data: dp, pushed } = pushDueSlots(d0);
+      const { data: dp, pushed } = pushDueSlots(sal.data); // chain salary result so lastSalaryDate persists
       const pet = decayPet(
         dp.petState,
         new Date(),
