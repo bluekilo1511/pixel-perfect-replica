@@ -18,6 +18,7 @@ import {
 import { StudyRoom3D } from "./StudyRoom3D";
 import { JournalModal } from "./JournalModal";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
+import { loadSession, saveSession } from "@/lib/tracker/sessionPersist";
 import { celebrate } from "@/lib/tracker/effects";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
@@ -154,16 +155,26 @@ export function PetWidget() {
     });
   }, []);
 
-  // Pomodoro with the pet (wall-clock based).
-  const [endAt, setEndAt] = useState<number | null>(null);
-  const [left, setLeft] = useState(pomodoroMinutes * 60);
+  // Pomodoro with the pet (wall-clock based). Restored from localStorage so a
+  // session or auto-break survives switching tabs (this widget unmounts there).
+  const [restored] = useState(loadSession);
+  const [endAt, setEndAt] = useState<number | null>(restored.endAt);
+  const [left, setLeft] = useState(() =>
+    restored.endAt
+      ? Math.max(0, Math.ceil((restored.endAt - Date.now()) / 1000))
+      : pomodoroMinutes * 60,
+  );
   const [bossActive, setBossActive] = useState(false);
   const [zen, setZen] = useState(false);
-  const [warmup, setWarmup] = useState(false); // 5-minute anti-procrastination session
+  const [warmup, setWarmup] = useState(restored.warmup); // 5-minute anti-procrastination session
   const warmupRef = useRef(false);
   warmupRef.current = warmup;
-  const [breakEndAt, setBreakEndAt] = useState<number | null>(null);
-  const [breakLeft, setBreakLeft] = useState(breakMinutes * 60);
+  const [breakEndAt, setBreakEndAt] = useState<number | null>(restored.breakEndAt);
+  const [breakLeft, setBreakLeft] = useState(() =>
+    restored.breakEndAt
+      ? Math.max(0, Math.ceil((restored.breakEndAt - Date.now()) / 1000))
+      : breakMinutes * 60,
+  );
   const [journalOpen, setJournalOpen] = useState(false);
   useEffect(() => {
     if (!endAt) setLeft(pomodoroMinutes * 60);
@@ -171,6 +182,11 @@ export function PetWidget() {
   useEffect(() => {
     if (!breakEndAt) setBreakLeft(breakMinutes * 60);
   }, [breakEndAt, breakMinutes]);
+  // Keep the session/break alive across tab switches: this widget unmounts on
+  // inactive tabs, so the wall-clock deadlines are saved to localStorage.
+  useEffect(() => {
+    saveSession(endAt, breakEndAt, warmup);
+  }, [endAt, breakEndAt, warmup]);
   useEffect(() => {
     setFocus(endAt ? left : null);
   }, [endAt, left, setFocus]);
@@ -616,6 +632,8 @@ export function PetWidget() {
         bossActive={bossActive}
         bossHpPct={shownHp}
         strikes={strikes}
+        onBreak={!!breakEndAt}
+        breakLeft={breakLeft}
         onClose={() => setZen(false)}
       />
     </section>
