@@ -1241,29 +1241,38 @@ html.theme-dragon .aurora::after {
   pointer-events: none;
 }
 
-/* Dragon sprite wrapped over the top edge of major panels (feet on the rim) */
+/* Dragon sprite: the new art is one big S-curved dragon. Each surface shows a
+   pre-rotated variant leaning a different way, so the wraps don't all read as
+   the same horizontal pose. */
 html.theme-dragon .glass::before {
   content: "";
   position: absolute;
-  top: -20px;
-  right: -4px;
-  width: 96px;
-  height: 36px;
-  background: url("/dragon-wrap.png") right bottom / contain no-repeat;
+  top: -58px;
+  right: -12px;
+  width: 92px;
+  height: 82px;
+  background: url("/dragon-wrap-up.png") center bottom / contain no-repeat;
   pointer-events: none;
   z-index: 6;
   filter: drop-shadow(0 2px 5px rgb(2 6 23 / 0.5));
   animation: dragon-float 6s ease-in-out infinite;
 }
 
-/* Header name plate: a bigger dragon crawling along the top edge */
-html.theme-dragon header.glass::before {
-  top: -20px;
-  right: 10px;
-  width: 130px;
-  height: 34px;
+/* Every other panel leans the dragon the opposite way, over its left corner */
+html.theme-dragon .glass:nth-child(even)::before {
+  right: auto;
+  left: -12px;
+  background-image: url("/dragon-wrap-down.png");
 }
 
+/* Header name plate: the dragon stretched out, gliding along the top edge */
+html.theme-dragon header.glass::before {
+  top: -40px;
+  right: 16px;
+  width: 158px;
+  height: 72px;
+  background-image: url("/dragon-wrap-lay.png");
+}
 
 /* Primary buttons keep the shimmering dragon-scale ring around them */
 html.theme-dragon button.bg-primary:not(:disabled)::before {
@@ -1324,18 +1333,18 @@ html.theme-dragon.fx-lite button.bg-primary:not(:disabled)::before {
   animation: none;
 }
 
-/* Primary buttons: a small dragon perched on the top-right corner */
+/* Primary buttons: a small dragon curled over the top-right corner */
 html.theme-dragon button.bg-primary:not(:disabled) {
   position: relative;
 }
 html.theme-dragon button.bg-primary:not(:disabled)::after {
   content: "";
   position: absolute;
-  top: -12px;
-  right: -2px;
-  width: 42px;
-  height: 15px;
-  background: url("/dragon-wrap.png") right bottom / contain no-repeat;
+  top: -22px;
+  right: -6px;
+  width: 44px;
+  height: 28px;
+  background: url("/dragon-wrap-down.png") center bottom / contain no-repeat;
   pointer-events: none;
   filter: drop-shadow(0 1px 3px rgb(2 6 23 / 0.5));
   animation: dragon-float 7s ease-in-out infinite;
@@ -1359,4 +1368,27 @@ html.theme-dragon button.bg-primary:not(:disabled)::after {
 html.theme-dragon.fx-lite .glass::before,
 html.theme-dragon.fx-lite button.bg-primary:not(:disabled)::after {
   animation: none;
+}
+
+@media (max-width: 640px) {
+  html.theme-dragon .glass::before {
+    top: -40px;
+    right: -8px;
+    width: 64px;
+    height: 58px;
+  }
+  html.theme-dragon .glass:nth-child(even)::before {
+    right: auto;
+    left: -8px;
+  }
+  html.theme-dragon header.glass::before {
+    top: -30px;
+    width: 112px;
+    height: 52px;
+  }
+  html.theme-dragon button.bg-primary:not(:disabled)::after {
+    top: -16px;
+    width: 34px;
+    height: 22px;
+  }
 }
