@@ -1246,6 +1246,27 @@ html.theme-dragon .aurora::after {
   pointer-events: none;
 }
 
+/* The fixed dragon sky still reacts to the weather ecosystem, so pet moods
+   keep reading through: rain dims and cools, snow chills, sun warms. */
+html.theme-dragon .weather-rainy .aurora {
+  filter: saturate(0.55) brightness(0.72) hue-rotate(8deg);
+}
+html.theme-dragon .weather-rainy::after {
+  background: color-mix(in oklab, var(--weather-rain-tint) 40%, transparent);
+}
+html.theme-dragon .weather-snowy .aurora {
+  filter: saturate(0.6) brightness(1.04) hue-rotate(-14deg);
+}
+html.theme-dragon .weather-snowy::after {
+  background: color-mix(in oklab, var(--weather-snow-tint) 36%, transparent);
+}
+html.theme-dragon .weather-sunny .aurora {
+  filter: saturate(1.12) brightness(1.06);
+}
+html.theme-dragon .weather-foggy .aurora {
+  filter: saturate(0.78) brightness(0.88) contrast(0.95);
+}
+
 /* Header name plate: the dragon sits inside the plate, full strength */
 html.theme-dragon header.glass {
   background:
