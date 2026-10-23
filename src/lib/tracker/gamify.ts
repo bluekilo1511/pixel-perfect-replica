@@ -202,7 +202,7 @@ export const MOOD_META: Record<Mood, { face: string; label: string; lines: strin
       "Hôm nay mình học gì nhỉ?",
       "Cố lên nhé, mình ở đây!",
       "Uống nước chưa đó? 💧",
-      "Một Pomodoro nữa thôi!",
+      "Một phiên nữa thôi!",
     ],
   },
   hungry: {

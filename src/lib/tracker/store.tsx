@@ -55,7 +55,7 @@ import {
   shouldNudgeWater,
 } from "./model";
 import { pushDueExtras } from "./tkb";
-import { bossCounterAttack, defeatBoss } from "./boss";
+import { bossCounterAttack, defeatBoss, type DailyBossState } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import { celebrate, evolutionFx, levelUpFx, setFxEnabled, setChime, ting } from "./effects";
 import { CAPSULE_INTERVAL_MS, lastSnapshotAt, saveSnapshot } from "./timeCapsule";
@@ -99,7 +99,11 @@ interface Store {
   dismissLevelUp: () => void;
   dismissEvolution: () => void;
   restore: (raw: unknown) => void;
-  finishPomodoro: (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => void;
+  finishPomodoro: (
+    boss: boolean,
+    minutes: number,
+    kind?: "pomodoro" | "warmup",
+  ) => { bossDue: boolean };
   bossCancel: () => void;
   claimAchievement: (id: AchievementId) => boolean;
   dismissBackupReminder: () => void;
@@ -424,11 +428,15 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
 
   const finishPomodoro = (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => {
     const cur = dataRef.current;
-    const game = boss
+    const today = dateStr(new Date());
+    // One daily-boss reward per day: tasks may already have defeated it.
+    const bossDue = boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
+    const game = bossDue
       ? defeatBoss(cur.game)
       : { ...cur.game, catCoins: cur.game.catCoins + POMODORO_REWARD };
+    const dailyBoss: DailyBossState = boss ? { date: today, defeated: true } : cur.dailyBoss;
     const r = completePomodoroSession(
-      { ...cur, game, petState: bumpPet(cur.petState, 0, 10) },
+      { ...cur, game, petState: bumpPet(cur.petState, 0, 10), dailyBoss },
       minutes,
       undefined,
       kind,
@@ -440,6 +448,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       });
     } else setData(r.data);
     announceAchievements(r.fresh);
+    return { bossDue };
   };
   const bossCancel = () => setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
   const claimAchievement = (id: AchievementId) => {

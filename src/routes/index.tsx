@@ -144,7 +144,7 @@ function Index() {
   return (
     <TrackerProvider>
       <App />
-      <Toaster position="top-center" />
+      <Toaster position="top-center" expand visibleToasts={5} gap={10} />
     </TrackerProvider>
   );
 }

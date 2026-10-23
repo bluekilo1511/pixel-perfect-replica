@@ -53,7 +53,7 @@ export const QUEST_POOL: QuestDef[] = [
     id: "pomo2",
     emoji: "🍅",
     name: "Đôi Cà Chua",
-    desc: "Hoàn thành 2 phiên Pomodoro",
+    desc: "Hoàn thành 2 phiên tập trung",
     metric: "pomodoros",
     target: 2,
     reward: { catCoins: 2, lizardGems: 0 },

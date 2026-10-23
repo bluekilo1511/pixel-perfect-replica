@@ -45,6 +45,13 @@ import {
   type RaidState,
 } from "./quests";
 import {
+  BOSS_MAX_HP,
+  DAILY_BOSS_TASK_DAMAGE,
+  defaultDailyBoss,
+  defeatBoss,
+  type DailyBossState,
+} from "./boss";
+import {
   defaultExams,
   newExamId,
   normalizeExamScores,
@@ -216,6 +223,7 @@ export interface AppData {
   backup: { lastBackupAt: string | null; lastReminderAt: string | null };
   quests: QuestsState;
   raid: RaidState;
+  dailyBoss: DailyBossState;
   exams: ExamEvent[];
   examScores: ExamScore[]; // per-subject test scores (see exams.ts)
   templates: TaskTemplate[];
@@ -340,6 +348,7 @@ export function defaultData(): AppData {
     backup: { lastBackupAt: null, lastReminderAt: null },
     quests: defaultQuests(),
     raid: defaultRaid(),
+    dailyBoss: defaultDailyBoss(),
     exams: defaultExams(),
     examScores: [],
     gradeBook: [],
@@ -624,6 +633,7 @@ export function migrate(raw: unknown): AppData {
   const backupRaw = obj(r.backup);
   const questsRaw = obj(r.quests);
   const raidRaw = obj(r.raid);
+  const dailyBossRaw = obj(r.dailyBoss);
   return {
     ...(rest as Partial<AppData>),
     app: "local-task-tracker-pro",
@@ -678,6 +688,10 @@ export function migrate(raw: unknown): AppData {
     raid: {
       weekStart: typeof raidRaw.weekStart === "string" ? raidRaw.weekStart : null,
       claimed: raidRaw.claimed === true,
+    },
+    dailyBoss: {
+      date: typeof dailyBossRaw.date === "string" ? dailyBossRaw.date : null,
+      defeated: dailyBossRaw.defeated === true,
     },
     exams: normalizeExams(r.exams),
     examScores: normalizeExamScores(r.examScores),
@@ -854,6 +868,7 @@ export interface CompleteResult {
   petEvolved: boolean;
   petLevels: number;
   fresh: AchievementId[];
+  bossDefeated: boolean;
 }
 
 export function addMaterial(data: AppData, id: MaterialId | null, n = 1): AppData {
@@ -917,12 +932,20 @@ export function completeTask(
       petEvolved: false,
       petLevels: 0,
       fresh: [],
+      bossDefeated: false,
     };
   const r = rewardFor(task.kind);
   const today = dateStr(now);
   const mult = streakMultiplier(data.streak.count);
   const earned = Math.round(r.xp * mult * xpMult);
   const { game, levelsGained } = addXp(data.game, earned);
+  // Daily boss: every completed task deals damage (5 tasks defeat it, reward once/day).
+  const tasksToday = (data.dailyStats[today]?.tasks ?? 0) + 1;
+  const prevBoss: DailyBossState =
+    data.dailyBoss.date === today ? data.dailyBoss : defaultDailyBoss();
+  const bossDefeated = !prevBoss.defeated && tasksToday * DAILY_BOSS_TASK_DAMAGE >= BOSS_MAX_HP;
+  const dailyBoss: DailyBossState = { date: today, defeated: prevBoss.defeated || bossDefeated };
+  const gameBoss = bossDefeated ? defeatBoss(game) : game;
   const pet = addPetXp(bumpPet(data.petState, 0, 5), earned);
   const drop = rollDrop(rng);
   const pomodoroPatch = task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {};
@@ -937,11 +960,12 @@ export function completeTask(
       tasks: 1,
       ...(task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {}),
     }),
+    dailyBoss,
     game: {
-      ...game,
-      catCoins: game.catCoins + r.cat,
-      lizardGems: game.lizardGems + r.lizard,
-      spinTickets: game.spinTickets + r.spins,
+      ...gameBoss,
+      catCoins: gameBoss.catCoins + r.cat,
+      lizardGems: gameBoss.lizardGems + r.lizard,
+      spinTickets: gameBoss.spinTickets + r.spins,
     },
     tasks: data.tasks.map((t) =>
       t.id === taskId
@@ -975,6 +999,7 @@ export function completeTask(
     petEvolved: pet.evolved,
     petLevels: pet.levelsGained,
     fresh: ach.fresh,
+    bossDefeated,
     data: ach.data,
   };
 }

@@ -219,7 +219,7 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
   firstFocus: {
     emoji: "🍅",
     name: "Tia Lửa Đầu Tiên",
-    desc: "Hoàn thành 1 phiên Pomodoro.",
+    desc: "Hoàn thành 1 phiên tập trung.",
     clue: "Mọi hành trình bắt đầu bằng một tiếng tích tắc…",
     constellation: "eagle",
   },
@@ -233,14 +233,14 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
   nightOwl: {
     emoji: "🦉",
     name: "Cú Đêm",
-    desc: "Hoàn thành task/Pomodoro trong khoảng 1h–4h sáng.",
+    desc: "Hoàn thành task/phiên tập trung trong khoảng 1h–4h sáng.",
     clue: "Khi cả thành phố đã ngủ say…",
     constellation: "eagle",
   },
   pomo10: {
     emoji: "🔥",
     name: "Mười Ngọn Đuốc",
-    desc: "Hoàn thành 10 phiên Pomodoro.",
+    desc: "Hoàn thành 10 phiên tập trung.",
     clue: "Mười lần thắp lửa, không lần nào tắt.",
     constellation: "eagle",
   },
@@ -254,7 +254,7 @@ export const ACHIEVEMENTS: Record<AchievementId, AchievementDef> = {
   pomo25: {
     emoji: "⚡",
     name: "Tia Sét Tập Trung",
-    desc: "Hoàn thành 25 phiên Pomodoro.",
+    desc: "Hoàn thành 25 phiên tập trung.",
     clue: "Hai mươi lăm tia sét xé toạc xao nhãng.",
     constellation: "eagle",
   },

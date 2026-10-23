@@ -22,7 +22,13 @@ import { celebrate } from "@/lib/tracker/effects";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BOSS_MAX_HP, BOSS_REWARD, bossHp } from "@/lib/tracker/boss";
+import {
+  BOSS_MAX_HP,
+  BOSS_REWARD,
+  DAILY_BOSS_TASK_DAMAGE,
+  bossHp,
+  dailyBossHpLeft,
+} from "@/lib/tracker/boss";
 import {
   ADVANCED_LINES,
   petEmoji,
@@ -177,6 +183,9 @@ export function PetWidget() {
   const endAtRef = useRef(endAt);
   endAtRef.current = endAt;
   const hp = bossHp(left, pomodoroMinutes * 60);
+  const today = dateStr();
+  const tasksToday = data.dailyStats[today]?.tasks ?? 0;
+  const bossTaskHp = dailyBossHpLeft(data.dailyBoss, today, tasksToday);
   // Fresh session, fresh break-in counter.
   useEffect(() => {
     if (endAt) {
@@ -215,7 +224,11 @@ export function PetWidget() {
           toast.error("🚨 Phá đò 3 lần — phiên này không được tính, thử lại nhé!");
           say("Lần này tập trung thật nhé… 😤");
         } else {
-          finishPomodoro(boss, wasWarmup ? 5 : pomodoroMinutes, wasWarmup ? "warmup" : "pomodoro");
+          const res = finishPomodoro(
+            boss,
+            wasWarmup ? 5 : pomodoroMinutes,
+            wasWarmup ? "warmup" : "pomodoro",
+          );
           celebrate();
           fireFlashbang("done");
           if (wasWarmup) {
@@ -224,9 +237,13 @@ export function PetWidget() {
           } else if (boss) {
             celebrate();
             ting(true);
-            toast.success(
-              `⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
-            );
+            if (res.bossDue) {
+              toast.success(
+                `⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
+              );
+            } else {
+              toast("⚔️ Boss hôm nay đã gục nhờ nhiệm vụ rồi — phiên này nhận thưởng thường 🍅");
+            }
             if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
           } else {
             toast.success(`🍅 Xong phiên học cùng thú cưng! +${POMODORO_REWARD} 😺`);
@@ -432,7 +449,7 @@ export function PetWidget() {
                     setEndAt(Date.now() + left * 1000);
                     say(`Cùng tập trung ${pomodoroMinutes} phút nhé! 📚`);
                   }}
-                >{`🍅 Pomodoro ${pomodoroMinutes}p`}</Button>
+                >{`🍅 Tập trung ${pomodoroMinutes}p`}</Button>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -503,6 +520,9 @@ export function PetWidget() {
                 onChange={(e) => setBossActive(e.target.checked)}
               />
               ⚔️ Thách đấu Boss
+              <span className="sr-only">
+                (Nhiệm vụ hoàn thành hôm nay cũng gây sát thương Boss: 5 nhiệm vụ = hạ Boss)
+              </span>
             </label>
           </div>
           <AmbientControl />
@@ -528,6 +548,13 @@ export function PetWidget() {
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 Thắng: x2 thưởng ({BOSS_REWARD.catCoins} 😺 + {BOSS_REWARD.lizardGems} 🦎). Bỏ cuộc:
                 Boss phản đòn −15% 💖.
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                🗡 Nhiệm vụ hôm nay cũng bắn Boss:{" "}
+                {Math.min(BOSS_MAX_HP, tasksToday * DAILY_BOSS_TASK_DAMAGE)}/{BOSS_MAX_HP} HP
+                {bossTaskHp === 0
+                  ? " — Boss đã gục! 💀"
+                  : ` (còn cần ${Math.ceil(bossTaskHp / DAILY_BOSS_TASK_DAMAGE)} nhiệm vụ)`}
               </p>
             </div>
           )}

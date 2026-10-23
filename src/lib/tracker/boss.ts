@@ -28,3 +28,21 @@ export function defeatBoss<G extends { catCoins: number; lizardGems: number }>(g
 
 export const bossCounterAttack = (pet: PetState): PetState =>
   bumpPet(pet, 0, -BOSS_COUNTER_HAPPINESS);
+
+// ---- Daily boss: completed tasks deal damage too, one reward per day ----
+export const DAILY_BOSS_TASK_DAMAGE = 20; // 5 tasks defeat the daily boss
+export interface DailyBossState {
+  date: string | null;
+  defeated: boolean;
+}
+export const defaultDailyBoss = (): DailyBossState => ({ date: null, defeated: false });
+
+/** HP left on the daily boss from tasks completed today (100 → 0). */
+export function dailyBossHpLeft(
+  boss: DailyBossState,
+  today: string,
+  tasksDoneToday: number,
+): number {
+  if (boss.date === today && boss.defeated) return 0;
+  return Math.max(0, BOSS_MAX_HP - tasksDoneToday * DAILY_BOSS_TASK_DAMAGE);
+}
