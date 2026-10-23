@@ -1249,12 +1249,12 @@ html.theme-dragon .aurora::after {
 /* Header name plate: the dragon sits inside the plate, full strength */
 html.theme-dragon header.glass {
   background:
-    var(--card) url("/dragon-wrap-lay.png") right center / auto 92% no-repeat;
+    var(--card) url("/dragon-plate.jpg") right 35% / cover no-repeat;
 }
 @media (max-width: 640px) {
   html.theme-dragon header.glass {
     background:
-      var(--card) url("/dragon-wrap-lay.png") right center / auto 70% no-repeat;
+      var(--card) url("/dragon-plate.jpg") right center / cover no-repeat;
   }
 }
 
