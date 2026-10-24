@@ -1402,3 +1402,16 @@ html.theme-dragon button.bg-primary:not(:disabled) {
     animation: none;
   }
 }
+
+@media (max-width: 640px) {
+  /* not enough horizontal room for 7 always-on labels on a phone: hover/active only */
+  .zodiac-star-label {
+    font-size: 9.5px;
+    opacity: 0;
+  }
+  .zodiac-star:hover .zodiac-star-label,
+  .zodiac-star[data-state="active"] .zodiac-star-label,
+  .zodiac-star:focus-visible .zodiac-star-label {
+    opacity: 1;
+  }
+}
