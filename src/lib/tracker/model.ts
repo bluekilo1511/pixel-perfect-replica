@@ -199,7 +199,6 @@ export interface AppSettings {
   navZodiac: string; // constellation id shown by the tab navigation sky
   navZodiacAuto: boolean; // pick the constellation automatically from the birthday
   birthday: string | null; // "YYYY-MM-DD", used by navZodiacAuto and nothing else
-  personalStar: { name: string; x: number; y: number }; // the user's own star in the nav sky
   admin: boolean; // admin test mode: trial data in memory, backup download locked
   dragonTheme: boolean; // dragon skin: shimmering dragon-scale borders on buttons + starry-sky background
 }
@@ -330,7 +329,6 @@ export function defaultSettings(): AppSettings {
     navZodiac: DEFAULT_ZODIAC_ID,
     navZodiacAuto: false,
     birthday: null,
-    personalStar: { name: "", x: 92, y: 18 },
     admin: false,
     dragonTheme: false,
   };
@@ -470,18 +468,6 @@ export function normalizeExtraSchedule(input: unknown): ExtraScheduleItem[] {
 }
 
 /** Accepts any old/new JSON and fills missing fields without losing old tasks. */
-const clampPct = (v: unknown, d: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : d;
-
-export function normalizePersonalStar(v: unknown): { name: string; x: number; y: number } {
-  const raw = obj(v);
-  return {
-    name: typeof raw.name === "string" ? raw.name.slice(0, 24) : "",
-    x: clampPct(raw.x, 92),
-    y: clampPct(raw.y, 18),
-  };
-}
-
 export type AdminBoostKind = "xp" | "catCoins" | "lizardGems" | "spinTickets" | "streak" | "petXp";
 const ADMIN_KINDS: AdminBoostKind[] = [
   "xp",
@@ -642,7 +628,6 @@ export function migrate(raw: unknown): AppData {
       typeof rawSettings.birthday === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawSettings.birthday)
         ? rawSettings.birthday
         : null,
-    personalStar: normalizePersonalStar(rawSettings.personalStar),
     admin: rawSettings.admin === true,
   };
   const backupRaw = obj(r.backup);
