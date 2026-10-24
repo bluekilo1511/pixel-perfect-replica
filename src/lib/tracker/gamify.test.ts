@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toggleRestDay } from "./gamify";
+import { toggleRestDay, normalizeAccessories, ACCESSORY_SLOT } from "./gamify";
 import {
   checkStreak,
   decayPet,
@@ -144,5 +144,61 @@ describe("gamification rules", () => {
     });
     expect(upcomingSlots(d, new Date(2026, 9, 18, 7, 25))).toHaveLength(1);
     expect(upcomingSlots(d, new Date(2026, 9, 18, 7, 20))).toHaveLength(0);
+  });
+});
+
+describe("accessory slots", () => {
+  it("migrates the old single `accessory` field into its slot", () => {
+    expect(normalizeAccessories({ accessory: "gradcap" })).toEqual({
+      head: "gradcap",
+      face: null,
+      back: null,
+    });
+    expect(normalizeAccessories({ accessory: "sunglasses" })).toEqual({
+      head: null,
+      face: "sunglasses",
+      back: null,
+    });
+    expect(normalizeAccessories({ accessory: "wings" })).toEqual({
+      head: null,
+      face: null,
+      back: "wings",
+    });
+    expect(normalizeAccessories({ accessory: "not-real" })).toEqual({
+      head: null,
+      face: null,
+      back: null,
+    });
+  });
+
+  it("reads the new multi-slot shape and rejects slot mismatches", () => {
+    expect(
+      normalizeAccessories({
+        accessories: { head: "crown", face: "sunglasses", back: "wings" },
+      }),
+    ).toEqual({ head: "crown", face: "sunglasses", back: "wings" });
+    // a lens cannot be worn on the head
+    expect(
+      normalizeAccessories({ accessories: { head: "sunglasses", face: null, back: null } }),
+    ).toEqual({ head: null, face: null, back: null });
+  });
+
+  it("every accessory maps to a valid slot", () => {
+    for (const slot of Object.values(ACCESSORY_SLOT)) {
+      expect(["head", "face", "back"]).toContain(slot);
+    }
+  });
+
+  it("a migrated pet keeps its worn item through migrate", () => {
+    const pet = defaultPet(new Date());
+    const migrated = migrate({
+      ...defaultData(),
+      petState: { ...pet, accessory: "gradcap" },
+    });
+    expect(migrated.petState.accessories).toEqual({
+      head: "gradcap",
+      face: null,
+      back: null,
+    });
   });
 });
