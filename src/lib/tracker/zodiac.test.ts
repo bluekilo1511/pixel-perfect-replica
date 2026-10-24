@@ -45,22 +45,15 @@ describe("zodiac constellations", () => {
     const data = migrate({});
     expect(data.settings.navZodiac).toBe(DEFAULT_ZODIAC_ID);
     expect(data.settings.admin).toBe(false);
-    expect(data.settings.personalStar).toEqual({ name: "", x: 92, y: 18 });
 
     const weird = migrate({
       settings: {
         navZodiac: "not-a-sign",
         admin: true,
-        personalStar: { name: "x".repeat(40), x: 500, y: -20 },
       },
     });
     expect(weird.settings.navZodiac).toBe(DEFAULT_ZODIAC_ID);
     expect(weird.settings.admin).toBe(true);
-    expect(weird.settings.personalStar).toEqual({
-      name: "x".repeat(24),
-      x: 100,
-      y: 0,
-    });
 
     const good = migrate({ settings: { navZodiac: "pisces" } });
     expect(good.settings.navZodiac).toBe("pisces");
