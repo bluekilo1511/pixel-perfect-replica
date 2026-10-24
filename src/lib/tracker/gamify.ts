@@ -95,18 +95,18 @@ export const ACCESSORY_UI: Record<AccessorySlot, Record<Species, string>> = {
     whale: "top-[34%] left-1/2 -translate-x-1/2 text-6xl opacity-90",
   },
   head: {
-    cat: "-top-6 left-[47%] text-4xl",
-    lizard: "-top-7 left-[45%] text-4xl",
-    dog: "-top-6 left-[47%] text-4xl",
-    owl: "-top-4 left-1/2 text-4xl",
-    whale: "-top-7 left-[38%] text-4xl",
+    cat: "-top-6 left-1/2 -translate-x-1/2 text-4xl",
+    lizard: "-top-7 left-[42%] -translate-x-1/2 text-4xl",
+    dog: "-top-6 left-1/2 -translate-x-1/2 text-4xl",
+    owl: "-top-5 left-1/2 -translate-x-1/2 text-4xl",
+    whale: "-top-6 left-[38%] -translate-x-1/2 text-4xl",
   },
   face: {
-    cat: "top-[27%] left-[50%] text-2xl",
-    lizard: "top-[26%] left-[34%] text-xl",
-    dog: "top-[30%] left-[50%] text-2xl",
-    owl: "top-[24%] left-[47%] text-3xl",
-    whale: "top-[30%] left-[28%] text-xl",
+    cat: "top-[38%] left-1/2 -translate-x-1/2 text-2xl",
+    lizard: "top-[32%] left-[30%] -translate-x-1/2 text-xl",
+    dog: "top-[40%] left-1/2 -translate-x-1/2 text-2xl",
+    owl: "top-[36%] left-1/2 -translate-x-1/2 text-3xl",
+    whale: "top-[42%] left-[36%] -translate-x-1/2 text-2xl",
   },
 };
 
@@ -395,9 +395,6 @@ export function normalizePet(rawInput: unknown, now = new Date()): PetState {
     ownedSpecies: Array.from(new Set<Species>(["cat", ...owned])),
     accessories: normalizeAccessories(raw),
     ownedAccessories,
-    ownedAccessories: Array.isArray(raw.ownedAccessories)
-      ? raw.ownedAccessories.filter((x) => ac.includes(x as Accessory))
-      : [],
     decorOwned,
     decorActive,
     hunger: typeof raw.hunger === "number" ? clamp(raw.hunger) : b.hunger,
