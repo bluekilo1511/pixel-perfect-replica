@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import {
   ACCESSORIES,
+  ACCESSORY_SLOT,
+  ACCESSORY_UI,
   DECORATIONS,
   MOOD_META,
   moodOf,
@@ -331,12 +333,19 @@ export function PetWidget() {
                 {bubble}
               </span>
             )}
-            <span className={`relative text-7xl leading-none ${anim}`}>
-              {petForm}
-              {pet.accessory && (
-                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-4xl">
-                  {ACCESSORIES[pet.accessory].emoji}
+            <span className={`relative block text-7xl leading-none ${anim}`}>
+              {pet.accessories.back && (
+                <span className={`absolute ${ACCESSORY_UI.back[pet.species]}`} aria-hidden>
+                  {ACCESSORIES[pet.accessories.back].emoji}
                 </span>
+              )}
+              <span className="relative">{petForm}</span>
+              {(["head", "face"] as const).map((slot) =>
+                pet.accessories[slot] ? (
+                  <span key={slot} className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}>
+                    {ACCESSORIES[pet.accessories[slot]!].emoji}
+                  </span>
+                ) : null,
               )}
             </span>
             <span className="absolute -bottom-1 -right-1 rounded-full bg-card px-2 py-0.5 text-lg">
@@ -350,7 +359,8 @@ export function PetWidget() {
           >
             <StudyRoom3D
               decor={pet.decorActive}
-              petEmoji={petForm}
+              species={pet.species}
+              accessories={pet.accessories}
               batterySaver={data.settings.batterySaver}
               onShelfClick={() => setJournalOpen(true)}
               onStow={(id) =>
