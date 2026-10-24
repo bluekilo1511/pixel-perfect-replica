@@ -528,79 +528,6 @@
   }
 }
 
-.personal-star {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: none;
-  padding: 0;
-  cursor: grab;
-  touch-action: none;
-  z-index: 61;
-  background: radial-gradient(circle, #ffd76a 0 35%, #f5a623 60%, transparent 72%);
-  box-shadow:
-    0 0 10px color-mix(in oklab, #f5a623 80%, transparent),
-    0 0 22px color-mix(in oklab, #ffd76a 45%, transparent);
-  animation: star-twinkle 4s ease-in-out infinite;
-}
-.personal-star:active {
-  cursor: grabbing;
-}
-.personal-star-editor {
-  position: fixed;
-  left: 12px;
-  bottom: 12px;
-  z-index: 60;
-  max-height: min(340px, 62vh);
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: min(270px, 72%);
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: var(--glass-shadow);
-}
-.personal-star-editor input {
-  font-size: 12px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--foreground);
-}
-.personal-star-presets {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.personal-star-presets button {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--muted-foreground);
-}
-.personal-star-presets button:hover {
-  color: var(--foreground);
-  border-color: var(--primary);
-}
-.personal-star-editor-note {
-  font-size: 10px;
-  color: var(--muted-foreground);
-}
-.personal-star-close {
-  align-self: flex-end;
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
 @media (max-width: 640px) {
   .zodiac-sky {
     height: 116px;
@@ -611,8 +538,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .zodiac-aurora,
-  .zodiac-star .star-node,
-  .personal-star {
+  .zodiac-star .star-node {
     animation: none;
   }
 }
