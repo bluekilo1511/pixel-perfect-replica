@@ -484,17 +484,17 @@
   display: none;
 }
 .zodiac-star:hover {
-  color: var(--foreground);
-  background: color-mix(in oklab, var(--card) 40%, transparent);
+  color: oklch(0.99 0.008 230);
 }
+/* Active tab: no box - the 8-point star itself lights up and glows */
 .zodiac-star[data-state="active"] {
-  color: var(--foreground);
-  background: color-mix(in oklab, var(--card) 70%, transparent);
-  border-color: var(--border);
-  box-shadow: var(--glass-shadow);
+  color: #fff;
+  background: radial-gradient(circle, oklch(0.9 0.09 85 / 0.2), transparent 70%);
+  border-color: transparent;
+  box-shadow: none;
 }
 .zodiac-star[data-state="active"] .star-node {
-  filter: drop-shadow(0 0 6px var(--primary));
+  color: #fff;
   animation: none;
 }
 .zodiac-star-label {
@@ -1366,20 +1366,37 @@ html.theme-dragon button.bg-primary:not(:disabled) {
 /* ---- Visibility pass: inactive stars must read clearly against the aurora ---- */
 .zodiac-star .star-node {
   color: oklch(0.95 0.03 220);
-  background: radial-gradient(
-    circle,
-    oklch(0.2 0.07 255 / 0.5) 0%,
-    oklch(0.2 0.07 255 / 0.32) 55%,
-    transparent 78%
-  );
-  border-radius: 50%;
   animation: star-twinkle-strong 6s ease-in-out infinite;
   animation-delay: var(--tw);
 }
-.zodiac-star[data-state="active"] .star-node {
-  animation: none;
-  color: var(--foreground);
-  filter: drop-shadow(0 0 6px var(--primary));
+/* 8-point star behind each tab icon - lit gold only on the active tab */
+.zodiac-star .star-node::before {
+  display: block;
+  content: "";
+  position: absolute;
+  inset: -58%;
+  background: radial-gradient(circle, #fff6d8 0 32%, #ffd76a 66%, transparent 76%);
+  clip-path: polygon(50% 0%, 57.7% 31.5%, 85.4% 14.6%, 68.5% 42.3%, 100% 50%, 68.5% 57.7%, 85.4% 85.4%, 57.7% 68.5%, 50% 100%, 42.3% 68.5%, 14.6% 85.4%, 31.5% 57.7%, 0% 50%, 31.5% 42.3%, 14.6% 14.6%, 42.3% 31.5%);
+  opacity: 0.5;
+  filter: drop-shadow(0 0 3px rgb(255 215 106 / 0.65));
+  transition: opacity 0.2s ease;
+}
+.zodiac-star:hover .star-node::before {
+  opacity: 0.75;
+}
+.zodiac-star[data-state="active"] .star-node::before {
+  opacity: 1;
+  animation: active-star-glow 2.4s ease-in-out infinite alternate;
+}
+@keyframes active-star-glow {
+  from {
+    filter: drop-shadow(0 0 5px rgb(255 215 106 / 0.85));
+  }
+  to {
+    filter:
+      drop-shadow(0 0 9px rgb(255 215 106 / 1))
+      drop-shadow(0 0 18px rgb(255 215 106 / 0.75));
+  }
 }
 @keyframes star-twinkle-strong {
   0%,
@@ -1402,7 +1419,8 @@ html.theme-dragon button.bg-primary:not(:disabled) {
     0 0 10px oklch(0 0 0 / 65%);
 }
 @media (prefers-reduced-motion: reduce) {
-  .zodiac-star .star-node {
+  .zodiac-star .star-node,
+  .zodiac-star .star-node::before {
     animation: none;
   }
 }
@@ -1421,8 +1439,8 @@ html.theme-dragon button.bg-primary:not(:disabled) {
 }
 
 /* ============================================================
-   Star season: bright nav sky, button sparkles, streak stars,
-   catchable shooting star
+   Star season: bright nav sky, glowing 8-point active tab star,
+   button sparkles
    ============================================================ */
 
 /* The nav sky keeps its classic bright aurora even during the night band */
@@ -1470,60 +1488,6 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: none;
 }
 
-/* Streak constellation: one little star per 10 streak days */
-.streak-stars {
-  position: absolute;
-  right: 12px;
-  bottom: 8px;
-  z-index: 4;
-  display: flex;
-  gap: 4px;
-  pointer-events: none;
-}
-.streak-stars span {
-  width: 8px;
-  height: 8px;
-  background: color-mix(in oklab, var(--foreground) 22%, transparent);
-  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
-}
-.streak-stars span.lit {
-  background: #ffd76a;
-  filter: drop-shadow(0 0 3px rgb(255 215 106 / 0.9));
-}
-
-/* Catchable shooting star */
-.shooting-star {
-  position: absolute;
-  left: -34px;
-  z-index: 4;
-  width: 30px;
-  height: 3px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, transparent, #ffd76a);
-  box-shadow: 0 0 8px rgb(255 215 106 / 0.8);
-  cursor: pointer;
-  animation: shoot-fly 5.2s linear forwards;
-}
-.shooting-star::before {
-  content: "";
-  position: absolute;
-  right: -4px;
-  top: -4px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 35%, #ffd76a 70%, transparent 80%);
-  filter: drop-shadow(0 0 6px rgb(255 215 106 / 0.95));
-}
-@keyframes shoot-fly {
-  from {
-    transform: translateX(0) translateY(0);
-  }
-  to {
-    /* travel inside the sky band only - never clipped at the edges */
-    transform: translateX(var(--fly-x, 70vw)) translateY(46px);
-  }
-}
 
 /* ---- Sky band readability guarantee: the band is always a dark starry sky,
    so its labels and icons stay light in every theme and time of day ---- */
@@ -1534,7 +1498,4 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
 .zodiac-sky .zodiac-star[data-state="active"],
 .zodiac-sky .zodiac-star:focus-visible {
   color: oklch(0.99 0.008 230);
-  background: oklch(0.3 0.09 262 / 0.78);
-  border-color: oklch(0.78 0.1 230 / 0.55);
-  box-shadow: 0 0 14px -4px oklch(0.7 0.12 230 / 0.65);
 }
