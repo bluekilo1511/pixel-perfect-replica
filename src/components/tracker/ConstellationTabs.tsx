@@ -8,12 +8,9 @@ import {
   Newspaper,
   Settings,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTracker } from "@/lib/tracker/store";
 import { zodiacById, zodiacForBirthday, type NavTabKey } from "@/lib/tracker/zodiac";
-import { dateStr } from "@/lib/tracker/model";
-import { SHOOTING_STAR_REWARD, catchesRemaining, recordCatch } from "@/lib/tracker/shootingStar";
 
 const items = [
   { value: "today", label: "Hôm nay", icon: Check },
@@ -77,42 +74,6 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
   })();
   const zodiac = birthdayZodiac ?? zodiacById(s.navZodiac);
   const personal = s.personalStar;
-
-  // Streak constellation: one little star lights up every 10 streak days (display only).
-  const streakLit = Math.min(6, Math.floor(data.streak.count / 10));
-
-  // Shooting star: spawns every few minutes when catches remain; +3 coins per catch.
-  const [shoot, setShoot] = useState<{ top: number; fly: number; key: number } | null>(
-    null,
-  );
-  const catchRef = useRef(data.shootingStar);
-  catchRef.current = data.shootingStar;
-  useEffect(() => {
-    if (shoot) return;
-    if (catchesRemaining(catchRef.current, dateStr()) <= 0) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setTimeout(() => {
-      const w = nav.current?.getBoundingClientRect().width ?? window.innerWidth;
-      // keep the whole flight inside the sky band: no clipping at the edges
-      setShoot({
-        top: 10 + Math.round(Math.random() * 40),
-        fly: Math.max(220, Math.round(w) - 44),
-        key: Date.now(),
-      });
-    }, 90000 + Math.random() * 180000);
-    return () => clearTimeout(t);
-  }, [shoot]);
-  const catchStar = () => {
-    const next = recordCatch(catchRef.current, dateStr());
-    setShoot(null);
-    if (!next) return;
-    update((d) => ({
-      ...d,
-      shootingStar: next,
-      game: { ...d.game, catCoins: d.game.catCoins + SHOOTING_STAR_REWARD },
-    }));
-    toast.success(`☄️ Bắt được sao băng! +${SHOOTING_STAR_REWARD} xu`);
-  };
 
   // Personal star: drag on desktop (committed on release), click opens its editor.
   const [editing, setEditing] = useState(false);
@@ -208,32 +169,6 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
             onPointerUp={onStarUp}
             aria-label="Ngôi sao của bạn"
           />
-          {/* Streak constellation: 6 slots, one lit star per 10 streak days */}
-          <div
-            className="streak-stars"
-            title={`Chuỗi ${data.streak.count} ngày — mỗi 10 ngày thắp 1 sao`}
-            aria-hidden
-          >
-            {Array.from({ length: 6 }, (_, i) => (
-              <span key={i} className={i < streakLit ? "lit" : ""} />
-            ))}
-          </div>
-          {/* Catchable shooting star */}
-          {shoot && (
-            <button
-              type="button"
-              key={shoot.key}
-              className="shooting-star"
-              style={{
-                top: `${shoot.top}%`,
-                ["--fly-x" as string]: `${shoot.fly}px`,
-              }}
-              aria-label="Bắt sao băng"
-              title="Chạm để bắt sao băng!"
-              onClick={catchStar}
-              onAnimationEnd={() => setShoot(null)}
-            />
-          )}
           {editing && (
             <div className="personal-star-editor">
               <div className="text-xs font-semibold">⭐ Ngôi sao của bạn</div>
