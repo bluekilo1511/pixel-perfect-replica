@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import {
   ACCESSORIES,
+  ACCESSORY_SLOT,
   buyDecor,
   bumpPet,
   CONSUMABLES,
@@ -100,7 +101,7 @@ export function PetShop() {
         petState: {
           ...d.petState,
           ownedAccessories: [...d.petState.ownedAccessories, ac],
-          accessory: ac,
+          accessories: { ...d.petState.accessories, [ACCESSORY_SLOT[ac]]: ac },
         },
       };
     });
@@ -243,14 +244,14 @@ export function PetShop() {
             );
           })}
         </ul>
-        <h3 className="mb-2 font-semibold">Phụ kiện đội đầu</h3>
+        <h3 className="mb-2 font-semibold">Phụ kiện (mỗi slot một món: đầu / mặt / lưng)</h3>
         <ul className="mb-5 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {(Object.keys(ACCESSORIES) as Accessory[])
             .filter((ac) => !ACCESSORIES[ac].craftOnly || pet.ownedAccessories.includes(ac))
             .map((ac) => {
               const m = ACCESSORIES[ac];
               const owned = pet.ownedAccessories.includes(ac);
-              const worn = pet.accessory === ac;
+              const worn = pet.accessories[ACCESSORY_SLOT[ac]] === ac;
               return (
                 <li
                   key={ac}
@@ -265,7 +266,13 @@ export function PetShop() {
                       onClick={() =>
                         update((d) => ({
                           ...d,
-                          petState: { ...d.petState, accessory: worn ? null : ac },
+                          petState: {
+                            ...d.petState,
+                            accessories: {
+                              ...d.petState.accessories,
+                              [ACCESSORY_SLOT[ac]]: worn ? null : ac,
+                            },
+                          },
                         }))
                       }
                     >
@@ -282,7 +289,7 @@ export function PetShop() {
                             petState: {
                               ...d.petState,
                               ownedAccessories: [...d.petState.ownedAccessories, ac],
-                              accessory: ac,
+                              accessories: { ...d.petState.accessories, [ACCESSORY_SLOT[ac]]: ac },
                             },
                           }),
                           `Đã mua ${m.emoji} ${m.name}!`,
