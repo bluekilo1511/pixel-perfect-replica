@@ -359,8 +359,7 @@ export function PetWidget() {
           >
             <StudyRoom3D
               decor={pet.decorActive}
-              species={pet.species}
-              accessories={pet.accessories}
+              petEmoji={petForm}
               batterySaver={data.settings.batterySaver}
               onShelfClick={() => setJournalOpen(true)}
               onStow={(id) =>
