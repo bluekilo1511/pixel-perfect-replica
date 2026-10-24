@@ -82,16 +82,24 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
   const streakLit = Math.min(6, Math.floor(data.streak.count / 10));
 
   // Shooting star: spawns every few minutes when catches remain; +3 coins per catch.
-  const [shoot, setShoot] = useState<{ top: number; key: number } | null>(null);
+  const [shoot, setShoot] = useState<{ top: number; fly: number; key: number } | null>(
+    null,
+  );
   const catchRef = useRef(data.shootingStar);
   catchRef.current = data.shootingStar;
   useEffect(() => {
     if (shoot) return;
     if (catchesRemaining(catchRef.current, dateStr()) <= 0) return;
-    const t = setTimeout(
-      () => setShoot({ top: 12 + Math.round(Math.random() * 50), key: Date.now() }),
-      90000 + Math.random() * 180000,
-    );
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setTimeout(() => {
+      const w = nav.current?.getBoundingClientRect().width ?? window.innerWidth;
+      // keep the whole flight inside the sky band: no clipping at the edges
+      setShoot({
+        top: 10 + Math.round(Math.random() * 40),
+        fly: Math.max(220, Math.round(w) - 44),
+        key: Date.now(),
+      });
+    }, 90000 + Math.random() * 180000);
     return () => clearTimeout(t);
   }, [shoot]);
   const catchStar = () => {
@@ -216,7 +224,10 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
               type="button"
               key={shoot.key}
               className="shooting-star"
-              style={{ top: `${shoot.top}%` }}
+              style={{
+                top: `${shoot.top}%`,
+                ["--fly-x" as string]: `${shoot.fly}px`,
+              }}
               aria-label="Bắt sao băng"
               title="Chạm để bắt sao băng!"
               onClick={catchStar}
@@ -275,3 +286,4 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     </Tabs>
   );
 }
+
