@@ -95,9 +95,10 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     const cx = ((e.clientX - box.left) / box.width) * 100;
     const cy = ((e.clientY - box.top) / box.height) * 100;
     // clamp: keep the star fully inside the sky (no clipping at edges/corners)
+    const PAD = 14;
     setDragPos({
-      x: Math.min(94, Math.max(6, cx)),
-      y: Math.min(90, Math.max(10, cy)),
+      x: Math.min(((box.width - PAD) / box.width) * 100, Math.max((PAD / box.width) * 100, cx)),
+      y: Math.min(((box.height - PAD) / box.height) * 100, Math.max((PAD / box.height) * 100, cy)),
     });
   };
   const onStarUp = () => {
@@ -163,7 +164,11 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
             type="button"
             className="personal-star"
             title={personal.name ? `Ngôi sao của bạn: ${personal.name}` : "Ngôi sao của bạn"}
-            style={{ left: `${starPos.x}%`, top: `${starPos.y}%` }}
+            style={{
+              // clamp in px so the star can never poke out of the sky on any height
+              left: `max(14px, min(calc(100% - 14px), ${starPos.x}%))`,
+              top: `max(14px, min(calc(100% - 14px), ${starPos.y}%))`,
+            }}
             onPointerDown={onStarDown}
             onPointerMove={onStarMove}
             onPointerUp={onStarUp}
