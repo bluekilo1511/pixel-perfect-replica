@@ -3,6 +3,20 @@ import type { Materials } from "./extras";
 
 export type Species = "cat" | "lizard" | "dog" | "owl" | "whale";
 export type Accessory = "gradcap" | "sunglasses" | "crown" | "wings";
+export type AccessorySlot = "head" | "face" | "back";
+/** Which slot each accessory occupies — the pet can wear one item per slot at the same time. */
+export const ACCESSORY_SLOT: Record<Accessory, AccessorySlot> = {
+  gradcap: "head",
+  crown: "head",
+  sunglasses: "face",
+  wings: "back",
+};
+export const ACCESSORY_SLOTS: AccessorySlot[] = ["head", "face", "back"];
+export const emptyAccessories = (): Record<AccessorySlot, Accessory | null> => ({
+  head: null,
+  face: null,
+  back: null,
+});
 export type DecorId =
   | "lamp"
   | "plant"
@@ -19,7 +33,7 @@ export type Mood = "excited" | "normal" | "hungry" | "sulky";
 export interface PetState {
   species: Species;
   ownedSpecies: Species[];
-  accessory: Accessory | null;
+  accessories: Record<AccessorySlot, Accessory | null>;
   ownedAccessories: Accessory[];
   decorOwned: DecorId[]; // decorations bought for the pet room
   decorActive: DecorId[]; // placed in the room (max MAX_ACTIVE_DECOR)
@@ -71,6 +85,31 @@ export const ACCESSORIES: Record<
   wings: { emoji: "🪽", name: "Cánh Thiên Thần", price: 0, craftOnly: true },
 };
 
+/** Emoji-overlay placement (Tailwind classes) for each accessory slot, tuned per species glyph. */
+export const ACCESSORY_UI: Record<AccessorySlot, Record<Species, string>> = {
+  back: {
+    cat: "top-[34%] left-1/2 -translate-x-1/2 text-6xl opacity-90",
+    lizard: "top-[34%] left-1/2 -translate-x-1/2 text-6xl opacity-90",
+    dog: "top-[34%] left-1/2 -translate-x-1/2 text-6xl opacity-90",
+    owl: "top-[34%] left-1/2 -translate-x-1/2 text-6xl opacity-90",
+    whale: "top-[34%] left-1/2 -translate-x-1/2 text-6xl opacity-90",
+  },
+  head: {
+    cat: "-top-6 left-[47%] text-4xl",
+    lizard: "-top-7 left-[45%] text-4xl",
+    dog: "-top-6 left-[47%] text-4xl",
+    owl: "-top-4 left-1/2 text-4xl",
+    whale: "-top-7 left-[38%] text-4xl",
+  },
+  face: {
+    cat: "top-[27%] left-[50%] text-2xl",
+    lizard: "top-[26%] left-[34%] text-xl",
+    dog: "top-[30%] left-[50%] text-2xl",
+    owl: "top-[24%] left-[47%] text-3xl",
+    whale: "top-[30%] left-[28%] text-xl",
+  },
+};
+
 export const MAX_ACTIVE_DECOR = 8; // All decorations can be placed at once
 
 /** Pet-room decorations, bought with 🦎 like head accessories. Purely cosmetic. */
@@ -119,11 +158,30 @@ export const CONSUMABLES: Record<
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
+/** Reads accessories from new ({head,face,back}) or old (`accessory`) data — never loses a worn item. */
+export function normalizeAccessories(raw: Record<string, unknown>): Record<AccessorySlot, Accessory | null> {
+  const ac = Object.keys(ACCESSORIES) as Accessory[];
+  const out = emptyAccessories();
+  const rawAc = raw.accessories;
+  if (rawAc && typeof rawAc === "object") {
+    const slots = (rawAc ?? {}) as Record<string, unknown>;
+    for (const slot of ACCESSORY_SLOTS) {
+      const v = slots[slot];
+      if (typeof v === "string" && ac.includes(v as Accessory) && ACCESSORY_SLOT[v as Accessory] === slot)
+        out[slot] = v as Accessory;
+    }
+  } else if (typeof raw.accessory === "string" && ac.includes(raw.accessory as Accessory)) {
+    const legacy = raw.accessory as Accessory;
+    out[ACCESSORY_SLOT[legacy]] = legacy;
+  }
+  return out;
+}
+
 export function defaultPet(now = new Date()): PetState {
   return {
     species: "cat",
     ownedSpecies: ["cat"],
-    accessory: null,
+    accessories: emptyAccessories(),
     ownedAccessories: [],
     decorOwned: [],
     decorActive: [],
@@ -329,10 +387,14 @@ export function normalizePet(rawInput: unknown, now = new Date()): PetState {
   )
     .filter((x) => dec.includes(x) && decorOwned.includes(x))
     .slice(0, MAX_ACTIVE_DECOR);
+  const ownedAccessories = Array.isArray(raw.ownedAccessories)
+    ? raw.ownedAccessories.filter((x) => ac.includes(x as Accessory))
+    : [];
   return {
     species: sp.includes(raw.species as Species) ? (raw.species as Species) : "cat",
     ownedSpecies: Array.from(new Set<Species>(["cat", ...owned])),
-    accessory: ac.includes(raw.accessory as Accessory) ? (raw.accessory as Accessory) : null,
+    accessories: normalizeAccessories(raw),
+    ownedAccessories,
     ownedAccessories: Array.isArray(raw.ownedAccessories)
       ? raw.ownedAccessories.filter((x) => ac.includes(x as Accessory))
       : [],
