@@ -86,9 +86,12 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     if (!d.moved) return;
     const box = nav.current?.getBoundingClientRect();
     if (!box) return;
+    const cx = ((e.clientX - box.left) / box.width) * 100;
+    const cy = ((e.clientY - box.top) / box.height) * 100;
+    // clamp: keep the star fully inside the sky (no clipping at edges/corners)
     setDragPos({
-      x: ((e.clientX - box.left) / box.width) * 100,
-      y: ((e.clientY - box.top) / box.height) * 100,
+      x: Math.min(94, Math.max(6, cx)),
+      y: Math.min(90, Math.max(10, cy)),
     });
   };
   const onStarUp = () => {
