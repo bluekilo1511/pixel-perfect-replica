@@ -68,6 +68,24 @@ const MOODS = [
   { v: 4, emoji: "😪", label: "Kiệt sức" },
 ] as const;
 
+const TODAY_SECTIONS = [
+  { key: "today", label: "🎯 Hôm nay" },
+  { key: "schedule", label: "📅 Lịch & thi" },
+  { key: "goals", label: "📚 Mục tiêu & môn" },
+] as const;
+
+type TodaySectionKey = (typeof TODAY_SECTIONS)[number]["key"];
+
+function readTodaySection(): TodaySectionKey {
+  try {
+    const v = localStorage.getItem("ppr.todaySection");
+    if (v === "schedule" || v === "goals") return v;
+  } catch {
+    /* storage unavailable */
+  }
+  return "today";
+}
+
 function WaterCard() {
   const { data, drinkWater } = useTracker();
   const cups = data.game.water.cups;
@@ -932,93 +950,143 @@ export function TodayPanel() {
         Number(a.completed) - Number(b.completed) || Number(!!b.pinned) - Number(!!a.pinned),
     );
   const done = tasks.filter((t) => t.completed).length;
+  const [section, setSection] = useState<TodaySectionKey>(readTodaySection);
+  const pickSection = (key: TodaySectionKey) => {
+    setSection(key);
+    try {
+      localStorage.setItem("ppr.todaySection", key);
+    } catch {
+      /* storage unavailable */
+    }
+  };
 
   return (
-    <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
-      <div className="space-y-5">
-        <SpecialDaysCard />
-        <NextSlotCard />
-        <TomorrowPrepCard />
-        <WeeklyGoalCard />
-        <WeekReviewCard />
-        <WaterCard />
-        <NotesCard />
-        <ExtraScheduleCard />
-        <SubjectsCard />
-      </div>
-      <div className="space-y-5">
-        <PetWidget />
-        <WeekGoalsCard />
-        <section className="glass p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">✅ Nhiệm vụ cần làm hôm nay</h2>
-            <span className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span
-                className="rounded-full bg-secondary px-2 py-0.5 text-xs"
-                title="Thêm nhanh từ bất kỳ đâu"
-              >
-                ⌨️ Ctrl+K
-              </span>
-              {done}/{tasks.length}
-            </span>
-          </div>
-          <Button
-            variant="outline"
-            className="mb-3 w-full"
-            onClick={() => {
-              if (typeof Notification !== "undefined" && Notification.permission === "default")
-                Notification.requestPermission().catch(() => {});
-              const r = syncTodaySlots(data);
-              if (!r.added) {
-                toast("Lịch hôm nay đã có đủ trong danh sách 👍");
-                return;
-              }
-              update((d) => syncTodaySlots(d).data);
-              toast.success(`Đã nạp ${r.added} mục lịch riêng hôm nay 🗓️`, {
-                description: "Sẽ nhắc bạn trước mỗi mục 5 phút 🔔",
-              });
-            }}
+    <div className="space-y-4">
+      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Hôm nay các nhóm">
+        {TODAY_SECTIONS.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            role="tab"
+            aria-selected={section === s.key}
+            onClick={() => pickSection(s.key)}
+            className={
+              section === s.key
+                ? "shrink-0 rounded-full px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground shadow"
+                : "shrink-0 rounded-full px-4 py-2 text-sm font-medium bg-secondary/60 text-foreground/75 hover:bg-secondary hover:text-foreground"
+            }
           >
-            ⚡ Đồng bộ nhanh lịch riêng hôm nay
-          </Button>
-          <PrepSuggestionBar />
-          <AddTask />
-          <TemplatesCard />
-          {(() => {
-            const open = tasks.filter((t) => !t.completed);
-            const completed = tasks.filter((t) => t.completed);
-            return (
-              <>
-                <ul className="mt-4 space-y-2">
-                  {open.map((t) => (
-                    <TaskRow key={t.id} task={t} />
-                  ))}
-                  {!tasks.length && (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      Chưa có nhiệm vụ nào.
-                    </p>
-                  )}
-                </ul>
-                {completed.length > 0 && (
-                  <div className="mt-4">
-                    <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                      ✓ Đã hoàn thành ({completed.length})
-                    </p>
-                    <ul className="space-y-2">
-                      {completed.map((t) => (
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {section === "today" && (
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
+          <div className="space-y-5">
+            <WaterCard />
+            <NotesCard />
+          </div>
+          <div className="space-y-5">
+            <PetWidget />
+            <section className="glass p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">✅ Nhiệm vụ cần làm hôm nay</h2>
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span
+                    className="rounded-full bg-secondary px-2 py-0.5 text-xs"
+                    title="Thêm nhanh từ bất kỳ đâu"
+                  >
+                    ⌨️ Ctrl+K
+                  </span>
+                  {done}/{tasks.length}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                className="mb-3 w-full"
+                onClick={() => {
+                  if (typeof Notification !== "undefined" && Notification.permission === "default")
+                    Notification.requestPermission().catch(() => {});
+                  const r = syncTodaySlots(data);
+                  if (!r.added) {
+                    toast("Lịch hôm nay đã có đủ trong danh sách 👍");
+                    return;
+                  }
+                  update((d) => syncTodaySlots(d).data);
+                  toast.success(`Đã nạp ${r.added} mục lịch riêng hôm nay 🗓️`, {
+                    description: "Sẽ nhắc bạn trước mỗi mục 5 phút 🔔",
+                  });
+                }}
+              >
+                ⚡ Đồng bộ nhanh lịch riêng hôm nay
+              </Button>
+              <PrepSuggestionBar />
+              <AddTask />
+              <TemplatesCard />
+              {(() => {
+                const open = tasks.filter((t) => !t.completed);
+                const completed = tasks.filter((t) => t.completed);
+                return (
+                  <>
+                    <ul className="mt-4 space-y-2">
+                      {open.map((t) => (
                         <TaskRow key={t.id} task={t} />
                       ))}
+                      {!tasks.length && (
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                          Chưa có nhiệm vụ nào.
+                        </p>
+                      )}
                     </ul>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </section>
-        <ExamCard />
-        <DailyQuestsCard />
-        <RaidBossCard />
-      </div>
+                    {completed.length > 0 && (
+                      <div className="mt-4">
+                        <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                          ✓ Đã hoàn thành ({completed.length})
+                        </p>
+                        <ul className="space-y-2">
+                          {completed.map((t) => (
+                            <TaskRow key={t.id} task={t} />
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </section>
+            <DailyQuestsCard />
+            <RaidBossCard />
+          </div>
+        </div>
+      )}
+
+      {section === "schedule" && (
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
+          <div className="space-y-5">
+            <NextSlotCard />
+            <TomorrowPrepCard />
+            <ExtraScheduleCard />
+          </div>
+          <div className="space-y-5">
+            <ExamCard />
+            <SpecialDaysCard />
+          </div>
+        </div>
+      )}
+
+      {section === "goals" && (
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
+          <div className="space-y-5">
+            <SubjectsCard />
+            <WeeklyGoalCard />
+          </div>
+          <div className="space-y-5">
+            <WeekGoalsCard />
+            <WeekReviewCard />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

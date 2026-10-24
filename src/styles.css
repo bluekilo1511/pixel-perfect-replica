@@ -408,13 +408,15 @@
   width: 100%;
   overflow: hidden;
   border-radius: 14px;
-  border: 1px solid var(--border);
-  background: color-mix(in oklab, var(--card) 55%, transparent);
+  border: 1px solid oklch(0.55 0.12 250 / 0.55);
+  background:
+    radial-gradient(130% 120% at 12% -10%, oklch(0.58 0.14 248 / 0.55), transparent 60%),
+    linear-gradient(180deg, oklch(0.38 0.105 253), oklch(0.27 0.09 265));
   box-shadow: var(--glass-shadow);
 }
 .zodiac-sky {
   position: relative;
-  height: 120px;
+  height: 132px;
 }
 .zodiac-aurora {
   position: absolute;
@@ -437,7 +439,7 @@
   height: 100%;
 }
 .zodiac-lines line {
-  stroke: color-mix(in oklab, var(--primary) 40%, transparent);
+  stroke: color-mix(in oklab, var(--primary) 65%, transparent);
   stroke-width: 1.5;
   stroke-dasharray: 2 3;
   vector-effect: non-scaling-stroke;
@@ -500,12 +502,16 @@
   top: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: oklch(0.98 0.012 225);
   white-space: nowrap;
-  opacity: 0.78;
+  opacity: 0.95;
   pointer-events: none;
   transition: opacity 0.15s ease;
-  text-shadow: 0 1px 4px oklch(0 0 0 / 55%);
+  text-shadow:
+    0 1px 2px oklch(0 0 0 / 80%),
+    0 0 8px oklch(0 0 0 / 55%);
 }
 .zodiac-star:hover .zodiac-star-label,
 .zodiac-star[data-state="active"] .zodiac-star-label,
@@ -597,7 +603,7 @@
 }
 @media (max-width: 640px) {
   .zodiac-sky {
-    height: 100px;
+    height: 116px;
   }
   .zodiac-star-label {
     font-size: 10px;
@@ -1289,13 +1295,11 @@ html.theme-dragon .weather-foggy .aurora {
 
 /* Header name plate: the dragon sits inside the plate, full strength */
 html.theme-dragon header.glass {
-  background:
-    var(--card) url("/dragon-plate.jpg") right 35% / cover no-repeat;
+  background: var(--card) url("/dragon-plate.jpg") right 35% / cover no-repeat;
 }
 @media (max-width: 640px) {
   html.theme-dragon header.glass {
-    background:
-      var(--card) url("/dragon-plate.jpg") right center / cover no-repeat;
+    background: var(--card) url("/dragon-plate.jpg") right center / cover no-repeat;
   }
 }
 
@@ -1307,11 +1311,7 @@ html.theme-dragon button.bg-primary:not(:disabled)::before {
   border-radius: inherit;
   padding: 1.5px;
   background:
-    repeating-conic-gradient(
-        from 0deg,
-        rgb(125 211 252 / 0.35) 0deg 12deg,
-        transparent 12deg 24deg
-      )
+    repeating-conic-gradient(from 0deg, rgb(125 211 252 / 0.35) 0deg 12deg, transparent 12deg 24deg)
       0 0 / 14px 14px,
     linear-gradient(120deg, #38bdf8, #2563eb, #a78bfa, #fbbf24, #38bdf8) 0 0 / 300% 100%;
   -webkit-mask:
@@ -1342,7 +1342,7 @@ html.theme-dragon button.bg-primary:not(:disabled)::before {
     box-shadow:
       0 0 8px -3px rgb(56 189 248 / 0.45),
       inset 0 0 4px -1px rgb(167 139 250 / 0.35);
-    }
+  }
   to {
     box-shadow:
       0 0 14px -2px rgb(167 139 250 / 0.65),
