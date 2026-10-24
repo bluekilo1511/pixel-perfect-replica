@@ -1394,8 +1394,12 @@ html.theme-dragon button.bg-primary:not(:disabled) {
   text-shadow: 0 1px 3px oklch(0 0 0 / 65%);
 }
 .zodiac-star-label {
-  color: var(--foreground);
-  font-weight: 600;
+  color: oklch(0.98 0.012 225);
+  font-weight: 700;
+  text-shadow:
+    0 1px 2px oklch(0 0 0 / 92%),
+    0 0 4px oklch(0 0 0 / 80%),
+    0 0 10px oklch(0 0 0 / 65%);
 }
 @media (prefers-reduced-motion: reduce) {
   .zodiac-star .star-node {
@@ -1422,11 +1426,11 @@ html.theme-dragon button.bg-primary:not(:disabled) {
    ============================================================ */
 
 /* The nav sky keeps its classic bright aurora even during the night band */
-html:not([data-theme="light"]) .zodiac-sky-wrap .zodiac-aurora {
-  --aurora-1: oklch(0.57 0.17 240);
-  --aurora-2: oklch(0.65 0.14 200);
-  --aurora-3: oklch(0.4 0.2 267);
-  --aurora-4: oklch(0.51 0.17 250);
+.zodiac-sky-wrap .zodiac-aurora {
+  --aurora-1: oklch(0.6 0.16 240);
+  --aurora-2: oklch(0.68 0.13 205);
+  --aurora-3: oklch(0.44 0.18 267);
+  --aurora-4: oklch(0.54 0.15 250);
 }
 
 /* Sparkling star on primary buttons (dragon theme keeps its own ring) */
@@ -1516,6 +1520,21 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
     transform: translateX(0) translateY(0);
   }
   to {
-    transform: translateX(110vw) translateY(70px);
+    /* travel inside the sky band only - never clipped at the edges */
+    transform: translateX(var(--fly-x, 70vw)) translateY(46px);
   }
+}
+
+/* ---- Sky band readability guarantee: the band is always a dark starry sky,
+   so its labels and icons stay light in every theme and time of day ---- */
+.zodiac-sky .zodiac-star {
+  color: oklch(0.93 0.02 230);
+}
+.zodiac-sky .zodiac-star:hover,
+.zodiac-sky .zodiac-star[data-state="active"],
+.zodiac-sky .zodiac-star:focus-visible {
+  color: oklch(0.99 0.008 230);
+  background: oklch(0.3 0.09 262 / 0.78);
+  border-color: oklch(0.78 0.1 230 / 0.55);
+  box-shadow: 0 0 14px -4px oklch(0.7 0.12 230 / 0.65);
 }
