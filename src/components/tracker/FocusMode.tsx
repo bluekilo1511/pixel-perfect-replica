@@ -1,5 +1,12 @@
 import { useEffect } from "react";
-import { MOOD_META, moodOf, ACCESSORIES, SPECIES, type PetState } from "@/lib/tracker/gamify";
+import {
+  ACCESSORIES,
+  ACCESSORY_UI,
+  MOOD_META,
+  moodOf,
+  SPECIES,
+  type PetState,
+} from "@/lib/tracker/gamify";
 import { petEmoji } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 import { AmbientControl } from "./AmbientControl";
@@ -54,13 +61,20 @@ export function FocusMode({
           Chế độ tập trung
         </span>
         <span
-          className={`relative text-8xl leading-none ${running ? "animate-pet-idle" : "animate-pet-dance"}`}
+          className={`relative block text-8xl leading-none ${running ? "animate-pet-idle" : "animate-pet-dance"}`}
         >
-          {petEmoji(pet)}
-          {pet.accessory && (
-            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-5xl">
-              {ACCESSORIES[pet.accessory].emoji}
+          {pet.accessories.back && (
+            <span className={`absolute ${ACCESSORY_UI.back[pet.species]}`} aria-hidden>
+              {ACCESSORIES[pet.accessories.back].emoji}
             </span>
+          )}
+          <span className="relative">{petEmoji(pet)}</span>
+          {(["head", "face"] as const).map((slot) =>
+            pet.accessories[slot] ? (
+              <span key={slot} className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}>
+                {ACCESSORIES[pet.accessories[slot]!].emoji}
+              </span>
+            ) : null,
           )}
         </span>
         <span className="text-sm text-muted-foreground">
