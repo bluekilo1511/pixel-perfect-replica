@@ -11,7 +11,13 @@ function Fx(props: Parameters<typeof Sparkles>[0]) {
   return saver ? null : <Sparkles {...props} />;
 }
 import * as THREE from "three";
-import { DECORATIONS, type DecorId } from "@/lib/tracker/gamify";
+import {
+  DECORATIONS,
+  type Accessory,
+  type AccessorySlot,
+  type DecorId,
+  type Species,
+} from "@/lib/tracker/gamify";
 
 /** Diorama study corner: an isometric mini room where owned decorations appear as real objects. */
 
@@ -20,21 +26,6 @@ const FLOOR_D = 4.2;
 const WALL_H = 2.6;
 const BACK_Z = -FLOOR_D / 2; // back wall
 const LEFT_X = -FLOOR_W / 2; // left wall
-
-function emojiTexture(emoji: string) {
-  const c = document.createElement("canvas");
-  c.width = c.height = 128;
-  const g = c.getContext("2d");
-  if (g) {
-    g.font = "96px serif";
-    g.textAlign = "center";
-    g.textBaseline = "middle";
-    g.fillText(emoji, 64, 68);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
 
 function woodTexture() {
   const c = document.createElement("canvas");
@@ -189,14 +180,232 @@ function posterTexture() {
 
 /* ---------- shared bits ---------- */
 
-function PetSprite({ emoji }: { emoji: string }) {
-  const tex = useMemo(() => emojiTexture(emoji), [emoji]);
+const PET_COLORS: Record<Species, { body: string; belly: string; accent: string }> = {
+  cat: { body: "#f0a05a", belly: "#ffe8cc", accent: "#c97b3d" },
+  lizard: { body: "#7ed957", belly: "#d9f7c9", accent: "#4aa63a" },
+  dog: { body: "#d9a066", belly: "#f5e3cf", accent: "#a97843" },
+  owl: { body: "#a97e57", belly: "#e8d3b8", accent: "#7a5433" },
+  whale: { body: "#5aa9e6", belly: "#d3ecff", accent: "#3b7fc4" },
+};
+
+/** Simple oval eyes that blink every few seconds so the pet feels alive. */
+function Eye({ x, y, z, size = 0.05 }: { x: number; y: number; z: number; size?: number }) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime() % 4;
+    ref.current.scale.y = t > 3.9 ? 0.15 : 1;
+  });
   return (
-    <Float speed={2.2} floatIntensity={0.55} rotationIntensity={0.25}>
-      <mesh position={[0.55, 0.5, 0.5]}>
-        <planeGeometry args={[0.9, 0.9]} />
-        <meshBasicMaterial map={tex} transparent toneMapped={false} />
-      </mesh>
+    <mesh ref={ref} position={[x, y, z]}>
+      <sphereGeometry args={[size, 16, 16]} />
+      <meshStandardMaterial color="#1c2230" roughness={0.4} />
+    </mesh>
+  );
+}
+
+/** A tiny 3D pet built from primitive meshes — no emoji sprites. */
+function Pet3D({
+  species,
+  accessories,
+}: {
+  species: Species;
+  accessories: Record<AccessorySlot, Accessory | null>;
+}) {
+  const petRef = useRef<THREE.Group>(null);
+  const col = PET_COLORS[species];
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (petRef.current) {
+      petRef.current.position.y = 0.75 + Math.sin(t * 1.4) * 0.05;
+      petRef.current.rotation.y = Math.sin(t * 0.5) * 0.25;
+    }
+  });
+
+  const common = (
+    <>
+      <Eye x={-0.16} y={0.18} z={0.42} />
+      <Eye x={0.16} y={0.18} z={0.42} />
+    </>
+  );
+
+  return (
+    <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.35}>
+      <group ref={petRef} scale={0.9}>
+        {/* accessories on the back go behind the body */}
+        {accessories.back === "wings" && (
+          <group position={[0, 0.15, -0.28]}>
+            {[-1, 1].map((s) => (
+              <mesh key={s} position={[s * 0.38, 0.05, 0]} rotation={[0, s * 0.5, s * 0.25]}>
+                <sphereGeometry args={[0.22, 16, 16, 0, Math.PI, 0, Math.PI / 1.2]} />
+                <meshStandardMaterial color="#ffffff" transparent opacity={0.75} roughness={0.2} />
+              </mesh>
+            ))}
+          </group>
+        )}
+
+        {species === "whale" ? (
+          <group>
+            <mesh>
+              <capsuleGeometry args={[0.5, 0.7, 8, 24]} />
+              <meshStandardMaterial color={col.body} roughness={0.35} />
+            </mesh>
+            <mesh position={[0, -0.12, 0.45]} scale={[0.8, 0.55, 0.6]}>
+              <sphereGeometry args={[0.5, 24, 24]} />
+              <meshStandardMaterial color={col.belly} roughness={0.4} />
+            </mesh>
+            <mesh position={[0, 0.42, -0.35]} rotation={[-0.5, 0, 0]}>
+              <sphereGeometry args={[0.25, 16, 16]} />
+              <meshStandardMaterial color={col.accent} roughness={0.35} />
+            </mesh>
+            <mesh position={[0, 0.05, -0.85]} rotation={[0.9, 0, 0]} scale={[1, 0.5, 0.4]}>
+              <coneGeometry args={[0.28, 0.4, 12]} />
+              <meshStandardMaterial color={col.accent} roughness={0.35} />
+            </mesh>
+            {common}
+            <mesh position={[0, 0.28, 0.5]} scale={[0.35, 0.12, 0.2]}>
+              <sphereGeometry args={[1, 12, 12]} />
+              <meshStandardMaterial color={col.accent} roughness={0.4} />
+            </mesh>
+          </group>
+        ) : species === "owl" ? (
+          <group>
+            <mesh>
+              <capsuleGeometry args={[0.38, 0.35, 8, 24]} />
+              <meshStandardMaterial color={col.body} roughness={0.5} />
+            </mesh>
+            <mesh position={[0, -0.1, 0.3]} scale={[0.85, 0.8, 0.55]}>
+              <sphereGeometry args={[0.4, 24, 24]} />
+              <meshStandardMaterial color={col.belly} roughness={0.5} />
+            </mesh>
+            {[-1, 1].map((s) => (
+              <mesh key={s} position={[s * 0.18, 0.35, 0.18]} rotation={[0, 0, s * 0.4]}>
+                <coneGeometry args={[0.09, 0.2, 8]} />
+                <meshStandardMaterial color={col.accent} roughness={0.4} />
+              </mesh>
+            ))}
+            <mesh position={[0, 0.18, 0.42]} scale={[0.5, 0.4, 0.3]}>
+              <sphereGeometry args={[0.15, 12, 12]} />
+              <meshStandardMaterial color={col.accent} roughness={0.4} />
+            </mesh>
+            <Eye x={-0.15} y={0.22} z={0.36} size={0.09} />
+            <Eye x={0.15} y={0.22} z={0.36} size={0.09} />
+          </group>
+        ) : (
+          <group>
+            {/* torso */}
+            <mesh position={[0, 0, 0]}>
+              <capsuleGeometry args={[0.34, 0.3, 8, 24]} />
+              <meshStandardMaterial color={col.body} roughness={0.45} />
+            </mesh>
+            <mesh position={[0, -0.08, 0.26]} scale={[0.75, 0.8, 0.5]}>
+              <sphereGeometry args={[0.32, 24, 24]} />
+              <meshStandardMaterial color={col.belly} roughness={0.5} />
+            </mesh>
+            {/* head */}
+            <mesh position={[0, 0.42, 0.08]} scale={[1, 0.92, 0.9]}>
+              <sphereGeometry args={[0.3, 24, 24]} />
+              <meshStandardMaterial color={col.body} roughness={0.45} />
+            </mesh>
+            {/* ears or spikes */}
+            {species === "lizard" ? (
+              <>
+                {[0.1, 0.28, 0.46].map((x, i) => (
+                  <mesh key={i} position={[x, 0.55 + i * 0.02, -0.1]} rotation={[0, 0, -0.5]}>
+                    <coneGeometry args={[0.05, 0.14, 8]} />
+                    <meshStandardMaterial color={col.accent} roughness={0.4} />
+                  </mesh>
+                ))}
+              </>
+            ) : (
+              [-1, 1].map((s) => (
+                <mesh key={s} position={[s * 0.2, 0.62, 0.05]} rotation={[0, 0, s * 0.25]}>
+                  <coneGeometry args={[0.09, 0.2, 10]} />
+                  <meshStandardMaterial color={col.accent} roughness={0.4} />
+                </mesh>
+              ))
+            )}
+            {/* snout */}
+            <mesh position={[0, 0.34, 0.32]} scale={[0.9, 0.6, 0.8]}>
+              <sphereGeometry args={[0.14, 16, 16]} />
+              <meshStandardMaterial color={col.belly} roughness={0.5} />
+            </mesh>
+            <mesh position={[-0.08, 0.34, 0.44]}>
+              <sphereGeometry args={[0.025, 8, 8]} />
+              <meshStandardMaterial color="#1c2230" />
+            </mesh>
+            <mesh position={[0.08, 0.34, 0.44]}>
+              <sphereGeometry args={[0.025, 8, 8]} />
+              <meshStandardMaterial color="#1c2230" />
+            </mesh>
+            {common}
+            {/* tail */}
+            <mesh position={[0, -0.05, -0.4]} rotation={[0.7, 0, 0]}>
+              <capsuleGeometry args={[0.07, 0.35, 8, 12]} />
+              <meshStandardMaterial color={col.accent} roughness={0.45} />
+            </mesh>
+            {/* feet */}
+            {[-1, 1].map((s) => (
+              <mesh key={s} position={[s * 0.18, -0.36, 0.08]} scale={[1, 0.5, 1.2]}>
+                <sphereGeometry args={[0.1, 12, 12]} />
+                <meshStandardMaterial color={col.accent} roughness={0.45} />
+              </mesh>
+            ))}
+          </group>
+        )}
+
+        {/* head accessory: graduation cap or crown */}
+        {accessories.head === "gradcap" && (
+          <group position={[0, species === "owl" ? 0.62 : 0.74, 0.05]}>
+            <mesh>
+              <cylinderGeometry args={[0.24, 0.24, 0.1, 16]} />
+              <meshStandardMaterial color="#20242e" roughness={0.5} />
+            </mesh>
+            <mesh position={[0, 0.07, 0]}>
+              <boxGeometry args={[0.56, 0.03, 0.56]} />
+              <meshStandardMaterial color="#20242e" roughness={0.5} />
+            </mesh>
+            <mesh position={[0, 0.14, 0.2]} rotation={[0.4, 0, 0]}>
+              <cylinderGeometry args={[0.006, 0.006, 0.3, 6]} />
+              <meshStandardMaterial color="#f4c542" metalness={0.6} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0.27, 0.33]}>
+              <sphereGeometry args={[0.035, 8, 8]} />
+              <meshStandardMaterial color="#f4c542" metalness={0.6} roughness={0.3} />
+            </mesh>
+          </group>
+        )}
+        {accessories.head === "crown" && (
+          <group position={[0, species === "owl" ? 0.66 : 0.8, 0.05]}>
+            <mesh>
+              <cylinderGeometry args={[0.18, 0.21, 0.12, 16]} />
+              <meshStandardMaterial color="#f4c542" metalness={0.55} roughness={0.25} />
+            </mesh>
+            {[-0.12, 0, 0.12].map((x) => (
+              <mesh key={x} position={[x, 0.1, 0]}>
+                <coneGeometry args={[0.035, 0.12, 8]} />
+                <meshStandardMaterial color="#f4c542" metalness={0.55} roughness={0.25} />
+              </mesh>
+            ))}
+          </group>
+        )}
+
+        {/* face accessory: sunglasses, sitting on the eyes */}
+        {accessories.face === "sunglasses" && (
+          <group position={[0, species === "owl" ? 0.22 : 0.6, species === "owl" ? 0.34 : 0.38]}>
+            <mesh rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.26, 0.02, 8, 24, Math.PI]} />
+              <meshStandardMaterial color="#15181f" roughness={0.3} />
+            </mesh>
+            {[-1, 1].map((s) => (
+              <mesh key={s} position={[s * 0.13, 0, 0.02]}>
+                <boxGeometry args={[0.16, 0.1, 0.03]} />
+                <meshStandardMaterial color="#15181f" roughness={0.25} />
+              </mesh>
+            ))}
+          </group>
+        )}
+      </group>
     </Float>
   );
 }
@@ -670,13 +879,15 @@ function SeasonExtras({ season }: { season: RoomSeason }) {
 function Room({
   decor,
   onStow,
-  petEmoji,
+  species,
+  accessories,
   onShelfClick,
   season = "default",
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
-  petEmoji: string;
+  species: Species;
+  accessories: Record<AccessorySlot, Accessory | null>;
   onShelfClick?: (() => void) | undefined;
   season?: RoomSeason;
 }) {
@@ -871,7 +1082,7 @@ function Room({
           <meshStandardMaterial color="#3f3f46" roughness={0.6} />
         </mesh>
       </group>
-      <PetSprite emoji={petEmoji} />
+      <Pet3D species={species} accessories={accessories} />
       {has("plant") && (
         <Clickable id="plant" position={[2.65, 0, -1.55]} onStow={onStow}>
           <Plant />
@@ -1050,14 +1261,16 @@ class Boundary extends Component<
 export function StudyRoom3D({
   decor,
   onStow,
-  petEmoji,
+  species,
+  accessories,
   onShelfClick,
   season = roomSeason(),
   batterySaver = false,
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
-  petEmoji: string;
+  species: Species;
+  accessories: Record<AccessorySlot, Accessory | null>;
   onShelfClick?: () => void;
   season?: RoomSeason;
   batterySaver?: boolean;
@@ -1086,7 +1299,8 @@ export function StudyRoom3D({
             <Room
               decor={decor}
               onStow={onStow}
-              petEmoji={petEmoji}
+              species={species}
+              accessories={accessories}
               onShelfClick={onShelfClick}
               season={season}
             />
