@@ -297,3 +297,31 @@ export function zodiacById(id: string): Zodiac {
 export function isValidZodiacId(id: string): boolean {
   return BY_ID.has(id);
 }
+
+/** Western zodiac date ranges as [id, startMMDD, endMMDD]; capricorn wraps the year. */
+const ZODIAC_RANGES: [string, number, number][] = [
+  ["capricorn", 1222, 119],
+  ["aquarius", 120, 218],
+  ["pisces", 219, 320],
+  ["aries", 321, 419],
+  ["taurus", 420, 520],
+  ["gemini", 521, 620],
+  ["cancer", 621, 722],
+  ["leo", 723, 822],
+  ["virgo", 823, 922],
+  ["libra", 923, 1022],
+  ["scorpio", 1023, 1121],
+  ["sagittarius", 1122, 1221],
+];
+
+/** Constellation for a birthday (month 1-12, day 1-31); null when out of range. */
+export function zodiacForBirthday(month: number, day: number): Zodiac | null {
+  if (!(month >= 1 && month <= 12) || !(day >= 1 && day <= 31)) return null;
+  const md = month * 100 + day;
+  for (const [id, start, end] of ZODIAC_RANGES) {
+    if (start <= end ? md >= start && md <= end : md >= start || md <= end) {
+      return zodiacById(id);
+    }
+  }
+  return null;
+}

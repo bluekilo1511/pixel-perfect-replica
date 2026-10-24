@@ -1415,3 +1415,107 @@ html.theme-dragon button.bg-primary:not(:disabled) {
     opacity: 1;
   }
 }
+
+/* ============================================================
+   Star season: bright nav sky, button sparkles, streak stars,
+   catchable shooting star
+   ============================================================ */
+
+/* The nav sky keeps its classic bright aurora even during the night band */
+html:not([data-theme="light"]) .zodiac-sky-wrap .zodiac-aurora {
+  --aurora-1: oklch(0.57 0.17 240);
+  --aurora-2: oklch(0.65 0.14 200);
+  --aurora-3: oklch(0.4 0.2 267);
+  --aurora-4: oklch(0.51 0.17 250);
+}
+
+/* Sparkling star on primary buttons (dragon theme keeps its own ring) */
+html:not(.theme-dragon) button.bg-primary:not(:disabled) {
+  position: relative;
+}
+html:not(.theme-dragon) button.bg-primary:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, #ffffff 0 20%, #ffd76a 55%, transparent 78%);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  filter: drop-shadow(0 0 4px rgb(255 215 106 / 0.9));
+  animation: btn-star-shine 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes btn-star-shine {
+  0%,
+  100% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.12) rotate(20deg);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not(.theme-dragon) button.bg-primary:not(:disabled)::after {
+    animation: none;
+  }
+}
+html.fx-lite button.bg-primary:not(:disabled)::after {
+  animation: none;
+}
+
+/* Streak constellation: one little star per 10 streak days */
+.streak-stars {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  z-index: 4;
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+.streak-stars span {
+  width: 8px;
+  height: 8px;
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+}
+.streak-stars span.lit {
+  background: #ffd76a;
+  filter: drop-shadow(0 0 3px rgb(255 215 106 / 0.9));
+}
+
+/* Catchable shooting star */
+.shooting-star {
+  position: absolute;
+  left: -34px;
+  z-index: 4;
+  width: 30px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, transparent, #ffd76a);
+  box-shadow: 0 0 8px rgb(255 215 106 / 0.8);
+  cursor: pointer;
+  animation: shoot-fly 5.2s linear forwards;
+}
+.shooting-star::before {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 35%, #ffd76a 70%, transparent 80%);
+  filter: drop-shadow(0 0 6px rgb(255 215 106 / 0.95));
+}
+@keyframes shoot-fly {
+  from {
+    transform: translateX(0) translateY(0);
+  }
+  to {
+    transform: translateX(110vw) translateY(70px);
+  }
+}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
-import { ZODIAC_LIST } from "@/lib/tracker/zodiac";
+import { ZODIAC_LIST, zodiacForBirthday } from "@/lib/tracker/zodiac";
+import { DateInputVN } from "./DateInputVN";
 import type { AdminBoostKind } from "@/lib/tracker/model";
 import {
   DRAGON_UNLOCK_LEVEL,
@@ -60,6 +61,16 @@ export function SettingsPanel() {
 
   const set = (patch: Partial<AppSettings>) =>
     update((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
+
+  // Which constellation is actually active (auto from birthday, or manual pick)?
+  const activeZodiacId = (() => {
+    if (s.navZodiacAuto && s.birthday) {
+      const [, m, d] = s.birthday.split("-");
+      const z = zodiacForBirthday(Number(m), Number(d));
+      if (z) return z.id;
+    }
+    return s.navZodiac;
+  })();
 
   const saveName = () => {
     const clean = name.trim().slice(0, 30);
@@ -314,6 +325,27 @@ export function SettingsPanel() {
         <p className="mb-3 text-xs text-muted-foreground">
           Chọn hình chòm sao treo 7 tab của app — mỗi tab là một ngôi sao trong chòm thật.
         </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
+          <div>
+            <p className="text-sm font-medium">🌟 Chòm theo ngày sinh</p>
+            <p className="text-xs text-muted-foreground">
+              Tự chọn chòm đúng cung của bạn — vẫn đổi tay được bên dưới.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <DateInputVN
+              className="h-9 w-32"
+              value={s.birthday ?? ""}
+              onChange={(iso) => set({ birthday: iso || null })}
+              ariaLabel="Ngày sinh"
+            />
+            <Switch
+              checked={s.navZodiacAuto === true}
+              onCheckedChange={(v) => set({ navZodiacAuto: v })}
+              aria-label="Tự chọn chòm theo ngày sinh"
+            />
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {ZODIAC_LIST.map((z) => (
             <button
@@ -321,7 +353,7 @@ export function SettingsPanel() {
               type="button"
               onClick={() => set({ navZodiac: z.id })}
               className={`rounded-xl border p-2 text-left text-xs transition-colors ${
-                s.navZodiac === z.id
+                activeZodiacId === z.id
                   ? "border-primary bg-primary/10 text-foreground"
                   : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
               }`}

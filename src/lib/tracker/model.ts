@@ -14,6 +14,8 @@ import {
 } from "./gamify";
 import { defaultMarket, type MarketState } from "./market";
 import { DEFAULT_ZODIAC_ID, isValidZodiacId } from "./zodiac";
+import { DEFAULT_SPECIAL_DAYS, normalizeSpecialDays, type SpecialDay } from "./specialDays";
+import { defaultShootingStar, normalizeShootingStar, type ShootingStarState } from "./shootingStar";
 import {
   addPetXp,
   bumpLifetime,
@@ -195,6 +197,8 @@ export interface AppSettings {
   chime: ChimeKind; // style of the Pomodoro-finished chime
   batterySaver: boolean; // lower 3D room resolution/effects to save battery
   navZodiac: string; // constellation id shown by the tab navigation sky
+  navZodiacAuto: boolean; // pick the constellation automatically from the birthday
+  birthday: string | null; // "YYYY-MM-DD", used by navZodiacAuto and nothing else
   personalStar: { name: string; x: number; y: number }; // the user's own star in the nav sky
   admin: boolean; // admin test mode: trial data in memory, backup download locked
   dragonTheme: boolean; // dragon skin: shimmering dragon-scale borders on buttons + starry-sky background
@@ -240,6 +244,8 @@ export interface AppData {
   weeklyGoal: WeeklyGoalState;
   extraSchedule: ExtraScheduleItem[]; // quick one-off reminders (see tkb.ts)
   extraLog: string[]; // "YYYY-MM-DD:extraId" already pushed to the task list
+  specialDays: SpecialDay[]; // holidays & birthdays, reminder only (see specialDays.ts)
+  shootingStar: ShootingStarState; // nav-sky shooting star catches today (see shootingStar.ts)
   ownerName?: string; // display name in the header, editable
   [extra: string]: unknown;
 }
@@ -322,6 +328,8 @@ export function defaultSettings(): AppSettings {
     fxSound: true,
     chime: "soft",
     navZodiac: DEFAULT_ZODIAC_ID,
+    navZodiacAuto: false,
+    birthday: null,
     personalStar: { name: "", x: 92, y: 18 },
     admin: false,
     dragonTheme: false,
@@ -365,6 +373,8 @@ export function defaultData(): AppData {
     weeklyGoal: { minutes: 300, celebratedWeek: null },
     extraSchedule: [],
     extraLog: [],
+    specialDays: [...DEFAULT_SPECIAL_DAYS],
+    shootingStar: defaultShootingStar(),
   };
 }
 
@@ -627,6 +637,11 @@ export function migrate(raw: unknown): AppData {
       typeof rawSettings.navZodiac === "string" && isValidZodiacId(rawSettings.navZodiac)
         ? rawSettings.navZodiac
         : DEFAULT_ZODIAC_ID,
+    navZodiacAuto: rawSettings.navZodiacAuto === true,
+    birthday:
+      typeof rawSettings.birthday === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawSettings.birthday)
+        ? rawSettings.birthday
+        : null,
     personalStar: normalizePersonalStar(rawSettings.personalStar),
     admin: rawSettings.admin === true,
   };
@@ -648,6 +663,8 @@ export function migrate(raw: unknown): AppData {
     extraLog: Array.isArray(r.extraLog)
       ? r.extraLog.filter((k): k is string => typeof k === "string")
       : [],
+    specialDays: normalizeSpecialDays(r.specialDays),
+    shootingStar: normalizeShootingStar(r.shootingStar),
     avatarBase64: typeof r.avatarBase64 === "string" ? r.avatarBase64 : null,
     petState: normalizePet(r.petState),
     streak:
