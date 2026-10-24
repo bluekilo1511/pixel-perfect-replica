@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTracker } from "@/lib/tracker/store";
-import { zodiacById, zodiacForBirthday, type NavTabKey } from "@/lib/tracker/zodiac";
+import { zodiacById, zodiacForBirthday } from "@/lib/tracker/zodiac";
 
 const items = [
   { value: "today", label: "Hôm nay", icon: Check },
@@ -21,13 +21,6 @@ const items = [
   { value: "chronicle", label: "Nhật báo tuần", icon: Newspaper },
   { value: "settings", label: "Cài đặt", icon: Settings },
 ] as const;
-
-const PRESETS = [
-  { name: "Trái trên", x: 12, y: 20 },
-  { name: "Phải trên", x: 88, y: 20 },
-  { name: "Trái dưới", x: 12, y: 80 },
-  { name: "Phải dưới", x: 88, y: 80 },
-];
 
 export function ConstellationTabs({ children }: { children: ReactNode }) {
   const [active, setActive] = useState("today");
@@ -64,7 +57,7 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const { data, update } = useTracker();
+  const { data } = useTracker();
   const s = data.settings;
   // Constellation: auto-picked from the birthday when enabled, manual pick otherwise.
   const birthdayZodiac = (() => {
@@ -73,48 +66,6 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     return zodiacForBirthday(Number(m), Number(d));
   })();
   const zodiac = birthdayZodiac ?? zodiacById(s.navZodiac);
-  const personal = s.personalStar;
-
-  // Personal star: drag on desktop (committed on release), click opens its editor.
-  const [editing, setEditing] = useState(false);
-  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
-  const drag = useRef<{ moved: boolean; startX: number; startY: number } | null>(null);
-  const starPos = dragPos ?? { x: personal.x, y: personal.y };
-
-  const onStarDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    drag.current = { moved: false, startX: e.clientX, startY: e.clientY };
-    if (e.pointerType === "mouse") e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onStarMove = (e: React.PointerEvent<HTMLButtonElement>) => {
-    const d = drag.current;
-    if (!d) return;
-    if (Math.abs(e.clientX - d.startX) + Math.abs(e.clientY - d.startY) > 5) d.moved = true;
-    if (!d.moved) return;
-    const box = nav.current?.getBoundingClientRect();
-    if (!box) return;
-    const cx = ((e.clientX - box.left) / box.width) * 100;
-    const cy = ((e.clientY - box.top) / box.height) * 100;
-    // clamp: keep the star fully inside the sky (no clipping at edges/corners)
-    const PAD = 14;
-    setDragPos({
-      x: Math.min(((box.width - PAD) / box.width) * 100, Math.max((PAD / box.width) * 100, cx)),
-      y: Math.min(((box.height - PAD) / box.height) * 100, Math.max((PAD / box.height) * 100, cy)),
-    });
-  };
-  const onStarUp = () => {
-    const d = drag.current;
-    drag.current = null;
-    if (d?.moved) {
-      if (dragPos)
-        update((d) => ({
-          ...d,
-          settings: { ...d.settings, personalStar: { ...d.settings.personalStar, ...dragPos } },
-        }));
-      setDragPos(null);
-    } else {
-      setEditing((v) => !v);
-    }
-  };
 
   return (
     <Tabs value={active} onValueChange={change}>
@@ -159,67 +110,6 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
               );
             })}
           </TabsList>
-          {/* The user's own star */}
-          <button
-            type="button"
-            className="personal-star"
-            title={personal.name ? `Ngôi sao của bạn: ${personal.name}` : "Ngôi sao của bạn"}
-            style={{
-              // clamp in px so the star can never poke out of the sky on any height
-              left: `max(14px, min(calc(100% - 14px), ${starPos.x}%))`,
-              top: `max(14px, min(calc(100% - 14px), ${starPos.y}%))`,
-            }}
-            onPointerDown={onStarDown}
-            onPointerMove={onStarMove}
-            onPointerUp={onStarUp}
-            aria-label="Ngôi sao của bạn"
-          />
-          {editing && (
-            <div className="personal-star-editor">
-              <div className="text-xs font-semibold">⭐ Ngôi sao của bạn</div>
-              <input
-                value={personal.name}
-                maxLength={24}
-                placeholder="Đặt tên cho sao..."
-                onChange={(e) =>
-                  update((d) => ({
-                    ...d,
-                    settings: {
-                      ...d.settings,
-                      personalStar: { ...d.settings.personalStar, name: e.target.value },
-                    },
-                  }))
-                }
-              />
-              <div className="personal-star-presets">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.name}
-                    type="button"
-                    onClick={() =>
-                      update((d) => ({
-                        ...d,
-                        settings: {
-                          ...d.settings,
-                          personalStar: { ...d.settings.personalStar, x: p.x, y: p.y },
-                        },
-                      }))
-                    }
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-              <div className="personal-star-editor-note">Kéo ngôi sao để tự chọn vị trí</div>
-              <button
-                type="button"
-                className="personal-star-close"
-                onClick={() => setEditing(false)}
-              >
-                Xong
-              </button>
-            </div>
-          )}
         </div>
       </div>
       {children}
