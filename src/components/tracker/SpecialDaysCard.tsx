@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import {
   MAX_SPECIAL_DAYS,
+  daysUntil,
   describeCountdown,
   specialToday,
-  upcomingSpecialDays,
   type SpecialDayKind,
 } from "@/lib/tracker/specialDays";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,6 @@ export function SpecialDaysCard() {
   const [date, setDate] = useState("");
   const now = new Date();
   const todays = specialToday(list, now);
-  const upcoming = upcomingSpecialDays(list, now, 14)
-    .filter((x) => x.inDays > 0)
-    .slice(0, 5);
 
   const add = () => {
     const clean = name.trim().slice(0, 40);
@@ -72,35 +69,46 @@ export function SpecialDaysCard() {
         </div>
       )}
 
-      {upcoming.length > 0 && (
-        <ul className="mb-3 space-y-1.5">
-          {upcoming.map(({ item, inDays }) => (
-            <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
-              <span>
-                {item.kind === "birthday" ? "🎂" : "🗓️"} {item.name}
-                <span className="ml-1 text-xs text-muted-foreground">
-                  ({item.day}/{item.month})
+      {list.length > 0 && (
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground">
+            Tất cả ngày đã lưu ({list.length}/{MAX_SPECIAL_DAYS})
+          </p>
+        </div>
+      )}
+      {list.length > 0 && (
+        <ul className="mb-3 max-h-44 space-y-1.5 overflow-y-auto pr-1 thin-scroll">
+          {[...list]
+            .sort((a, b) => daysUntil(a, now) - daysUntil(b, now))
+            .map((item) => (
+              <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate">
+                  {item.kind === "birthday" ? "🎂" : "🗓️"} {item.name}
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({item.day}/{item.month})
+                  </span>
                 </span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="text-xs text-primary">{describeCountdown(inDays)}</span>
-                <button
-                  type="button"
-                  className="text-muted-foreground transition-colors hover:text-destructive"
-                  title={`Xoá ${item.name}`}
-                  aria-label={`Xoá ${item.name}`}
-                  onClick={() =>
-                    update((d) => ({
-                      ...d,
-                      specialDays: d.specialDays.filter((x) => x.id !== item.id),
-                    }))
-                  }
-                >
-                  ✕
-                </button>
-              </span>
-            </li>
-          ))}
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs text-primary">
+                    {describeCountdown(daysUntil(item, now))}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-muted-foreground transition-colors hover:text-destructive"
+                    title={`Xoá ${item.name}`}
+                    aria-label={`Xoá ${item.name}`}
+                    onClick={() =>
+                      update((d) => ({
+                        ...d,
+                        specialDays: d.specialDays.filter((x) => x.id !== item.id),
+                      }))
+                    }
+                  >
+                    ✕
+                  </button>
+                </span>
+              </li>
+            ))}
         </ul>
       )}
 
