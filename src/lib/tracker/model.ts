@@ -26,7 +26,6 @@ import {
   normalizeExtras,
   recordWaterGoal,
   rollDrop,
-  startExpedition,
   writeDiary,
   type AchievementId,
   type AchievementState,
@@ -1095,7 +1094,6 @@ export function completePomodoroSession(
   kind: SessionKind = "pomodoro",
 ): { data: AppData; fresh: AchievementId[] } {
   const today = dateStr(now);
-  const focusToday = (data.dailyStats[today]?.focusMin ?? 0) + minutes;
   const achievements = bumpLifetime(data.achievements, { focusMin: minutes, pomodoros: 1 });
   const record = makeTask(
     kind === "warmup" ? `Khởi động (${minutes} phút)` : `Phiên tập trung (${minutes} phút)`,
@@ -1114,7 +1112,6 @@ export function completePomodoroSession(
     ...data,
     achievements,
     claimedAchievements: { ...achievements.claimed },
-    expedition: startExpedition(data.expedition, focusToday, now),
     dailyStats: bumpStats(data.dailyStats, dateStr(now), { focusMin: minutes, pomodoros: 1 }),
     tasks: [...data.tasks, record],
     sessionLog,

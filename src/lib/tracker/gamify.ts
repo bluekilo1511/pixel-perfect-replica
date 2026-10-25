@@ -159,7 +159,9 @@ export const CONSUMABLES: Record<
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 /** Reads accessories from new ({head,face,back}) or old (`accessory`) data — never loses a worn item. */
-export function normalizeAccessories(raw: Record<string, unknown>): Record<AccessorySlot, Accessory | null> {
+export function normalizeAccessories(
+  raw: Record<string, unknown>,
+): Record<AccessorySlot, Accessory | null> {
   const ac = Object.keys(ACCESSORIES) as Accessory[];
   const out = emptyAccessories();
   const rawAc = raw.accessories;
@@ -167,12 +169,20 @@ export function normalizeAccessories(raw: Record<string, unknown>): Record<Acces
     const slots = (rawAc ?? {}) as Record<string, unknown>;
     for (const slot of ACCESSORY_SLOTS) {
       const v = slots[slot];
-      if (typeof v === "string" && ac.includes(v as Accessory) && ACCESSORY_SLOT[v as Accessory] === slot)
+      if (
+        typeof v === "string" &&
+        ac.includes(v as Accessory) &&
+        ACCESSORY_SLOT[v as Accessory] === slot
+      )
         out[slot] = v as Accessory;
     }
-  } else if (typeof raw.accessory === "string" && ac.includes(raw.accessory as Accessory)) {
+  }
+  // Legacy single `accessory` field still fills an empty slot — new saves always
+  // carry an (often empty) `accessories` object, so it must merge, not branch.
+  if (typeof raw.accessory === "string" && ac.includes(raw.accessory as Accessory)) {
     const legacy = raw.accessory as Accessory;
-    out[ACCESSORY_SLOT[legacy]] = legacy;
+    const slot = ACCESSORY_SLOT[legacy];
+    if (!out[slot]) out[slot] = legacy;
   }
   return out;
 }

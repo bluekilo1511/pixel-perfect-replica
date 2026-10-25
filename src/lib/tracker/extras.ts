@@ -414,6 +414,31 @@ export function claimReward(
   return { ...a, claimed: { ...a.claimed, [id]: now.toISOString() } };
 }
 
+/** Where the expedition compass stands right now: ready to press, already away, or how many focus minutes are still missing. */
+export function expeditionStatus(
+  expedition: ExpeditionState,
+  focusToday: number,
+  now = new Date(),
+): {
+  away: boolean;
+  usedToday: boolean;
+  ready: boolean;
+  haveMinutes: number;
+  needMinutes: number;
+} {
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const away = !!expedition.endAt && new Date(expedition.endAt).getTime() > now.getTime();
+  const usedToday = expedition.lastTriggerDate === today;
+  const ready = !away && !usedToday && focusToday >= EXPEDITION_TRIGGER_MINUTES;
+  return {
+    away,
+    usedToday,
+    ready,
+    haveMinutes: focusToday,
+    needMinutes: Math.max(0, EXPEDITION_TRIGGER_MINUTES - focusToday),
+  };
+}
+
 export function startExpedition(
   expedition: ExpeditionState,
   minutes: number,

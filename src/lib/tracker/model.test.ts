@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { expeditionStatus, startExpedition } from "./extras";
 import {
   DRAGON_UNLOCK_LEVEL,
   addWaterCup,
@@ -149,13 +150,31 @@ describe("tracker rules", () => {
     expect(r.data.dailyStats["2026-10-18"]!.pomodoros).toBe(1);
   });
 
-  it("expedition triggers on cumulative daily focus (2 sessions of 25p)", () => {
+  it("expedition is manual: compass unlocks at 50 cumulative focus minutes", () => {
     let d = defaultData();
     const day = new Date(2026, 9, 18, 10, 0);
     d = completePomodoroSession(d, 25, day).data;
-    expect(d.expedition.startedAt).toBeNull(); // 25p alone is not enough
+    expect(d.expedition.startedAt).toBeNull(); // sessions never auto-start anymore
+    let st = expeditionStatus(
+      d.expedition,
+      d.dailyStats["2026-10-18"]?.focusMin ?? 0,
+      new Date(2026, 9, 18, 10, 5),
+    );
+    expect(st.ready).toBe(false);
+    expect(st.haveMinutes).toBe(25);
+    expect(st.needMinutes).toBe(25);
     d = completePomodoroSession(d, 25, new Date(2026, 9, 18, 14, 0)).data;
-    expect(d.expedition.startedAt).not.toBeNull(); // 50p cumulative triggers
+    st = expeditionStatus(
+      d.expedition,
+      d.dailyStats["2026-10-18"]?.focusMin ?? 0,
+      new Date(2026, 9, 18, 14, 5),
+    );
+    expect(st.ready).toBe(true); // 50p cumulative unlocks the compass
+    d = {
+      ...d,
+      expedition: startExpedition(d.expedition, st.haveMinutes, new Date(2026, 9, 18, 15, 0)),
+    };
+    expect(d.expedition.startedAt).not.toBeNull();
     expect(d.expedition.lastTriggerDate).toBe("2026-10-18");
   });
 

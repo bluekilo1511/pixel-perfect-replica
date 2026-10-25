@@ -18,6 +18,7 @@ import {
   STREAK_GOAL,
 } from "@/lib/tracker/gamify";
 import { StudyRoom3D } from "./StudyRoom3D";
+import { ExpeditionScene } from "./ExpeditionScene";
 import { JournalModal } from "./JournalModal";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { loadSession, saveSession } from "@/lib/tracker/sessionPersist";
@@ -34,9 +35,12 @@ import {
 } from "@/lib/tracker/boss";
 import {
   ADVANCED_LINES,
+  EXPEDITION_TRIGGER_MINUTES,
+  expeditionStatus,
   petEmoji,
   petTitle,
   petXpForLevel,
+  startExpedition,
   TIER_BADGE,
   tierOf,
 } from "@/lib/tracker/extras";
@@ -94,6 +98,29 @@ const randomLine = (pet: PetState) =>
 export function PetWidget() {
   const setFocus = useFocusSky();
   const { data, finishPomodoro, bossCancel, update } = useTracker();
+
+  // Expedition compass: unlocks once today's total focus reaches the trigger
+  // threshold; pressing it sends the pet exploring (3D room becomes the 2D scene).
+  const expFocusToday = data.dailyStats[dateStr()]?.focusMin ?? 0;
+  const exp = expeditionStatus(data.expedition, expFocusToday, new Date());
+  const expRunning = !!data.expedition.endAt;
+  const expTip = exp.away
+    ? "🧭 Pet đang thám hiểm…"
+    : exp.usedToday
+      ? "🧭 Pet đã đi thám hiểm hôm nay rồi"
+      : exp.ready
+        ? "🧭 Sẵn sàng! Bấm cho pet lên đường"
+        : `🧭 Cần ${exp.needMinutes} phút tập trung nữa hôm nay (hiện có ${exp.haveMinutes}/${EXPEDITION_TRIGGER_MINUTES})`;
+  const startExpeditionNow = () => {
+    update((d) => {
+      const ft = d.dailyStats[dateStr()]?.focusMin ?? 0;
+      const next = startExpedition(d.expedition, ft, new Date());
+      if (next === d.expedition) return d;
+      ting();
+      toast.success("🧭 Pet lên đường thám hiểm! 30 phút nữa sẽ trở về.");
+      return { ...d, expedition: next };
+    });
+  };
   const pet = data.petState;
   const petForm = petEmoji(pet);
   const mood = moodOf(pet);
@@ -360,21 +387,29 @@ export function PetWidget() {
             aria-label="Góc học của thú cưng"
             title="Góc học — bấm một món để cất vào kho (kệ sách có bí mật nhỏ 👀)"
           >
-            <StudyRoom3D
-              decor={pet.decorActive}
-              petEmoji={petForm}
-              batterySaver={data.settings.batterySaver}
-              onShelfClick={() => setJournalOpen(true)}
-              onStow={(id) =>
-                update((d) => {
-                  const r = toggleDecor(d.petState, id);
-                  if (r && !r.placed && !r.pet.decorActive.includes(id)) {
-                    toast("🏠 Đã bày đủ tất cả các món!");
-                  }
-                  return r ? { ...d, petState: r.pet } : d;
-                })
-              }
-            />
+            {expRunning ? (
+              <ExpeditionScene
+                petEmoji={petForm}
+                endAt={data.expedition.endAt!}
+                batterySaver={data.settings.batterySaver}
+              />
+            ) : (
+              <StudyRoom3D
+                decor={pet.decorActive}
+                petEmoji={petForm}
+                batterySaver={data.settings.batterySaver}
+                onShelfClick={() => setJournalOpen(true)}
+                onStow={(id) =>
+                  update((d) => {
+                    const r = toggleDecor(d.petState, id);
+                    if (r && !r.placed && !r.pet.decorActive.includes(id)) {
+                      toast("🏠 Đã bày đủ tất cả các món!");
+                    }
+                    return r ? { ...d, petState: r.pet } : d;
+                  })
+                }
+              />
+            )}
           </div>
         </div>
 
@@ -554,6 +589,25 @@ export function PetWidget() {
                 (Nhiệm vụ hoàn thành hôm nay cũng gây sát thương Boss: 5 nhiệm vụ = hạ Boss)
               </span>
             </label>
+            <div className="exp-compass group relative ml-auto">
+              <Button
+                size="sm"
+                variant={exp.ready ? "secondary" : "ghost"}
+                className="h-8 px-2 text-base"
+                disabled={!exp.ready || !!endAt || !!breakEndAt}
+                aria-label={expTip}
+                title={expTip}
+                onClick={startExpeditionNow}
+              >
+                🧭
+              </Button>
+              <span
+                className="pointer-events-none absolute bottom-full right-0 z-20 mb-1 hidden w-max max-w-56 rounded-lg bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-md group-hover:block group-focus-within:block"
+                role="tooltip"
+              >
+                {expTip}
+              </span>
+            </div>
           </div>
           <AmbientControl />
           {bossActive && (
