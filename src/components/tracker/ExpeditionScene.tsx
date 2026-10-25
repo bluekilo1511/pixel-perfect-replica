@@ -129,7 +129,7 @@ export function ExpeditionScene({
 
   return (
     <div
-      className="exp-scene relative aspect-[16/9] w-full select-none overflow-hidden rounded-xl"
+      className="exp-scene relative h-64 w-full select-none overflow-hidden rounded-xl sm:h-72 md:h-80"
       role="img"
       aria-label="Thú cưng đang đi thám hiểm trên đồng hoang 2D"
       data-testid="expedition-scene"
@@ -137,7 +137,7 @@ export function ExpeditionScene({
       {/* Sky */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#7ec8f7] via-[#a8dcf5] to-[#f6e7c1]" />
       <span
-        className="absolute right-[12%] top-[10%] text-3xl"
+        className="absolute right-[12%] top-[10%] text-5xl"
         style={{ filter: "drop-shadow(0 0 12px rgba(255,220,130,0.9))" }}
         aria-hidden
       >
@@ -150,7 +150,7 @@ export function ExpeditionScene({
           style={{
             left: c.left,
             top: c.top,
-            fontSize: c.size,
+            fontSize: Math.round(c.size * 1.3),
             animationDuration: `${c.dur}s`,
             animationDelay: `${c.delay}s`,
           }}
@@ -166,11 +166,11 @@ export function ExpeditionScene({
           className={`flex w-full shrink-0 items-end justify-around ${batterySaver ? "" : "exp-parallax-slow"}`}
         >
           {MOUNTAINS.map((m, i) => (
-            <span key={i} className="text-6xl opacity-80" aria-hidden>
+            <span key={i} className="text-7xl opacity-80" aria-hidden>
               {m}
             </span>
           ))}
-          <span className="text-5xl opacity-75" aria-hidden>
+          <span className="text-6xl opacity-75" aria-hidden>
             🏞️
           </span>
         </div>
@@ -178,11 +178,11 @@ export function ExpeditionScene({
           className={`flex w-full shrink-0 items-end justify-around ${batterySaver ? "" : "exp-parallax-slow"}`}
         >
           {MOUNTAINS.map((m, i) => (
-            <span key={i} className="text-6xl opacity-80" aria-hidden>
+            <span key={i} className="text-7xl opacity-80" aria-hidden>
               {m}
             </span>
           ))}
-          <span className="text-5xl opacity-75" aria-hidden>
+          <span className="text-6xl opacity-75" aria-hidden>
             🏞️
           </span>
         </div>
@@ -192,7 +192,7 @@ export function ExpeditionScene({
           className={`flex w-full shrink-0 items-end justify-around ${batterySaver ? "" : "exp-parallax-mid"}`}
         >
           {HORIZON_ITEMS.map((t, i) => (
-            <span key={i} className="text-3xl" aria-hidden>
+            <span key={i} className="text-4xl" aria-hidden>
               {t}
             </span>
           ))}
@@ -201,7 +201,7 @@ export function ExpeditionScene({
           className={`flex w-full shrink-0 items-end justify-around ${batterySaver ? "" : "exp-parallax-mid"}`}
         >
           {HORIZON_ITEMS.map((t, i) => (
-            <span key={i} className="text-3xl" aria-hidden>
+            <span key={i} className="text-4xl" aria-hidden>
               {t}
             </span>
           ))}
@@ -222,7 +222,7 @@ export function ExpeditionScene({
             <span
               key={i}
               className="absolute"
-              style={{ left: `${g.x}%`, bottom: `${g.dy}px`, fontSize: g.size }}
+              style={{ left: `${g.x}%`, bottom: `${g.dy}px`, fontSize: Math.round(g.size * 1.3) }}
               aria-hidden
             >
               {g.emoji}
@@ -234,7 +234,7 @@ export function ExpeditionScene({
             <span
               key={i}
               className="absolute"
-              style={{ left: `${g.x}%`, bottom: `${g.dy}px`, fontSize: g.size }}
+              style={{ left: `${g.x}%`, bottom: `${g.dy}px`, fontSize: Math.round(g.size * 1.3) }}
               aria-hidden
             >
               {g.emoji}
@@ -248,9 +248,9 @@ export function ExpeditionScene({
         className={`absolute bottom-[15%] left-[14%] ${batterySaver ? "" : "exp-run"}`}
         data-testid="expedition-pet"
       >
-        <span className="relative block text-5xl leading-none" aria-hidden>
+        <span className="relative block text-6xl leading-none" aria-hidden>
           {petEmoji}
-          <span className="absolute -right-5 bottom-0 text-2xl" aria-hidden>
+          <span className="absolute -right-6 -bottom-1 text-3xl" aria-hidden>
             ⚔️
           </span>
         </span>
@@ -288,7 +288,7 @@ export function ExpeditionScene({
           data-testid="expedition-wild"
         >
           <span
-            className={`relative block text-5xl leading-none ${
+            className={`relative block text-6xl leading-none ${
               wild.phase === "clash"
                 ? "exp-clash"
                 : wild.phase === "poof"
@@ -301,7 +301,7 @@ export function ExpeditionScene({
           </span>
           {wild.phase === "clash" && (
             <span
-              className="exp-spark absolute -top-3 left-1/2 -translate-x-1/2 text-2xl"
+              className="exp-spark absolute -top-3 left-1/2 -translate-x-1/2 text-3xl"
               aria-hidden
             >
               ⚡
@@ -319,16 +319,16 @@ export function ExpeditionScene({
       )}
       {/* Clash flash near the pet's sword */}
       {wild?.phase === "clash" && (
-        <span className="exp-spark absolute bottom-[26%] left-[24%] text-2xl" aria-hidden>
+        <span className="exp-spark absolute bottom-[26%] left-[24%] text-3xl" aria-hidden>
           💥
         </span>
       )}
 
       {/* Expedition caption + countdown */}
-      <div className="absolute left-3 top-3 rounded-full bg-black/35 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+      <div className="absolute left-3 top-3 rounded-full bg-black/35 px-3.5 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
         🧭 Chuyến thám hiểm
       </div>
-      <div className="absolute right-3 top-3 rounded-full bg-black/35 px-3 py-1 text-xs font-semibold tabular-nums text-white backdrop-blur-sm">
+      <div className="absolute right-3 top-3 rounded-full bg-black/35 px-3.5 py-1.5 text-sm font-semibold tabular-nums text-white backdrop-blur-sm">
         {returnOverlay ? "🏠 Đang trở về nơi ở…" : `⏳ ${fmt(remain)}`}
       </div>
     </div>
