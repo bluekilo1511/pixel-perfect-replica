@@ -348,7 +348,10 @@ export function PetWidget() {
                 ) : null,
               )}
             </span>
-            <span className="absolute -bottom-1 -right-1 rounded-full bg-card px-2 py-0.5 text-lg">
+            <span className="absolute -bottom-1.5 -right-1.5 flex items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-lg shadow-sm backdrop-blur-md">
+              <span className="text-[10px] font-semibold leading-none text-foreground/85">
+                {MOOD_META[mood].label}
+              </span>
               {MOOD_META[mood].face}
             </span>
           </Button>
