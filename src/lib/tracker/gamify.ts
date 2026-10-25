@@ -103,10 +103,10 @@ export const ACCESSORY_UI: Record<AccessorySlot, Record<Species, string>> = {
   },
   face: {
     cat: "top-[32%] left-1/2 -translate-x-1/2 text-4xl",
-    dog: "top-[8%] left-1/2 -translate-x-1/2 text-3xl",
-    owl: "-top-3 left-1/2 -translate-x-1/2 text-4xl",
-    whale: "top-[4%] left-[66%] -translate-x-1/2 text-3xl",
-    lizard: "top-0 left-[53%] -translate-x-1/2 text-2xl",
+    dog: "top-[16%] left-1/2 -translate-x-1/2 text-3xl",
+    owl: "top-[6%] left-1/2 -translate-x-1/2 text-4xl",
+    whale: "top-[20%] left-[36%] -translate-x-1/2 text-3xl",
+    lizard: "top-[2%] left-[42%] -translate-x-1/2 text-2xl",
   },
 };
 
