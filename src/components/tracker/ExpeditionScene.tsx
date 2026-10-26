@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * 2D expedition cutscene: while the pet is away exploring, the 3D room is
- * replaced by this side-scrolling scene. The pet runs in place with a sword,
- * the world scrolls past (grass, dirt, rocks, flowers, trees, mountains,
+ * replaced by this side-scrolling scene. The pet runs in place, the world
+ * scrolls past (grass, dirt, rocks, flowers, trees, mountains,
  * clouds), and every now and then a wild emoji critter charges in from the
- * other side — brief sword clash, then it evaporates in a puff.
+ * other side — it is cut down before it ever reaches the pet: a brief sword
+ * clash, or a winged-sword strike when the Cosmic Angel Wings are equipped.
  */
 
 const WILD_POOL = [
@@ -77,10 +78,13 @@ export function ExpeditionScene({
   petEmoji,
   endAt,
   batterySaver = false,
+  wings = false,
 }: {
   petEmoji: string;
   endAt: string;
   batterySaver?: boolean;
+  /** Cosmic Angel Wings equipped: a winged sword escorts the pet instead. */
+  wings?: boolean;
 }) {
   const [remain, setRemain] = useState(() =>
     Math.max(0, Math.ceil((new Date(endAt).getTime() - Date.now()) / 1000)),
@@ -250,9 +254,6 @@ export function ExpeditionScene({
       >
         <span className="relative block text-5xl leading-none" aria-hidden>
           {petEmoji}
-          <span className="absolute -right-5 bottom-0 text-2xl" aria-hidden>
-            ⚔️
-          </span>
         </span>
         {!batterySaver && (
           <>
@@ -277,6 +278,45 @@ export function ExpeditionScene({
         )}
       </div>
 
+      {/* Winged sword companion (Cánh Thiên Thần Vũ Trụ): hovers behind the
+          pet with flapping wings and dashes out to slash wild critters before
+          they ever reach the pet. */}
+      {wings && (
+        <div
+          className="absolute z-20"
+          style={{
+            left: wild?.phase === "clash" ? "30%" : "7%",
+            bottom: wild?.phase === "clash" ? "25%" : "27%",
+            transition: "left 0.45s ease-in-out, bottom 0.45s ease-in-out",
+          }}
+          data-testid="expedition-sword"
+        >
+          <span
+            className={`block ${batterySaver ? "-rotate-12" : "exp-sword"}`}
+            style={{ filter: "drop-shadow(0 0 6px rgba(125, 211, 252, 0.85))" }}
+            aria-hidden
+          >
+            <svg
+              width="44"
+              height="44"
+              viewBox="0 0 64 64"
+              fill="#232a3f"
+              role="img"
+              aria-label="Kiếm có cánh bay theo sau thú cưng"
+            >
+              <g className={batterySaver ? "" : "exp-sword-wings"}>
+                <path d="M30 27 C24 19 15 16 3 17 C10 13 13 9 21 10 C17 7 14 4 12 1 C22 5 28 12 30 20 Z" />
+                <path d="M34 27 C40 19 49 16 61 17 C54 13 51 9 43 10 C47 7 50 4 52 1 C42 5 36 12 34 20 Z" />
+              </g>
+              <circle cx="32" cy="8" r="3" />
+              <rect x="30.6" y="10" width="2.8" height="9" rx="1.4" />
+              <path d="M23 19 C27 22 37 22 41 19 C37 25 27 25 23 19 Z" />
+              <path d="M32 25 L34.6 29 L34.6 51 L32 59 L29.4 51 L29.4 29 Z" />
+            </svg>
+          </span>
+        </div>
+      )}
+
       {/* Wild critter charging in from the opposite side */}
       {wild && (
         <div
@@ -299,13 +339,19 @@ export function ExpeditionScene({
           >
             {wild.emoji}
           </span>
-          {wild.phase === "clash" && (
+          {wild.phase === "clash" && !wings && (
             <span
               className="exp-spark absolute -top-3 left-1/2 -translate-x-1/2 text-2xl"
               aria-hidden
             >
               ⚡
             </span>
+          )}
+          {wild.phase === "clash" && wings && (
+            <span
+              className="exp-slash absolute left-1/2 top-1/2 z-10 block h-1.5 w-16 rounded-full bg-gradient-to-r from-transparent via-white to-transparent"
+              aria-hidden
+            />
           )}
           {wild.phase === "poof" && (
             <span
@@ -318,7 +364,7 @@ export function ExpeditionScene({
         </div>
       )}
       {/* Clash flash near the pet's sword */}
-      {wild?.phase === "clash" && (
+      {wild?.phase === "clash" && !wings && (
         <span className="exp-spark absolute bottom-[26%] left-[24%] text-2xl" aria-hidden>
           💥
         </span>
