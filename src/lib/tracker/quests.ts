@@ -118,10 +118,10 @@ export function dailyQuests(date: string): QuestDef[] {
 export const questProgress = (stats: DayStats | undefined, q: QuestDef): number =>
   Math.min(q.target, stats?.[q.metric] ?? 0);
 
-// ---- Weekly raid boss (Monday-start week, damage from all Pomodoros of the week) ----
-export const RAID_MAX_HP = 100;
-export const RAID_DAMAGE_PER_POMO = 12;
-export const RAID_REWARD = { catCoins: 10, lizardGems: 3 };
+// ---- Weekly raid boss (Monday-start week, damage from all focus minutes of the week) ----
+export const RAID_HP = 420; // ~7 hours of focus per week defeats the boss
+export const RAID_LOOT = 3; // material drops granted on defeat
+export const RAID_REWARD = { catCoins: 40, lizardGems: 8 };
 
 export interface RaidState {
   weekStart: string | null;
@@ -139,6 +139,7 @@ export function raidWeekKey(date: string): string {
 export interface RaidStatus {
   weekStart: string;
   pomodoros: number;
+  focusMin: number;
   damage: number;
   hpLeft: number;
   defeated: boolean;
@@ -154,9 +155,15 @@ export function raidStatus(
     (n, d) => n + (stats[d]?.pomodoros ?? 0),
     0,
   );
-  const damage = pomodoros * RAID_DAMAGE_PER_POMO;
-  const hpLeft = Math.max(0, RAID_MAX_HP - damage);
+  const focusMin = Array.from({ length: 7 }, (_, i) => shiftDate(weekStart, i)).reduce(
+    (n, d) => n + (stats[d]?.focusMin ?? 0),
+    0,
+  );
+  // Every focused minute deals 1 damage: the boss falls after ~7 hours of focus,
+  // no matter how long each session is (25/50/... minutes).
+  const damage = Math.min(RAID_HP, focusMin);
+  const hpLeft = RAID_HP - damage;
   const defeated = hpLeft === 0;
   const claimable = defeated && !(raid.weekStart === weekStart && raid.claimed);
-  return { weekStart, pomodoros, damage, hpLeft, defeated, claimable };
+  return { weekStart, pomodoros, focusMin, damage, hpLeft, defeated, claimable };
 }

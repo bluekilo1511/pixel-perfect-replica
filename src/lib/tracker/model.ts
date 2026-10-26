@@ -24,6 +24,7 @@ import {
   claimReward,
   isNightOwlHour,
   normalizeExtras,
+  pickMaterial,
   recordWaterGoal,
   rollDrop,
   writeDiary,
@@ -40,6 +41,7 @@ import {
   defaultQuests,
   defaultRaid,
   questProgress,
+  RAID_LOOT,
   RAID_REWARD,
   raidStatus,
   type QuestsState,
@@ -1166,22 +1168,28 @@ export function claimQuest(
   };
 }
 
-/** Claims the weekly raid reward once the boss is defeated. */
-export function claimRaid(data: AppData, now = new Date()): { data: AppData; ok: boolean } {
+/** Claims the weekly raid reward once the boss is defeated (coins, gems and loot materials). */
+export function claimRaid(
+  data: AppData,
+  now = new Date(),
+  rng: () => number = Math.random,
+): { data: AppData; ok: boolean; drops: MaterialId[] } {
   const st = raidStatus(data.dailyStats, dateStr(now), data.raid);
-  if (!st.claimable) return { data, ok: false };
-  return {
-    ok: true,
-    data: {
-      ...data,
-      raid: { weekStart: st.weekStart, claimed: true },
-      game: {
-        ...data.game,
-        catCoins: data.game.catCoins + RAID_REWARD.catCoins,
-        lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems,
-      },
+  if (!st.claimable) return { data, ok: false, drops: [] };
+  let next: AppData = {
+    ...data,
+    raid: { weekStart: st.weekStart, claimed: true },
+    game: {
+      ...data.game,
+      catCoins: data.game.catCoins + RAID_REWARD.catCoins,
+      lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems,
     },
   };
+  const drops: MaterialId[] = Array.from({ length: RAID_LOOT }, () => pickMaterial(rng));
+  drops.forEach((d) => {
+    next = addMaterial(next, d);
+  });
+  return { data: next, ok: true, drops };
 }
 
 // ---- Backup reminder ----

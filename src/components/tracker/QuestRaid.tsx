@@ -1,6 +1,6 @@
 import { useTracker } from "@/lib/tracker/store";
 import { dateStr } from "@/lib/tracker/model";
-import { dailyQuests, questProgress, RAID_MAX_HP, raidStatus } from "@/lib/tracker/quests";
+import { dailyQuests, questProgress, RAID_HP, raidStatus } from "@/lib/tracker/quests";
 import { weatherEffect, weatherFromData } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 
@@ -72,13 +72,15 @@ export function DailyQuestsCard() {
 export function RaidBossCard() {
   const { data, claimRaid } = useTracker();
   const st = raidStatus(data.dailyStats, dateStr(), data.raid);
-  const pct = (st.hpLeft / RAID_MAX_HP) * 100;
+  const pct = (st.hpLeft / RAID_HP) * 100;
 
   return (
     <section className="glass p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold">⚔️ Boss tuần</h2>
-        <span className="text-sm text-muted-foreground">{st.pomodoros} 🍅 tuần này</span>
+        <span className="text-sm text-muted-foreground">
+          {st.pomodoros} 🍅 · {st.focusMin}p tập trung
+        </span>
       </div>
       <div className="mb-2 flex items-center gap-3">
         <span className={`text-4xl ${st.defeated ? "opacity-40 grayscale" : ""}`} aria-hidden>
@@ -88,7 +90,7 @@ export function RaidBossCard() {
           <div className="mb-1 flex justify-between text-xs text-muted-foreground">
             <span>{st.defeated ? "Đã hạ gục!" : "Quái vật Xao Nhãng"}</span>
             <span>
-              {st.hpLeft}/{RAID_MAX_HP} HP
+              {st.hpLeft}/{RAID_HP} HP
             </span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-muted">
@@ -100,7 +102,8 @@ export function RaidBossCard() {
         </div>
       </div>
       <p className="mb-3 text-xs text-muted-foreground">
-        Mỗi phiên học trong tuần gây 12 sát thương. Hạ boss để nhận +10 😺 +3 🦎.
+        Mỗi phút tập trung trong tuần gây 1 sát thương — cần khoảng 7 giờ để hạ boss. Thưởng: +40 😺
+        +8 🦎 + 3 nguyên liệu.
       </p>
       <Button className="w-full" disabled={!st.claimable} onClick={claimRaid}>
         {st.claimable

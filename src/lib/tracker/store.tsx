@@ -259,7 +259,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     if (!r.ok) return false;
     setData(r.data);
     celebrate();
-    toast.success("⚔️ Hạ Boss tuần! +10 😺 +3 🦎");
+    toast.success("⚔️ Hạ Boss tuần! +40 😺 +8 🦎", { duration: 6000 });
+    r.drops.forEach(announceDrop);
     return true;
   };
 
