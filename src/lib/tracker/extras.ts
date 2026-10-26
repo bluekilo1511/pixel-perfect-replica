@@ -74,6 +74,8 @@ export function payRecipe(m: Materials, r: Recipe): Materials {
 
 // ---- Pet evolution ----
 export const PET_XP_SHARE = 0.1;
+/** Tier 2 pets (level 6+) earn 15% of the user's XP instead of the base 10%. */
+export const petXpShare = (petLevel: number) => (tierOf(petLevel || 1) >= 2 ? 0.15 : PET_XP_SHARE);
 export const petXpForLevel = (lvl: number) => lvl * 100;
 
 const TIERS: Record<Species, [string, string, string]> = {
@@ -123,9 +125,9 @@ export function grantPetXp(
     evolved: tierOf(petLevel) !== tierOf(pet.petLevel || 1),
   };
 }
-/** Pet earns 10% of the user's XP. Returns new pet and whether its tier changed. */
+/** Pet earns a share of the user's XP (15% at tier 2, else 10%). Returns new pet and whether its tier changed. */
 export function addPetXp(pet: PetState, userXp: number) {
-  return grantPetXp(pet, Math.max(0, Math.round(userXp * PET_XP_SHARE)));
+  return grantPetXp(pet, Math.max(0, Math.round(userXp * petXpShare(pet.petLevel))));
 }
 
 // ---- Daily stats ----
