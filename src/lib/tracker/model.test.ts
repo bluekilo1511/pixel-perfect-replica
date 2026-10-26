@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expeditionStatus, startExpedition } from "./extras";
+import { expeditionStatus, resolveExpedition, startExpedition } from "./extras";
 import {
   DRAGON_UNLOCK_LEVEL,
   addWaterCup,
@@ -176,6 +176,37 @@ describe("tracker rules", () => {
     };
     expect(d.expedition.startedAt).not.toBeNull();
     expect(d.expedition.lastTriggerDate).toBe("2026-10-18");
+  });
+
+  it("expedition allows 3 trips per day, each costing 50 more focus minutes", () => {
+    let d = defaultData();
+    const at = (h: number, m = 0) => new Date(2026, 9, 18, h, m);
+    d = completePomodoroSession(d, 25, at(8)).data;
+    d = completePomodoroSession(d, 25, at(9)).data;
+    d = { ...d, expedition: startExpedition(d.expedition, 50, at(10)) };
+    expect(d.expedition.tripsToday).toBe(1);
+    // Still away: the compass stays locked until the pet comes home.
+    expect(startExpedition(d.expedition, 200, at(10, 5))).toBe(d.expedition);
+    let r = resolveExpedition(d.expedition, at(10, 31))!;
+    expect(r.drops.length).toBeGreaterThanOrEqual(2);
+    d = { ...d, expedition: r.expedition };
+    // Trip 2 costs 100 cumulative focus minutes (50 more than trip 1).
+    expect(expeditionStatus(d.expedition, 50, at(11)).ready).toBe(false);
+    expect(expeditionStatus(d.expedition, 50, at(11)).needMinutes).toBe(50);
+    expect(expeditionStatus(d.expedition, 100, at(11)).ready).toBe(true);
+    d = { ...d, expedition: startExpedition(d.expedition, 100, at(11)) };
+    expect(d.expedition.tripsToday).toBe(2);
+    r = resolveExpedition(d.expedition, at(11, 31))!;
+    d = { ...d, expedition: r.expedition };
+    // Trip 3 costs 150; after that the daily cap blocks any further trip.
+    expect(expeditionStatus(d.expedition, 149, at(12)).ready).toBe(false);
+    expect(expeditionStatus(d.expedition, 150, at(12)).ready).toBe(true);
+    d = { ...d, expedition: startExpedition(d.expedition, 150, at(12)) };
+    expect(d.expedition.tripsToday).toBe(3);
+    r = resolveExpedition(d.expedition, at(12, 31))!;
+    d = { ...d, expedition: r.expedition };
+    expect(expeditionStatus(d.expedition, 300, at(13)).usedToday).toBe(true);
+    expect(startExpedition(d.expedition, 300, at(13))).toBe(d.expedition);
   });
 
   it("backup reminder fires after 7 days and snoozes for 24h", () => {
