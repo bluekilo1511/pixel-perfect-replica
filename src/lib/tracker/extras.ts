@@ -339,14 +339,25 @@ export interface ExpeditionState {
   startedAt: string | null;
   endAt: string | null;
   lastTriggerDate?: string | null;
+  /** Trips started today — resets when the day rolls over. */
+  tripsToday?: number;
 }
 export const EXPEDITION_TRIGGER_MINUTES = 50;
 export const EXPEDITION_DURATION_MINUTES = 30;
+export const EXPEDITION_DAILY_LIMIT = 3;
 export const defaultExpedition = (): ExpeditionState => ({
   startedAt: null,
   endAt: null,
   lastTriggerDate: null,
+  tripsToday: 0,
 });
+/** Trips started today — legacy saves recorded only `lastTriggerDate`. */
+export const tripsOf = (expedition: ExpeditionState, today: string): number => {
+  if (expedition.lastTriggerDate !== today) return 0;
+  return expedition.tripsToday ?? 1;
+};
+/** Focus minutes the next trip costs: 50 × (trips already taken today + 1). */
+export const expeditionNeed = (trips: number) => EXPEDITION_TRIGGER_MINUTES * (trips + 1);
 
 export const isNightOwlHour = (d: Date) => d.getHours() >= 1 && d.getHours() < 4;
 
@@ -425,17 +436,23 @@ export function expeditionStatus(
   ready: boolean;
   haveMinutes: number;
   needMinutes: number;
+  tripsToday: number;
+  limit: number;
 } {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const away = !!expedition.endAt && new Date(expedition.endAt).getTime() > now.getTime();
-  const usedToday = expedition.lastTriggerDate === today;
-  const ready = !away && !usedToday && focusToday >= EXPEDITION_TRIGGER_MINUTES;
+  const trips = tripsOf(expedition, today);
+  const usedToday = trips >= EXPEDITION_DAILY_LIMIT;
+  const need = expeditionNeed(trips);
+  const ready = !away && !usedToday && focusToday >= need;
   return {
     away,
     usedToday,
     ready,
     haveMinutes: focusToday,
-    needMinutes: Math.max(0, EXPEDITION_TRIGGER_MINUTES - focusToday),
+    needMinutes: Math.max(0, need - focusToday),
+    tripsToday: trips,
+    limit: EXPEDITION_DAILY_LIMIT,
   };
 }
 
@@ -446,15 +463,13 @@ export function startExpedition(
   durationMinutes = EXPEDITION_DURATION_MINUTES,
 ): ExpeditionState {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  if (
-    expedition.endAt ||
-    expedition.lastTriggerDate === today ||
-    minutes < EXPEDITION_TRIGGER_MINUTES
-  )
-    return expedition;
+  const trips = tripsOf(expedition, today);
+  if (expedition.endAt || trips >= EXPEDITION_DAILY_LIMIT) return expedition;
+  if (minutes < expeditionNeed(trips)) return expedition;
   return {
     startedAt: now.toISOString(),
     lastTriggerDate: today,
+    tripsToday: trips + 1,
     endAt: new Date(now.getTime() + durationMinutes * 60_000).toISOString(),
   };
 }
@@ -468,7 +483,13 @@ export function resolveExpedition(
   if (!Number.isFinite(endAt) || endAt > now.getTime()) return null;
   const count = rng() < 0.5 ? 2 : 3;
   return {
-    expedition: defaultExpedition(),
+    // Keep today's trip count so the daily limit survives the return home.
+    expedition: {
+      startedAt: null,
+      endAt: null,
+      lastTriggerDate: expedition.lastTriggerDate ?? null,
+      tripsToday: expedition.tripsToday ?? (expedition.lastTriggerDate ? 1 : 0),
+    },
     drops: Array.from({ length: count }, () => pickMaterial(rng)),
   };
 }
