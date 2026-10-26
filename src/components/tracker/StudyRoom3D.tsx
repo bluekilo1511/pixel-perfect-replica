@@ -5,10 +5,23 @@ import { createContext, useContext } from "react";
 
 const SaverCtx = createContext(false);
 
-/** Sparkles that vanish in battery-saver mode (they redraw every frame). */
+const useReducedMotion = () => {
+  const [rm, setRm] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setRm(mq.matches);
+    const on = () => setRm(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return rm;
+};
+
+/** Sparkles that vanish in battery-saver mode or for reduced-motion users (they redraw every frame). */
 function Fx(props: Parameters<typeof Sparkles>[0]) {
   const saver = useContext(SaverCtx);
-  return saver ? null : <Sparkles {...props} />;
+  const reduced = useReducedMotion();
+  return saver || reduced ? null : <Sparkles {...props} />;
 }
 import * as THREE from "three";
 import { DECORATIONS, type DecorId } from "@/lib/tracker/gamify";
@@ -189,10 +202,25 @@ function posterTexture() {
 
 /* ---------- shared bits ---------- */
 
-function PetSprite({ emoji }: { emoji: string }) {
+function PetSprite({ emoji, evolving = false }: { emoji: string; evolving?: boolean }) {
   const tex = useMemo(() => emojiTexture(emoji), [emoji]);
   return (
     <Float speed={2.2} floatIntensity={0.55} rotationIntensity={0.25}>
+      {/* Tier 1 pets carry a faint golden mist — evolution is close. */}
+      {evolving && (
+        <Fx
+          count={16}
+          scale={[1.3, 1.1, 1.3]}
+          size={2}
+          speed={0.25}
+          opacity={0.25}
+          color="#facc15"
+          position={[0.55, 0.55, 0.5]}
+        />
+      )}
+      {evolving && (
+        <pointLight color="#fde68a" intensity={0.25} distance={1.4} position={[0.55, 0.6, 0.5]} />
+      )}
       <mesh position={[0.55, 0.5, 0.5]}>
         <planeGeometry args={[0.9, 0.9]} />
         <meshBasicMaterial map={tex} transparent toneMapped={false} />
@@ -673,12 +701,14 @@ function Room({
   petEmoji,
   onShelfClick,
   season = "default",
+  petEvolving = false,
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
   petEmoji: string;
   onShelfClick?: (() => void) | undefined;
   season?: RoomSeason;
+  petEvolving?: boolean;
 }) {
   const S = SEASON_PALETTE[season];
   const wood = useMemo(() => woodTexture(), []);
@@ -871,7 +901,7 @@ function Room({
           <meshStandardMaterial color="#3f3f46" roughness={0.6} />
         </mesh>
       </group>
-      <PetSprite emoji={petEmoji} />
+      <PetSprite emoji={petEmoji} evolving={petEvolving} />
       {has("plant") && (
         <Clickable id="plant" position={[2.65, 0, -1.55]} onStow={onStow}>
           <Plant />
@@ -1054,6 +1084,7 @@ export function StudyRoom3D({
   onShelfClick,
   season = roomSeason(),
   batterySaver = false,
+  petEvolving = false,
 }: {
   decor: DecorId[];
   onStow: (id: DecorId) => void;
@@ -1061,6 +1092,7 @@ export function StudyRoom3D({
   onShelfClick?: () => void;
   season?: RoomSeason;
   batterySaver?: boolean;
+  petEvolving?: boolean;
 }) {
   // Stop the render loop entirely while the tab is hidden (saves CPU/GPU/RAM).
   const [tabHidden, setTabHidden] = useState(false);
@@ -1089,6 +1121,7 @@ export function StudyRoom3D({
               petEmoji={petEmoji}
               onShelfClick={onShelfClick}
               season={season}
+              petEvolving={petEvolving}
             />
           </SaverCtx.Provider>
         </Canvas>

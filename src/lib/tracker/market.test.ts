@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buyMarket, defaultMarket, marketStock, weekStart, type MarketItemId } from "./market";
+import {
+  buyMarket,
+  defaultMarket,
+  MARKET_ITEMS,
+  marketPrice,
+  marketStock,
+  weekStart,
+  type MarketItemId,
+} from "./market";
 import { defaultPet } from "./gamify";
 import { emptyMaterials, type Materials } from "./extras";
 import type { MarketData } from "./market";
@@ -225,5 +233,23 @@ describe("ticket item", () => {
     expect(r.data.game.spinTickets).toBe(1);
     expect(r.data.game.catCoins).toBe(40);
     expect(buyMarket(r.data, "ticket", w).ok).toBe(false);
+  });
+});
+
+describe("tier 2 pet discount", () => {
+  it("charges 10% less for tier 2 pets and shows the discount price", () => {
+    const w = weekWith("shield");
+    const evolved = { ...makeData(100), petState: { ...makeData().petState, petLevel: 6 } };
+    const r = buyMarket(evolved, "shield", w); // shield costs 20 -> 18
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.game.catCoins).toBe(82);
+    expect(marketPrice(MARKET_ITEMS.shield, makeData().petState)).toBe(20);
+    expect(marketPrice(MARKET_ITEMS.shield, { ...makeData().petState, petLevel: 6 })).toBe(18);
+    expect(marketPrice(MARKET_ITEMS.honey, { ...makeData().petState, petLevel: 7 })).toBe(14); // 15 * 0.9 = 13.5 -> 14
+  });
+  it("never prices an item below 1 coin", () => {
+    const cheap = { ...MARKET_ITEMS.shield, price: 1 };
+    expect(marketPrice(cheap, { ...makeData().petState, petLevel: 6 })).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import { DECORATIONS, daysBetween, shiftDate, type DecorId, type PetState } from "./gamify";
-import { grantPetXp, type Materials } from "./extras";
+import { grantPetXp, tierOf, type Materials } from "./extras";
 
 /**
  * Chợ Hư Không — a weekly shop that rotates its stock every Monday.
@@ -211,6 +211,15 @@ export interface MarketData {
   market: MarketState;
 }
 
+/**
+ * Final price of a market item. Tier 2 pets (level 6+) get a standing 10% VIP
+ * discount on everything at the Void Market, rounded and never below 1 coin.
+ */
+export function marketPrice(item: MarketItem, petState: PetState): number {
+  const off = tierOf(petState.petLevel || 1) >= 2 ? 0.9 : 1;
+  return Math.max(1, Math.round(item.price * off));
+}
+
 /** Buys one market item. Mutates nothing; returns a new data object or a failure reason. */
 export function buyMarket<T extends MarketData>(
   data: T,
@@ -224,11 +233,12 @@ export function buyMarket<T extends MarketData>(
   const minLevel = MARKET_ITEMS[id].minLevel;
   if (minLevel != null && data.game.level < minLevel) return { ok: false, reason: "locked" };
   const item = MARKET_ITEMS[id];
-  if (data.game.catCoins < item.price) return { ok: false, reason: "not-enough-coins" };
+  const price = marketPrice(item, data.petState);
+  if (data.game.catCoins < price) return { ok: false, reason: "not-enough-coins" };
 
   const base: T = {
     ...data,
-    game: { ...data.game, catCoins: data.game.catCoins - item.price },
+    game: { ...data.game, catCoins: data.game.catCoins - price },
     market: { lastWeek: week, bought: { ...data.market.bought, [id]: week } },
   };
   const message = `Đã mua ${item.emoji} ${item.name}!`;

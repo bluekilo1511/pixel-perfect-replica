@@ -116,4 +116,3 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
     </Tabs>
   );
 }
-

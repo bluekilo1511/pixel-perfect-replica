@@ -3,10 +3,12 @@ import { useTracker } from "@/lib/tracker/store";
 import {
   buyMarket,
   MARKET_ITEMS,
+  marketPrice,
   marketStock,
   weekStart,
   type MarketItemId,
 } from "@/lib/tracker/market";
+import { petEmoji, tierOf } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 
 /** Chợ Hư Không — weekly rotating shop paid in cat coins. */
@@ -27,12 +29,16 @@ export function MarketCard() {
       <p className="mb-4 text-xs text-muted-foreground">
         Chợ nạp hàng ngẫu nhiên mỗi thứ Hai, mỗi món mua 1 lần/tuần — hàng hiếm cần đủ cấp độ và chỉ
         có ở đây.
+        {tierOf(data.petState.petLevel || 1) >= 2 &&
+          ` ${petEmoji(data.petState)} Thú cưng tier 2 của bạn được giảm 10% mọi món!`}
       </p>
       <ul className="grid gap-2 sm:grid-cols-3">
         {stock.map((id: MarketItemId) => {
           const m = MARKET_ITEMS[id];
           const soldOut = data.market.bought[id] === week;
           const locked = m.minLevel != null && data.game.level < m.minLevel;
+          const price = marketPrice(m, data.petState);
+          const discounted = price < m.price;
           return (
             <li
               key={id}
@@ -68,7 +74,14 @@ export function MarketCard() {
                     toast.success(r.message);
                   }}
                 >
-                  {m.price} 😺
+                  {discounted ? (
+                    <span title="🐾 Ưu đãi thú cưng tier 2: giảm 10%">
+                      <s className="mr-1 opacity-60">{m.price}</s>
+                      {price} 😺
+                    </span>
+                  ) : (
+                    `${m.price} 😺`
+                  )}
                 </Button>
               )}
             </li>
