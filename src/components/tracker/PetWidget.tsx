@@ -35,7 +35,6 @@ import {
 } from "@/lib/tracker/boss";
 import {
   ADVANCED_LINES,
-  EXPEDITION_TRIGGER_MINUTES,
   expeditionStatus,
   petEmoji,
   petTitle,
@@ -99,18 +98,19 @@ export function PetWidget() {
   const setFocus = useFocusSky();
   const { data, finishPomodoro, bossCancel, update } = useTracker();
 
-  // Expedition compass: unlocks once today's total focus reaches the trigger
-  // threshold; pressing it sends the pet exploring (3D room becomes the 2D scene).
+  // Expedition compass: each trip costs 50 × (trips taken today + 1) focus
+  // minutes, up to 3 trips per day; pressing it sends the pet exploring
+  // (3D room becomes the 2D scene).
   const expFocusToday = data.dailyStats[dateStr()]?.focusMin ?? 0;
   const exp = expeditionStatus(data.expedition, expFocusToday, new Date());
   const expRunning = !!data.expedition.endAt;
   const expTip = exp.away
     ? "🧭 Pet đang thám hiểm…"
     : exp.usedToday
-      ? "🧭 Pet đã đi thám hiểm hôm nay rồi"
+      ? `🧭 Pet đã đi đủ ${exp.limit} chuyến hôm nay rồi`
       : exp.ready
-        ? "🧭 Sẵn sàng! Bấm cho pet lên đường"
-        : `🧭 Cần ${exp.needMinutes} phút tập trung nữa hôm nay (hiện có ${exp.haveMinutes}/${EXPEDITION_TRIGGER_MINUTES})`;
+        ? `🧭 Sẵn sàng! Chuyến ${exp.tripsToday + 1}/${exp.limit} — bấm cho pet lên đường`
+        : `🧭 Chuyến ${exp.tripsToday + 1}/${exp.limit}: cần ${exp.needMinutes} phút tập trung nữa (hiện có ${exp.haveMinutes})`;
   const startExpeditionNow = () => {
     update((d) => {
       const ft = d.dailyStats[dateStr()]?.focusMin ?? 0;
@@ -392,6 +392,7 @@ export function PetWidget() {
                 petEmoji={petForm}
                 endAt={data.expedition.endAt!}
                 batterySaver={data.settings.batterySaver}
+                wings={data.petState.accessories.back === "wings"}
               />
             ) : (
               <StudyRoom3D
