@@ -1532,3 +1532,30 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   60% { opacity: 0.55; transform: scale(1.45) translateY(-10px); filter: blur(3px); }
   100% { opacity: 0; transform: scale(2) translateY(-22px); filter: blur(7px); }
 }
+
+/* Winged sword companion (Cánh Thiên Thần Vũ Trụ equipped) */
+.exp-sword {
+  animation: exp-sword-bob 1.6s ease-in-out infinite;
+}
+@keyframes exp-sword-bob {
+  0%, 100% { transform: rotate(-12deg) translateY(0); }
+  50% { transform: rotate(-12deg) translateY(-5px); }
+}
+.exp-sword-wings {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: exp-wing-flap 0.5s ease-in-out infinite;
+}
+@keyframes exp-wing-flap {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.45); }
+}
+.exp-slash {
+  opacity: 0;
+  animation: exp-slash 0.5s ease-out 1;
+}
+@keyframes exp-slash {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-45deg) scale(0.3); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(-45deg) scale(1.5); }
+}
