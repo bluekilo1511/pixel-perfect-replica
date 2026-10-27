@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { ZODIAC_LIST, zodiacForBirthday } from "@/lib/tracker/zodiac";
@@ -11,6 +11,9 @@ import {
   type ThemeMode,
 } from "@/lib/tracker/model";
 import { openFile } from "@/lib/tracker/storage";
+import { clearCustomChime, saveCustomChime } from "@/lib/tracker/chimeStore";
+import { ting } from "@/lib/tracker/effects";
+import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -49,7 +52,31 @@ export function SettingsPanel() {
   const s = data.settings;
   const [name, setName] = useState(data.ownerName ?? "");
   const [preset, setPreset] = useState("");
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null);
+  const [notifPermission, setNotifPermission] =
+    useState<NotificationPermission | null>(null);
+  const chimeInput = useRef<HTMLInputElement>(null);
+
+  const onChimeFile = async (file?: File) => {
+    if (!file) return;
+    if (
+      !file.type.startsWith("audio/") &&
+      !/\.(mp3|wav|ogg|m4a|flac)$/i.test(file.name)
+    ) {
+      toast.error("Chỉ nhận file âm thanh (mp3, wav, ogg...)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File quá lớn — tối đa 5 MB");
+      return;
+    }
+    const ok = await saveCustomChime(file, file.name);
+    if (!ok) {
+      toast.error("Trình duyệt không hỗ trợ lưu file âm thanh");
+      return;
+    }
+    set({ customChime: true });
+    toast.success(`Đã dùng "${file.name}" làm chuông hết phiên`);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -87,7 +114,9 @@ export function SettingsPanel() {
       toast.error("Nhập số phút từ 1 đến 180.");
       return;
     }
-    if (POMODORO_PRESETS.includes(minutes as (typeof POMODORO_PRESETS)[number])) {
+    if (
+      POMODORO_PRESETS.includes(minutes as (typeof POMODORO_PRESETS)[number])
+    ) {
       toast.error("Mặc định đã có sẵn, hãy chọn số khác.");
       return;
     }
@@ -95,7 +124,11 @@ export function SettingsPanel() {
       toast.error("Đã có preset này rồi.");
       return;
     }
-    set({ customPresets: [...s.customPresets, minutes].slice(0, 4).sort((a, b) => a - b) });
+    set({
+      customPresets: [...s.customPresets, minutes]
+        .slice(0, 4)
+        .sort((a, b) => a - b),
+    });
     setPreset("");
   };
 
@@ -115,7 +148,8 @@ export function SettingsPanel() {
         description: "Kiểm tra lại nhiệm vụ và số dư nhé.",
       });
     } catch (e) {
-      if ((e as { name?: string })?.name !== "AbortError") toast.error("Không mở được file");
+      if ((e as { name?: string })?.name !== "AbortError")
+        toast.error("Không mở được file");
     }
   };
 
@@ -124,8 +158,8 @@ export function SettingsPanel() {
       <section className="glass p-5">
         <h2 className="mb-1 text-lg font-semibold">⚙️ Cài đặt</h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục phiên học · <b>N</b> thêm nhiệm vụ ·{" "}
-          <b>1–7</b> chuyển tab
+          ⌨️ Phím tắt: <b>Space</b> tạm dừng/tiếp tục phiên học · <b>N</b> thêm
+          nhiệm vụ · <b>1–7</b> chuyển tab
         </p>
         <p className="mb-2 text-xs text-muted-foreground">
           Mọi thứ đang chạy, lưu thẳng vào file của bạn.
@@ -148,8 +182,14 @@ export function SettingsPanel() {
             </>
           </Row>
           <Row label="Giao diện" hint="Tự động = sáng ban ngày, tối về đêm">
-            <Select value={s.themeMode} onValueChange={(v) => set({ themeMode: v as ThemeMode })}>
-              <SelectTrigger className="h-9 w-[130px]" aria-label="Giao diện sáng/tối">
+            <Select
+              value={s.themeMode}
+              onValueChange={(v) => set({ themeMode: v as ThemeMode })}
+            >
+              <SelectTrigger
+                className="h-9 w-[130px]"
+                aria-label="Giao diện sáng/tối"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -193,14 +233,18 @@ export function SettingsPanel() {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={notifPermission === "denied" || notifPermission === null}
+                disabled={
+                  notifPermission === "denied" || notifPermission === null
+                }
                 onClick={async () => {
                   try {
                     const p = await Notification.requestPermission();
                     setNotifPermission(p);
                     if (p === "granted") toast.success("Đã bật thông báo");
                     else if (p === "denied")
-                      toast.error("Thông báo đã bị chặn. Hãy mở lại trong cài đặt trình duyệt.");
+                      toast.error(
+                        "Thông báo đã bị chặn. Hãy mở lại trong cài đặt trình duyệt.",
+                      );
                   } catch {
                     toast.error("Không bật được thông báo");
                   }
@@ -229,7 +273,10 @@ export function SettingsPanel() {
               aria-label="Phút học mặc định"
               onChange={(e) =>
                 set({
-                  pomodoroMinutes: Math.min(180, Math.max(1, Math.round(+e.target.value || 1))),
+                  pomodoroMinutes: Math.min(
+                    180,
+                    Math.max(1, Math.round(+e.target.value || 1)),
+                  ),
                 })
               }
             />
@@ -243,7 +290,11 @@ export function SettingsPanel() {
                   className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium"
                   title="Bấm để xoá preset"
                   aria-label={`Xoá preset ${m} phút`}
-                  onClick={() => set({ customPresets: s.customPresets.filter((x) => x !== m) })}
+                  onClick={() =>
+                    set({
+                      customPresets: s.customPresets.filter((x) => x !== m),
+                    })
+                  }
                 >
                   {m}p ✕
                 </button>
@@ -288,6 +339,65 @@ export function SettingsPanel() {
             </select>
           </Row>
           <Row
+            label="Âm lượng hiệu ứng"
+            hint="Chuông & âm báo khi hết phiên — 50% bằng âm cũ, kéo lên để to hơn"
+          >
+            <span className="w-10 text-right text-xs text-muted-foreground">
+              {s.fxVolume}%
+            </span>
+            <Slider
+              className="w-36"
+              min={0}
+              max={100}
+              step={5}
+              value={[s.fxVolume]}
+              aria-label="Âm lượng hiệu ứng"
+              onValueChange={(v) => set({ fxVolume: v[0] ?? s.fxVolume })}
+            />
+            <Button size="sm" variant="outline" onClick={() => ting(true)}>
+              ▶ Thử
+            </Button>
+          </Row>
+          <Row
+            label="Chuông của tôi"
+            hint={
+              s.customChime
+                ? "Đang dùng file âm của bạn cho chuông hết phiên"
+                : "Nạp file mp3/wav/ogg (≤ 5 MB) làm chuông hết phiên"
+            }
+          >
+            <input
+              ref={chimeInput}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => {
+                void onChimeFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => chimeInput.current?.click()}
+            >
+              📁 Chọn file
+            </Button>
+            {s.customChime && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void clearCustomChime();
+                  set({ customChime: false });
+                  toast.success("Đã quay lại chuông mặc định");
+                }}
+              >
+                🗑 Xoá
+              </Button>
+            )}
+          </Row>
+          <Row
             label="Chế độ tiết kiệm pin"
             hint="Hạ độ nét phòng 3D, tắt bóng đổ & lấp lánh — máy yếu chạy mượt hơn hẳn"
           >
@@ -313,7 +423,12 @@ export function SettingsPanel() {
               value={s.breakMinutes}
               aria-label="Phút nghỉ"
               onChange={(e) =>
-                set({ breakMinutes: Math.min(30, Math.max(0, Math.round(+e.target.value || 0))) })
+                set({
+                  breakMinutes: Math.min(
+                    30,
+                    Math.max(0, Math.round(+e.target.value || 0)),
+                  ),
+                })
               }
             />
           </Row>
@@ -323,7 +438,8 @@ export function SettingsPanel() {
       <section className="glass p-5 lg:col-span-2">
         <h2 className="mb-1 text-lg font-semibold">🌌 Chòm sao điều hướng</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          Chọn hình chòm sao treo 7 tab của app — mỗi tab là một ngôi sao trong chòm thật.
+          Chọn hình chòm sao treo 7 tab của app — mỗi tab là một ngôi sao trong
+          chòm thật.
         </p>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
           <div>
@@ -369,8 +485,9 @@ export function SettingsPanel() {
         <section className="glass p-5 lg:col-span-2">
           <h2 className="mb-1 text-lg font-semibold">🧪 Chế độ test (Admin)</h2>
           <p className="mb-3 text-xs text-muted-foreground">
-            Đang chạy dữ liệu thử trong bộ nhớ. Nút tăng tài nguyên cộng thẳng vào số liệu, không
-            ghi lịch sử; tải backup bị khóa khi chế độ này bật.
+            Đang chạy dữ liệu thử trong bộ nhớ. Nút tăng tài nguyên cộng thẳng
+            vào số liệu, không ghi lịch sử; tải backup bị khóa khi chế độ này
+            bật.
           </p>
           <div className="flex flex-wrap gap-2">
             {(
@@ -477,7 +594,8 @@ function StorageUsage() {
   const pct = Math.min(100, Math.round((kb / 5120) * 100));
   return (
     <p className="mb-4 text-xs text-muted-foreground">
-      📦 Dữ liệu đang chiếm ~<b>{kb.toLocaleString("vi-VN")} KB</b> / ~5 MB của trình duyệt
+      📦 Dữ liệu đang chiếm ~<b>{kb.toLocaleString("vi-VN")} KB</b> / ~5 MB của
+      trình duyệt
       {pct > 60 && " — gần giới hạn, nên xuất backup thường xuyên nhé"}
     </p>
   );
