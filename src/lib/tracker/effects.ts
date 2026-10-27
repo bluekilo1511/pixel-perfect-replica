@@ -4,6 +4,30 @@ import type { ChimeKind } from "./model";
 let ctx: AudioContext | null = null;
 let enabled = true;
 let chime: ChimeKind = "soft";
+let fxVolume = 80; // 0–100, persisted in AppSettings.fxVolume
+let customUrl: string | null = null; // object URL of the user's uploaded chime
+let master: GainNode | null = null;
+
+/** Effect-sound volume 0–100. 50 matches the original loudness; 100 is twice that. */
+export function setFxVolume(v: number) {
+  fxVolume = Math.min(100, Math.max(0, Number.isFinite(v) ? v : 80));
+  if (master) master.gain.value = Math.min(2.5, Math.max(0, fxVolume / 50));
+}
+
+/** Play an uploaded sound (object URL) instead of the built-in chime styles; null restores built-ins. */
+export function setCustomChime(url: string | null) {
+  customUrl = url;
+}
+
+/** Every effect gain routes through this master node so one volume slider governs them all. */
+function masterFor(c: AudioContext): GainNode {
+  if (!master || master.context !== c) {
+    master = c.createGain();
+    master.connect(c.destination);
+  }
+  master.gain.value = Math.min(2.5, Math.max(0, fxVolume / 50));
+  return master;
+}
 
 /** Master switch for effect sounds (user setting, persisted in AppSettings.fxSound). */
 export function setFxEnabled(v: boolean) {
@@ -39,7 +63,7 @@ function tone(
   g.gain.setValueAtTime(0.0001, at);
   g.gain.exponentialRampToValueAtTime(vol, at + 0.02);
   g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-  o.connect(g).connect(c.destination);
+  o.connect(g).connect(masterFor(c));
   o.start(at);
   o.stop(at + dur + 0.05);
 }
@@ -66,7 +90,7 @@ function playBowl(c: AudioContext, big: boolean) {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(v, t + 0.03);
     g.gain.exponentialRampToValueAtTime(0.0001, t + (big ? 2.4 : 1.6));
-    o.connect(g).connect(c.destination);
+    o.connect(g).connect(masterFor(c));
     o.start(t);
     o.stop(t + (big ? 2.5 : 1.7));
   });
@@ -75,7 +99,9 @@ function playBowl(c: AudioContext, big: boolean) {
 function playRetro(c: AudioContext, big: boolean) {
   // 8-bit fanfare: square-wave arpeggio
   const notes = big ? [523, 659, 784, 1046, 784, 1046] : [659, 784, 988, 1318];
-  notes.forEach((f, i) => tone(c, f, c.currentTime + i * 0.11, 0.14, "square", 0.12));
+  notes.forEach((f, i) =>
+    tone(c, f, c.currentTime + i * 0.11, 0.14, "square", 0.12),
+  );
 }
 
 function playBirds(c: AudioContext, big: boolean) {
@@ -87,11 +113,14 @@ function playBirds(c: AudioContext, big: boolean) {
     const g = c.createGain();
     o.type = "sine";
     o.frequency.setValueAtTime(2600 + Math.random() * 700, t);
-    o.frequency.exponentialRampToValueAtTime(3600 + Math.random() * 900, t + 0.09);
+    o.frequency.exponentialRampToValueAtTime(
+      3600 + Math.random() * 900,
+      t + 0.09,
+    );
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(0.1, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-    o.connect(g).connect(c.destination);
+    o.connect(g).connect(masterFor(c));
     o.start(t);
     o.stop(t + 0.15);
   }
@@ -100,6 +129,16 @@ function playBirds(c: AudioContext, big: boolean) {
 /** The Pomodoro/reward chime, in the user's chosen style. */
 export function ting(big = false) {
   if (!enabled) return;
+  if (customUrl) {
+    try {
+      const el = new Audio(customUrl);
+      el.volume = Math.max(0.05, Math.min(1, fxVolume / 100));
+      void el.play();
+    } catch {
+      /* audio unavailable */
+    }
+    return;
+  }
   const c = audio();
   if (!c) return;
   try {
@@ -173,7 +212,7 @@ export function evolutionFx() {
       g.gain.setValueAtTime(0, t0 + i * 0.13);
       g.gain.linearRampToValueAtTime(0.16, t0 + i * 0.13 + 0.03);
       g.gain.exponentialRampToValueAtTime(0.001, t0 + i * 0.13 + 0.5);
-      o.connect(g).connect(c.destination);
+      o.connect(g).connect(masterFor(c));
       o.start(t0 + i * 0.13);
       o.stop(t0 + i * 0.13 + 0.55);
     });
@@ -185,7 +224,7 @@ export function evolutionFx() {
     o.frequency.exponentialRampToValueAtTime(40, t0 + 0.9);
     g.gain.setValueAtTime(0.22, t0);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + 1.1);
-    o.connect(g).connect(c.destination);
+    o.connect(g).connect(masterFor(c));
     o.start(t0);
     o.stop(t0 + 1.15);
   } catch {
