@@ -115,7 +115,7 @@ interface Store {
   download: () => void;
   startTimer: (id: string) => void;
   pauseTimer: () => void;
-  finish: (id: string) => void;
+  finish: (id: string, fromTimer?: boolean) => void;
   drinkWater: () => void;
   spin: (mode?: SpinMode) => string | null;
   dismissLevelUp: () => void;
@@ -323,7 +323,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const finish = useCallback((id: string) => {
+  const finish = useCallback((id: string, fromTimer = false) => {
     const prev = dataRef.current;
     const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
     const prevFormEmoji = petEmoji(dataRef.current.petState);
@@ -339,6 +339,15 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     void saveSnapshot(r.data);
     setTimer((t) => (t?.taskId === id ? null : t));
     celebrate();
+    // A timed task finished by the clock (not the manual ✔ button) starts the
+    // same auto-break a pet Pomodoro gets — PetWidget listens for this event.
+    if (
+      fromTimer &&
+      r.data.settings.autoBreak &&
+      r.data.settings.breakMinutes > 0
+    ) {
+      window.dispatchEvent(new CustomEvent("pp-auto-break"));
+    }
     toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
       action: {
         label: "Hoàn tác",
@@ -377,7 +386,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       );
       if (remaining <= 0) {
         clearInterval(iv);
-        finish(timer.taskId);
+        finish(timer.taskId, true);
         return;
       }
       setTimer((t) => (t ? { ...t, remaining } : t));
