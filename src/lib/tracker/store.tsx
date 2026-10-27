@@ -57,15 +57,37 @@ import {
 import { pushDueExtras } from "./tkb";
 import { bossCounterAttack, defeatBoss, type DailyBossState } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
-import { celebrate, evolutionFx, levelUpFx, setFxEnabled, setChime, ting } from "./effects";
-import { CAPSULE_INTERVAL_MS, lastSnapshotAt, saveSnapshot } from "./timeCapsule";
-import { createFile, createWriter, downloadData, openFile, type Handle } from "./storage";
+import {
+  celebrate,
+  evolutionFx,
+  levelUpFx,
+  setChime,
+  setCustomChime,
+  setFxEnabled,
+  setFxVolume,
+  ting,
+} from "./effects";
+import { loadCustomChime } from "./chimeStore";
+import {
+  CAPSULE_INTERVAL_MS,
+  lastSnapshotAt,
+  saveSnapshot,
+} from "./timeCapsule";
+import {
+  createFile,
+  createWriter,
+  downloadData,
+  openFile,
+  type Handle,
+} from "./storage";
 
 /** True only when the user cancelled the file picker. */
 const isAbort = (e: unknown): boolean =>
   e instanceof Error
     ? e.name === "AbortError"
-    : e !== null && typeof e === "object" && (e as { name?: unknown }).name === "AbortError";
+    : e !== null &&
+      typeof e === "object" &&
+      (e as { name?: unknown }).name === "AbortError";
 
 export type SaveStatus = "none" | "saving" | "saved" | "dirty" | "error";
 
@@ -124,9 +146,12 @@ function announceAchievements(fresh: AchievementId[]) {
 }
 function announceDrop(drop: MaterialId | null) {
   if (drop)
-    toast(`🎁 Rơi nguyên liệu: ${MATERIALS[drop].emoji} ${MATERIALS[drop].name}`, {
-      className: "glass-toast",
-    });
+    toast(
+      `🎁 Rơi nguyên liệu: ${MATERIALS[drop].emoji} ${MATERIALS[drop].name}`,
+      {
+        className: "glass-toast",
+      },
+    );
 }
 
 // Keep one context instance across hot reloads so provider and consumers always match.
@@ -146,9 +171,11 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [timer, setTimer] = useState<Timer | null>(null);
   const [levelUp, setLevelUp] = useState<number | null>(null);
-  const [evolution, setEvolution] = useState<{ from: string; to: string; title: string } | null>(
-    null,
-  );
+  const [evolution, setEvolution] = useState<{
+    from: string;
+    to: string;
+    title: string;
+  } | null>(null);
   const writer = useRef<ReturnType<typeof createWriter> | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -175,13 +202,37 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     );
   }, [data, ready]);
 
-  const update = useCallback((fn: (d: AppData) => AppData) => setData((d) => fn(d)), []);
+  const update = useCallback(
+    (fn: (d: AppData) => AppData) => setData((d) => fn(d)),
+    [],
+  );
 
-  // Keep the effect-sound switch in sync with the saved setting.
+  // Keep the effect-sound switch, style and volume in sync with the saved setting.
   useEffect(() => {
     setFxEnabled(data.settings.fxSound);
     setChime(data.settings.chime);
-  }, [data.settings.fxSound, data.settings.chime]);
+    setFxVolume(data.settings.fxVolume);
+  }, [data.settings.fxSound, data.settings.chime, data.settings.fxVolume]);
+
+  // Restore the user's uploaded chime from IndexedDB (audio blobs never live in AppData).
+  useEffect(() => {
+    if (!data.settings.customChime) {
+      setCustomChime(null);
+      return;
+    }
+    let url: string | null = null;
+    loadCustomChime()
+      .then((rec) => {
+        if (rec?.blob && dataRef.current.settings.customChime) {
+          url = URL.createObjectURL(rec.blob);
+          setCustomChime(url);
+        }
+      })
+      .catch(() => setCustomChime(null));
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [data.settings.customChime]);
 
   const onLevels = (n: number, level: number) => {
     if (n > 0) {
@@ -234,17 +285,25 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     setData((d) => applyAdminBoost(d, kind, amount));
   const download = () => {
     if (dataRef.current.settings.admin) {
-      toast.error("Chế độ test (Admin) đang bật — tắt trong Cài đặt để tải backup.");
+      toast.error(
+        "Chế độ test (Admin) đang bật — tắt trong Cài đặt để tải backup.",
+      );
       return;
     }
     const now = new Date();
-    setData((d) => ({ ...d, backup: { ...d.backup, lastBackupAt: now.toISOString() } }));
+    setData((d) => ({
+      ...d,
+      backup: { ...d.backup, lastBackupAt: now.toISOString() },
+    }));
     downloadData(dataRef.current, fileName ?? undefined);
     setStatus("saved");
     setLastSaved(now);
   };
   const dismissBackupReminder = () =>
-    setData((d) => ({ ...d, backup: { ...d.backup, lastReminderAt: new Date().toISOString() } }));
+    setData((d) => ({
+      ...d,
+      backup: { ...d.backup, lastReminderAt: new Date().toISOString() },
+    }));
 
   const claimQuest = (id: string) => {
     const r = claimQuestRule(dataRef.current, id);
@@ -268,7 +327,13 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const prev = dataRef.current;
     const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
     const prevFormEmoji = petEmoji(dataRef.current.petState);
-    const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
+    const r = completeTask(
+      dataRef.current,
+      id,
+      new Date(),
+      Math.random,
+      xpMult,
+    );
     if (!r.rewarded) return; // anti-spam
     setData(r.data);
     void saveSnapshot(r.data);
@@ -298,14 +363,18 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         `${TIER_BADGE[tierOf(r.data.petState.petLevel)]} Thú cưng tiến hóa thành ${petTitle(r.data.petState)}!`,
         { className: "glass-toast", duration: 6000 },
       );
-    } else if (r.petLevels > 0) toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
+    } else if (r.petLevels > 0)
+      toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
   }, []);
 
   // Timer tick based on wall clock → reaches 00:00 reliably even if tab was throttled.
   useEffect(() => {
     if (!timer) return;
     const iv = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
+      const remaining = Math.max(
+        0,
+        Math.ceil((timer.endAt - Date.now()) / 1000),
+      );
       if (remaining <= 0) {
         clearInterval(iv);
         finish(timer.taskId);
@@ -333,9 +402,11 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
 
   const startTimer = (id: string) => {
     const task = dataRef.current.tasks.find((t) => t.id === id);
-    if (!task || task.completed || task.rewardClaimed || task.minutes <= 0) return;
+    if (!task || task.completed || task.rewardClaimed || task.minutes <= 0)
+      return;
     if (timer) pauseTimer();
-    const secs = task.remainingSeconds > 0 ? task.remainingSeconds : task.minutes * 60;
+    const secs =
+      task.remainingSeconds > 0 ? task.remainingSeconds : task.minutes * 60;
     setTimer({ taskId: id, endAt: Date.now() + secs * 1000, remaining: secs });
   };
 
@@ -347,7 +418,9 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       const sal = claimDailySalary(d0, dateStr());
       if (sal.coins > 0) {
         ting();
-        toast.success(`💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`);
+        toast.success(
+          `💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`,
+        );
       }
       const { data: dp, pushed } = pushDueSlots(sal.data); // chain salary result so lastSalaryDate persists
       const pet = decayPet(
@@ -377,10 +450,17 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         if (reminded.current.has(key)) return;
         reminded.current.add(key);
         ting();
-        toast(`🔔 5 phút nữa: ${s.title}`, { description: `${s.start} - ${s.end}` });
+        toast(`🔔 5 phút nữa: ${s.title}`, {
+          description: `${s.start} - ${s.end}`,
+        });
         try {
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(`🔔 5 phút nữa: ${s.title}`, { body: `${s.start} - ${s.end}` });
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            new Notification(`🔔 5 phút nữa: ${s.title}`, {
+              body: `${s.start} - ${s.end}`,
+            });
           }
         } catch {
           /* ignore */
@@ -394,14 +474,18 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         });
         d1 = next;
         ting();
-        toast.success(`🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`);
+        toast.success(
+          `🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`,
+        );
         expedition.drops.forEach(announceDrop);
       }
       const ach = applyAchievements(d1, {});
       announceAchievements(ach.fresh);
       if (ach.data !== dataRef.current) setData(ach.data);
       pushed.forEach((s) => {
-        toast(`⏰ Đến giờ: ${s.title}`, { description: "Đã thêm vào việc hôm nay" });
+        toast(`⏰ Đến giờ: ${s.title}`, {
+          description: "Đã thêm vào việc hôm nay",
+        });
       });
       if (pushed.length) ting();
     };
@@ -427,15 +511,22 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     setReady(true);
   };
 
-  const finishPomodoro = (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => {
+  const finishPomodoro = (
+    boss: boolean,
+    minutes: number,
+    kind?: "pomodoro" | "warmup",
+  ) => {
     const cur = dataRef.current;
     const today = dateStr(new Date());
     // One daily-boss reward per day: tasks may already have defeated it.
-    const bossDue = boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
+    const bossDue =
+      boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
     const game = bossDue
       ? defeatBoss(cur.game)
       : { ...cur.game, catCoins: cur.game.catCoins + POMODORO_REWARD };
-    const dailyBoss: DailyBossState = boss ? { date: today, defeated: true } : cur.dailyBoss;
+    const dailyBoss: DailyBossState = boss
+      ? { date: today, defeated: true }
+      : cur.dailyBoss;
     const r = completePomodoroSession(
       { ...cur, game, petState: bumpPet(cur.petState, 0, 10), dailyBoss },
       minutes,
@@ -451,7 +542,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     announceAchievements(r.fresh);
     return { bossDue };
   };
-  const bossCancel = () => setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
+  const bossCancel = () =>
+    setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
   const claimAchievement = (id: AchievementId) => {
     const next = claimAchievementReward(dataRef.current, id);
     if (!next) return false;
@@ -488,7 +580,9 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       announceDrop(drop);
       ting();
       toast.success(
-        jackpot ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!` : `🎡 Bạn nhận được ${prize}`,
+        jackpot
+          ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!`
+          : `🎡 Bạn nhận được ${prize}`,
       );
       onLevels(r.levelsGained, r.game.level);
     }, 2600);
