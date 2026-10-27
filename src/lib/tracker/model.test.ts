@@ -27,6 +27,24 @@ describe("tracker rules", () => {
     expect(d.timetable.days[6]!.label).toBe("Thứ Bảy");
   });
 
+  it("fxVolume defaults to 80 and is clamped to 0–100", () => {
+    expect(migrate({ settings: {} }).settings.fxVolume).toBe(80);
+    expect(migrate({ settings: { fxVolume: 250 } }).settings.fxVolume).toBe(
+      100,
+    );
+    expect(migrate({ settings: { fxVolume: -3 } }).settings.fxVolume).toBe(0);
+  });
+
+  it("customChime migrates only from an explicit true", () => {
+    expect(migrate({ settings: {} }).settings.customChime).toBe(false);
+    expect(
+      migrate({ settings: { customChime: true } }).settings.customChime,
+    ).toBe(true);
+    expect(
+      migrate({ settings: { customChime: "yes" } }).settings.customChime,
+    ).toBe(false);
+  });
+
   it("completing a task rewards once and cannot be re-triggered", () => {
     let d = defaultData();
     const t = makeTask("Học", "pomodoro", 25, "2026-10-18");
@@ -52,8 +70,13 @@ describe("tracker rules", () => {
   });
 
   it("pins 3 exercise sessions once per day", () => {
-    const d = ensureDailyPins(ensureDailyPins(defaultData(), "2026-10-18"), "2026-10-18");
-    expect(d.tasks.filter((t) => t.kind === "exercise" && t.minutes === 5)).toHaveLength(3);
+    const d = ensureDailyPins(
+      ensureDailyPins(defaultData(), "2026-10-18"),
+      "2026-10-18",
+    );
+    expect(
+      d.tasks.filter((t) => t.kind === "exercise" && t.minutes === 5),
+    ).toHaveLength(3);
   });
 
   it("school TKB slots never auto-become tasks (even tracked ones)", () => {
@@ -107,7 +130,14 @@ describe("tracker rules", () => {
   it("display-only slots never become tasks", () => {
     let d = defaultData();
     d.timetable.days[0]!.slots.push(
-      { id: "s1", start: "07:00", end: "07:25", title: "Học", kind: "pomodoro", minutes: 25 },
+      {
+        id: "s1",
+        start: "07:00",
+        end: "07:25",
+        title: "Học",
+        kind: "pomodoro",
+        minutes: 25,
+      },
       {
         id: "s2",
         start: "08:00",
@@ -172,7 +202,11 @@ describe("tracker rules", () => {
     expect(st.ready).toBe(true); // 50p cumulative unlocks the compass
     d = {
       ...d,
-      expedition: startExpedition(d.expedition, st.haveMinutes, new Date(2026, 9, 18, 15, 0)),
+      expedition: startExpedition(
+        d.expedition,
+        st.haveMinutes,
+        new Date(2026, 9, 18, 15, 0),
+      ),
     };
     expect(d.expedition.startedAt).not.toBeNull();
     expect(d.expedition.lastTriggerDate).toBe("2026-10-18");
@@ -220,10 +254,16 @@ describe("tracker rules", () => {
     expect(needsBackupReminder(backedUp, now)).toBe(false);
     const stale = {
       ...fresh,
-      backup: { lastBackupAt: "2026-10-10T00:00:00.000Z", lastReminderAt: null },
+      backup: {
+        lastBackupAt: "2026-10-10T00:00:00.000Z",
+        lastReminderAt: null,
+      },
     };
     expect(needsBackupReminder(stale, now)).toBe(true);
-    const snoozed = { ...stale, backup: { ...stale.backup, lastReminderAt: now.toISOString() } };
+    const snoozed = {
+      ...stale,
+      backup: { ...stale.backup, lastReminderAt: now.toISOString() },
+    };
     expect(needsBackupReminder(snoozed, now)).toBe(false);
     const snoozeExpired = {
       ...stale,
@@ -241,9 +281,15 @@ describe("tracker rules", () => {
 describe("task editing", () => {
   it("edits an unfinished task and resets its countdown", () => {
     let d = defaultData();
-    const t = makeTask("Học Toán", "pomodoro", 25, "2026-10-20", { remainingSeconds: 600 });
+    const t = makeTask("Học Toán", "pomodoro", 25, "2026-10-20", {
+      remainingSeconds: 600,
+    });
     d = { ...d, tasks: [t] };
-    const next = editTask(d, t.id, { title: "Học Lý", minutes: 50, kind: "custom" });
+    const next = editTask(d, t.id, {
+      title: "Học Lý",
+      minutes: 50,
+      kind: "custom",
+    });
     expect(next).not.toBeNull();
     const edited = next!.tasks.find((x) => x.id === t.id)!;
     expect(edited.title).toBe("Học Lý");
@@ -254,7 +300,9 @@ describe("task editing", () => {
 
   it("keeps the countdown when only the title changes", () => {
     let d = defaultData();
-    const t = makeTask("Học Toán", "pomodoro", 25, "2026-10-20", { remainingSeconds: 600 });
+    const t = makeTask("Học Toán", "pomodoro", 25, "2026-10-20", {
+      remainingSeconds: 600,
+    });
     d = { ...d, tasks: [t] };
     const next = editTask(d, t.id, { title: "  Học Lý  " });
     expect(next!.tasks.find((x) => x.id === t.id)!.title).toBe("Học Lý");
@@ -288,7 +336,9 @@ describe("task editing", () => {
     const t = makeTask("Học", "pomodoro", 25, "2026-10-20");
     d = { ...d, tasks: [t] };
     const next = editTask(d, t.id, { title: "   " });
-    expect(next!.tasks.find((x) => x.id === t.id)!.title.length).toBeGreaterThan(0);
+    expect(
+      next!.tasks.find((x) => x.id === t.id)!.title.length,
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -299,10 +349,19 @@ describe("water nudge", () => {
       ...d,
       dailyStats: {
         ...d.dailyStats,
-        "2026-10-20": { tasks: 0, focusMin: pomodoros * 25, water: cups, treats: 0, pomodoros },
+        "2026-10-20": {
+          tasks: 0,
+          focusMin: pomodoros * 25,
+          water: cups,
+          treats: 0,
+          pomodoros,
+        },
       },
     };
-    d = { ...d, game: { ...d.game, water: { date: "2026-10-20", cups, rewarded: false } } };
+    d = {
+      ...d,
+      game: { ...d.game, water: { date: "2026-10-20", cups, rewarded: false } },
+    };
     return d;
   };
   const now = new Date(2026, 9, 20, 20, 0);
@@ -336,7 +395,9 @@ describe("pomodoro presets", () => {
   });
 
   it("falls back to defaults on bad values", () => {
-    const d = migrate({ settings: { pomodoroMinutes: 9999, customPresets: "nope" } });
+    const d = migrate({
+      settings: { pomodoroMinutes: 9999, customPresets: "nope" },
+    });
     expect(d.settings.pomodoroMinutes).toBe(25);
     expect(d.settings.customPresets).toEqual([]);
   });
@@ -373,7 +434,12 @@ describe("focus session log", () => {
   });
 
   it("records warmup sessions with the warmup kind and a warmup title", () => {
-    const r = completePomodoroSession(defaultData(), 5, new Date(2026, 9, 20, 9, 30), "warmup");
+    const r = completePomodoroSession(
+      defaultData(),
+      5,
+      new Date(2026, 9, 20, 9, 30),
+      "warmup",
+    );
     expect(r.data.sessionLog.at(-1)!.kind).toBe("warmup");
     expect(r.data.tasks.at(-1)!.title).toContain("Khởi động");
   });
@@ -381,13 +447,21 @@ describe("focus session log", () => {
   it("caps the log at 400 entries", () => {
     let d = defaultData();
     for (let i = 0; i < 405; i++) {
-      d = completePomodoroSession(d, 25, new Date(2026, 9, 20, 0, i % 60, i % 60)).data;
+      d = completePomodoroSession(
+        d,
+        25,
+        new Date(2026, 9, 20, 0, i % 60, i % 60),
+      ).data;
     }
     expect(d.sessionLog.length).toBe(400);
   });
 
   it("mirrors the picked mood into the matching session entry", () => {
-    const r = completePomodoroSession(defaultData(), 25, new Date(2026, 9, 20, 9, 30));
+    const r = completePomodoroSession(
+      defaultData(),
+      25,
+      new Date(2026, 9, 20, 9, 30),
+    );
     const task = r.data.tasks.at(-1)!;
     const d2 = setTaskMood(r.data, task.id, 2);
     expect(d2.sessionLog.at(-1)!.mood).toBe(2);
@@ -396,10 +470,19 @@ describe("focus session log", () => {
   it("migrate keeps a valid session log and drops malformed rows", () => {
     const raw = {
       sessionLog: [
-        { at: new Date(2026, 9, 20, 8).toISOString(), minutes: 25, kind: "pomodoro" },
+        {
+          at: new Date(2026, 9, 20, 8).toISOString(),
+          minutes: 25,
+          kind: "pomodoro",
+        },
         { minutes: "oops" },
         null,
-        { at: new Date(2026, 9, 20, 9).toISOString(), minutes: 5, kind: "warmup", mood: 3 },
+        {
+          at: new Date(2026, 9, 20, 9).toISOString(),
+          minutes: 5,
+          kind: "warmup",
+          mood: 3,
+        },
       ],
     };
     const d = migrate(raw);
@@ -429,7 +512,9 @@ describe("display names & theme", () => {
 
   it("migrate defaults themeMode for old files and rejects invalid values", () => {
     expect(migrate({}).settings.themeMode).toBe("auto");
-    expect(migrate({ settings: { themeMode: "rainbow" } }).settings.themeMode).toBe("auto");
+    expect(
+      migrate({ settings: { themeMode: "rainbow" } }).settings.themeMode,
+    ).toBe("auto");
   });
 
   it("migrate clears empty pet names", () => {
@@ -440,8 +525,12 @@ describe("display names & theme", () => {
   it("dragon theme defaults off and persists through migration", () => {
     expect(defaultData().settings.dragonTheme).toBe(false);
     expect(migrate({}).settings.dragonTheme).toBe(false);
-    expect(migrate({ settings: { dragonTheme: true } }).settings.dragonTheme).toBe(true);
-    expect(migrate({ settings: { dragonTheme: "yes" } }).settings.dragonTheme).toBe(false);
+    expect(
+      migrate({ settings: { dragonTheme: true } }).settings.dragonTheme,
+    ).toBe(true);
+    expect(
+      migrate({ settings: { dragonTheme: "yes" } }).settings.dragonTheme,
+    ).toBe(false);
   });
 
   it("dragon theme unlocks permanently at level 5", () => {
