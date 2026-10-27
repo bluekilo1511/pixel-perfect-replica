@@ -198,7 +198,9 @@ export function PetWidget() {
   const [warmup, setWarmup] = useState(restored.warmup); // 5-minute anti-procrastination session
   const warmupRef = useRef(false);
   warmupRef.current = warmup;
-  const [breakEndAt, setBreakEndAt] = useState<number | null>(restored.breakEndAt);
+  const [breakEndAt, setBreakEndAt] = useState<number | null>(
+    restored.breakEndAt,
+  );
   const [breakLeft, setBreakLeft] = useState(() =>
     restored.breakEndAt
       ? Math.max(0, Math.ceil((restored.breakEndAt - Date.now()) / 1000))
@@ -227,6 +229,8 @@ export function PetWidget() {
   const strikesRef = useRef(0);
   const endAtRef = useRef(endAt);
   endAtRef.current = endAt;
+  const breakEndAtRef = useRef(breakEndAt);
+  breakEndAtRef.current = breakEndAt;
   const hp = bossHp(left, pomodoroMinutes * 60);
   const today = dateStr();
   const tasksToday = data.dailyStats[today]?.tasks ?? 0;
@@ -249,8 +253,11 @@ export function PetWidget() {
       fireFlashbang("breakin");
       if (strikesRef.current >= 3)
         toast.error("🚨 Phá đò 3 lần — phiên này sẽ không được tính thưởng!");
-      else toast(`🚨 Phá đò lần ${strikesRef.current}/3 — quay lại tập trung đi!`);
-      say(strikesRef.current >= 3 ? "Ngồi yên đi mà… 😤" : "Ê, đang học mà! 👀");
+      else
+        toast(`🚨 Phá đò lần ${strikesRef.current}/3 — quay lại tập trung đi!`);
+      say(
+        strikesRef.current >= 3 ? "Ngồi yên đi mà… 😤" : "Ê, đang học mà! 👀",
+      );
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
@@ -268,7 +275,9 @@ export function PetWidget() {
         const wasWarmup = warmupRef.current;
         const boss = bossRef.current && !wasWarmup;
         if (strikesRef.current >= 3) {
-          toast.error("🚨 Phá đò 3 lần — phiên này không được tính, thử lại nhé!");
+          toast.error(
+            "🚨 Phá đò 3 lần — phiên này không được tính, thử lại nhé!",
+          );
           say("Lần này tập trung thật nhé… 😤");
         } else {
           const res = finishPomodoro(
@@ -289,12 +298,18 @@ export function PetWidget() {
                 `⚔️ Đã hạ gục Quái Vật Xao Nhãng! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
               );
             } else {
-              toast("⚔️ Boss hôm nay đã gục nhờ nhiệm vụ rồi — phiên này nhận thưởng thường 🍅");
+              toast(
+                "⚔️ Boss hôm nay đã gục nhờ nhiệm vụ rồi — phiên này nhận thưởng thường 🍅",
+              );
             }
-            if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+            if (autoBreak && breakMinutes > 0)
+              setBreakEndAt(Date.now() + breakMinutes * 60_000);
           } else {
-            toast.success(`🍅 Xong phiên học cùng thú cưng! +${POMODORO_REWARD} 😺`);
-            if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+            toast.success(
+              `🍅 Xong phiên học cùng thú cưng! +${POMODORO_REWARD} 😺`,
+            );
+            if (autoBreak && breakMinutes > 0)
+              setBreakEndAt(Date.now() + breakMinutes * 60_000);
           }
           say("Giỏi quá! Mình tự hào về bạn! 🎉");
         }
@@ -319,6 +334,18 @@ export function PetWidget() {
     }, 500);
     return () => clearInterval(iv);
   }, [breakEndAt]);
+
+  // Timed tasks (e.g. "Học bài 25p") finished by the clock in the store ask for
+  // the same auto-break the pet Pomodoro gets — skip when already busy.
+  useEffect(() => {
+    const onStartBreak = () => {
+      if (endAtRef.current || breakEndAtRef.current) return;
+      setBreakEndAt(Date.now() + breakMinutes * 60_000);
+      say(`☕ Xong việc rồi, nghỉ ${breakMinutes} phút nè!`);
+    };
+    window.addEventListener("pp-auto-break", onStartBreak);
+    return () => window.removeEventListener("pp-auto-break", onStartBreak);
+  }, [breakMinutes]);
 
   // Feed the Tab Title HUD with the live Pomodoro state.
   useEffect(() => {
@@ -362,14 +389,20 @@ export function PetWidget() {
             )}
             <span className={`relative block text-7xl leading-none ${anim}`}>
               {pet.accessories.back && (
-                <span className={`absolute ${ACCESSORY_UI.back[pet.species]}`} aria-hidden>
+                <span
+                  className={`absolute ${ACCESSORY_UI.back[pet.species]}`}
+                  aria-hidden
+                >
                   {ACCESSORIES[pet.accessories.back].emoji}
                 </span>
               )}
               <span className="relative">{petForm}</span>
               {(["head", "face"] as const).map((slot) =>
                 pet.accessories[slot] ? (
-                  <span key={slot} className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}>
+                  <span
+                    key={slot}
+                    className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}
+                  >
                     {ACCESSORIES[pet.accessories[slot]!].emoji}
                   </span>
                 ) : null,
@@ -431,7 +464,10 @@ export function PetWidget() {
               onRename={(v) =>
                 update((d) => {
                   const { petName: _p, ...petRest } = d.petState;
-                  return { ...d, petState: { ...petRest, ...(v ? { petName: v } : {}) } };
+                  return {
+                    ...d,
+                    petState: { ...petRest, ...(v ? { petName: v } : {}) },
+                  };
                 })
               }
             />
@@ -465,7 +501,9 @@ export function PetWidget() {
                 ☕ {fmt(breakLeft)}
               </span>
             ) : (
-              <span className="font-display text-2xl tabular-nums">{fmt(left)}</span>
+              <span className="font-display text-2xl tabular-nums">
+                {fmt(left)}
+              </span>
             )}
             {endAt && (
               <Button
@@ -547,7 +585,9 @@ export function PetWidget() {
               <SelectContent>
                 {[
                   ...presetOptions,
-                  ...(presetOptions.includes(pomodoroMinutes) ? [] : [pomodoroMinutes]),
+                  ...(presetOptions.includes(pomodoroMinutes)
+                    ? []
+                    : [pomodoroMinutes]),
                 ]
                   .sort((a, b) => a - b)
                   .map((m) => (
@@ -588,7 +628,8 @@ export function PetWidget() {
               />
               ⚔️ Thách đấu Boss
               <span className="sr-only">
-                (Nhiệm vụ hoàn thành hôm nay cũng gây sát thương Boss: 5 nhiệm vụ = hạ Boss)
+                (Nhiệm vụ hoàn thành hôm nay cũng gây sát thương Boss: 5 nhiệm
+                vụ = hạ Boss)
               </span>
             </label>
             <div className="exp-compass group relative ml-auto">
@@ -613,10 +654,14 @@ export function PetWidget() {
           </div>
           <AmbientControl />
           {bossActive && (
-            <div className={`boss-panel rounded-xl p-3 ${hit ? "animate-boss-hit" : ""}`}>
+            <div
+              className={`boss-panel rounded-xl p-3 ${hit ? "animate-boss-hit" : ""}`}
+            >
               <div className="mb-1.5 flex items-center justify-between font-mono text-xs uppercase tracking-wider">
                 <span>
-                  <span className={`inline-block text-2xl ${endAt ? "animate-pet-idle" : ""}`}>
+                  <span
+                    className={`inline-block text-2xl ${endAt ? "animate-pet-idle" : ""}`}
+                  >
                     {shownHp > 0 ? "👹" : "💀"}
                   </span>{" "}
                   Quái Vật Xao Nhãng
@@ -632,12 +677,13 @@ export function PetWidget() {
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Thắng: x2 thưởng ({BOSS_REWARD.catCoins} 😺 + {BOSS_REWARD.lizardGems} 🦎). Bỏ cuộc:
-                Boss phản đòn −8 💖.
+                Thắng: x2 thưởng ({BOSS_REWARD.catCoins} 😺 +{" "}
+                {BOSS_REWARD.lizardGems} 🦎). Bỏ cuộc: Boss phản đòn −8 💖.
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 🗡 Nhiệm vụ hôm nay cũng bắn Boss:{" "}
-                {Math.min(BOSS_MAX_HP, tasksToday * DAILY_BOSS_TASK_DAMAGE)}/{BOSS_MAX_HP} HP
+                {Math.min(BOSS_MAX_HP, tasksToday * DAILY_BOSS_TASK_DAMAGE)}/
+                {BOSS_MAX_HP} HP
                 {bossTaskHp === 0
                   ? " — Boss đã gục! 💀"
                   : ` (còn cần ${Math.ceil(bossTaskHp / DAILY_BOSS_TASK_DAMAGE)} nhiệm vụ)`}
@@ -655,7 +701,8 @@ export function PetWidget() {
             {mult === 2 ? " MAX" : ""}
           </div>
           <div className="mt-2 text-xs text-muted-foreground">
-            Hôm nay {Math.min(todayDone, STREAK_GOAL)}/{STREAK_GOAL} · 🧊 {data.inventory.freezes}
+            Hôm nay {Math.min(todayDone, STREAK_GOAL)}/{STREAK_GOAL} · 🧊{" "}
+            {data.inventory.freezes}
           </div>
           <Button
             size="sm"
@@ -666,7 +713,9 @@ export function PetWidget() {
               update((d) => {
                 if (d.streak.lastQualifiedDate === dateStr()) {
                   toast(
-                    "Hôm nay đã đủ " + STREAK_GOAL + " nhiệm vụ — streak vẫn giữ, khỏi cần nghỉ 😎",
+                    "Hôm nay đã đủ " +
+                      STREAK_GOAL +
+                      " nhiệm vụ — streak vẫn giữ, khỏi cần nghỉ 😎",
                   );
                   return d;
                 }
@@ -708,7 +757,13 @@ export function PetWidget() {
   );
 }
 
-function PetName({ pet, onRename }: { pet: PetState; onRename: (v: string) => void }) {
+function PetName({
+  pet,
+  onRename,
+}: {
+  pet: PetState;
+  onRename: (v: string) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   if (editing)
