@@ -14,16 +14,8 @@ import {
 } from "./gamify";
 import { defaultMarket, type MarketState } from "./market";
 import { DEFAULT_ZODIAC_ID, isValidZodiacId } from "./zodiac";
-import {
-  DEFAULT_SPECIAL_DAYS,
-  normalizeSpecialDays,
-  type SpecialDay,
-} from "./specialDays";
-import {
-  defaultShootingStar,
-  normalizeShootingStar,
-  type ShootingStarState,
-} from "./shootingStar";
+import { DEFAULT_SPECIAL_DAYS, normalizeSpecialDays, type SpecialDay } from "./specialDays";
+import { defaultShootingStar, normalizeShootingStar, type ShootingStarState } from "./shootingStar";
 import {
   addPetXp,
   bumpLifetime,
@@ -79,11 +71,7 @@ import {
   type GradeExtra,
 } from "./grades";
 import { normalizeWeekGoals } from "./goals";
-import {
-  normalizeSubjectNotes,
-  removeSubjectNote,
-  type SubjectNoteMap,
-} from "./subjectNotes";
+import { normalizeSubjectNotes, removeSubjectNote, type SubjectNoteMap } from "./subjectNotes";
 import type { JournalEntry } from "./journal";
 import type { WeekGoal } from "./goals";
 import {
@@ -203,8 +191,7 @@ export interface GameState {
   [extra: string]: unknown;
 }
 
-export type AmbientSettingKind =
-  "rain" | "ocean" | "campfire" | "cafe" | "night" | null;
+export type AmbientSettingKind = "rain" | "ocean" | "campfire" | "cafe" | "night" | null;
 export type ThemeMode = "auto" | "dark" | "light";
 
 export interface AppSettings {
@@ -224,6 +211,7 @@ export interface AppSettings {
   birthday: string | null; // "YYYY-MM-DD", used by navZodiacAuto and nothing else
   admin: boolean; // admin test mode: trial data in memory, backup download locked
   dragonTheme: boolean; // dragon skin: shimmering dragon-scale borders on buttons + starry-sky background
+  autoSpin: boolean; // auto-spin the free spin + tickets when the app opens (keeps 2 tickets for weekend MEGA)
 }
 
 export interface AppData {
@@ -285,10 +273,7 @@ export const WATER_GOAL = 8;
 export const EXERCISE_SESSIONS = 3;
 export const POMODORO_PRESETS = [15, 25, 50] as const;
 
-export const KIND_META: Record<
-  TaskKind,
-  { emoji: string; label: string; minutes: number }
-> = {
+export const KIND_META: Record<TaskKind, { emoji: string; label: string; minutes: number }> = {
   water: { emoji: "💧", label: "Uống nước", minutes: 0 },
   exercise: { emoji: "🤸", label: "Tập thể dục 5p", minutes: 5 },
   pomodoro: { emoji: "📚", label: "Học bài 25p", minutes: 25 },
@@ -337,8 +322,7 @@ export function defaultGame(today = dateStr()): GameState {
   };
 }
 
-const clamp01 = (v: number, d: number) =>
-  Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : d;
+const clamp01 = (v: number, d: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : d);
 /** Player level that permanently unlocks the dragon theme. */
 export const DRAGON_UNLOCK_LEVEL = 5;
 
@@ -360,6 +344,7 @@ export function defaultSettings(): AppSettings {
     birthday: null,
     admin: false,
     dragonTheme: false,
+    autoSpin: false,
   };
 }
 
@@ -427,8 +412,7 @@ export function makeTask(
   };
 }
 
-const num = (v: unknown, d: number) =>
-  typeof v === "number" && Number.isFinite(v) ? v : d;
+const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
 
 /** Loose record view over unknown legacy-JSON values during migration. */
 const obj = (v: unknown): Record<string, unknown> =>
@@ -443,16 +427,8 @@ const normalizeCustomPresets = (v: unknown): number[] => {
     const n = Math.round(Number(x));
     return Number.isFinite(n) && n >= 1 && n <= 180 ? n : null;
   };
-  return [
-    ...new Set(
-      (Array.isArray(v) ? v : [])
-        .map(toMin)
-        .filter((n): n is number => n !== null),
-    ),
-  ]
-    .filter(
-      (m) => !POMODORO_PRESETS.includes(m as (typeof POMODORO_PRESETS)[number]),
-    )
+  return [...new Set((Array.isArray(v) ? v : []).map(toMin).filter((n): n is number => n !== null))]
+    .filter((m) => !POMODORO_PRESETS.includes(m as (typeof POMODORO_PRESETS)[number]))
     .sort((a, b) => a - b)
     .slice(0, 4);
 };
@@ -466,16 +442,11 @@ function normalizeSlot(input: unknown): Slot {
     id: typeof s.id === "string" ? s.id : uid("slot"),
     start: typeof s.start === "string" ? s.start : "08:00",
     end: typeof s.end === "string" ? s.end : "08:30",
-    title:
-      typeof s.title === "string" && s.title ? s.title : KIND_META[kind].label,
+    title: typeof s.title === "string" && s.title ? s.title : KIND_META[kind].label,
     kind,
     minutes: num(s.minutes, KIND_META[kind].minutes),
-    ...(typeof s.teacher === "string" && s.teacher.trim()
-      ? { teacher: s.teacher.trim() }
-      : {}),
-    ...(s.session === "morning" || s.session === "afternoon"
-      ? { session: s.session }
-      : {}),
+    ...(typeof s.teacher === "string" && s.teacher.trim() ? { teacher: s.teacher.trim() } : {}),
+    ...(s.session === "morning" || s.session === "afternoon" ? { session: s.session } : {}),
     ...(s.tracked === false ? { tracked: false } : {}),
   };
 }
@@ -486,9 +457,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const HM_RE = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 function hmTime(v: unknown, fallback: string): string {
-  return typeof v === "string" && HM_RE.test(v.trim())
-    ? v.trim().padStart(5, "0")
-    : fallback;
+  return typeof v === "string" && HM_RE.test(v.trim()) ? v.trim().padStart(5, "0") : fallback;
 }
 
 export function normalizeExtraSchedule(input: unknown): ExtraScheduleItem[] {
@@ -499,28 +468,21 @@ export function normalizeExtraSchedule(input: unknown): ExtraScheduleItem[] {
     return [
       {
         id: typeof s.id === "string" ? s.id : uid("extra"),
-        date:
-          typeof s.date === "string" && DATE_RE.test(s.date)
-            ? s.date
-            : dateStr(),
+        date: typeof s.date === "string" && DATE_RE.test(s.date) ? s.date : dateStr(),
         title: s.title.trim().slice(0, EXTRA_TITLE_MAX),
         time:
           typeof s.time === "string" && HM_RE.test(s.time.trim())
             ? s.time.trim().padStart(5, "0")
             : null,
         minutes: Math.min(600, Math.max(0, num(s.minutes, 0))),
-        createdAt:
-          typeof s.createdAt === "string"
-            ? s.createdAt
-            : new Date().toISOString(),
+        createdAt: typeof s.createdAt === "string" ? s.createdAt : new Date().toISOString(),
       },
     ];
   });
 }
 
 /** Accepts any old/new JSON and fills missing fields without losing old tasks. */
-export type AdminBoostKind =
-  "xp" | "catCoins" | "lizardGems" | "spinTickets" | "streak" | "petXp";
+export type AdminBoostKind = "xp" | "catCoins" | "lizardGems" | "spinTickets" | "streak" | "petXp";
 const ADMIN_KINDS: AdminBoostKind[] = [
   "xp",
   "catCoins",
@@ -534,11 +496,7 @@ export function isAdminBoostKind(v: unknown): v is AdminBoostKind {
 }
 
 /** Admin test mode: directly grant resources. No rewards, no history entries. */
-export function applyAdminBoost(
-  data: AppData,
-  kind: AdminBoostKind,
-  amount: number,
-): AppData {
+export function applyAdminBoost(data: AppData, kind: AdminBoostKind, amount: number): AppData {
   const n = Math.round(amount);
   if (n === 0) return data;
   switch (kind) {
@@ -621,9 +579,7 @@ export function migrate(raw: unknown): AppData {
       const dd = obj(d);
       const idx = typeof dd.dayIndex === "number" ? dd.dayIndex : i;
       if (idx >= 0 && idx < 7)
-        tt.days[idx]!.slots = (Array.isArray(dd.slots) ? dd.slots : []).map(
-          normalizeSlot,
-        );
+        tt.days[idx]!.slots = (Array.isArray(dd.slots) ? dd.slots : []).map(normalizeSlot);
     });
   } else if (Array.isArray(srcRaw)) {
     srcRaw.forEach((s) => {
@@ -632,9 +588,7 @@ export function migrate(raw: unknown): AppData {
       if (idx >= 0 && idx < 7) tt.days[idx]!.slots.push(normalizeSlot(ss));
     });
   }
-  tt.days.forEach((d) =>
-    d.slots.sort((a, b) => a.start.localeCompare(b.start)),
-  );
+  tt.days.forEach((d) => d.slots.sort((a, b) => a.start.localeCompare(b.start)));
   tt.morningStart = hmTime(srcObj.morningStart, tt.morningStart);
   tt.afternoonStart = hmTime(srcObj.afternoonStart, tt.afternoonStart);
   tt.slotMinutes = Array.isArray(srcRaw)
@@ -649,14 +603,10 @@ export function migrate(raw: unknown): AppData {
       const dd = obj(d);
       const idx = typeof dd.dayIndex === "number" ? dd.dayIndex : i;
       if (idx >= 0 && idx < 7)
-        ptt.days[idx]!.slots = (Array.isArray(dd.slots) ? dd.slots : []).map(
-          normalizeSlot,
-        );
+        ptt.days[idx]!.slots = (Array.isArray(dd.slots) ? dd.slots : []).map(normalizeSlot);
     });
   }
-  ptt.days.forEach((d) =>
-    d.slots.sort((a, b) => a.start.localeCompare(b.start)),
-  );
+  ptt.days.forEach((d) => d.slots.sort((a, b) => a.start.localeCompare(b.start)));
 
   const { timetable: _old, ...gameRest } = oldGame;
   const game: GameState = {
@@ -668,16 +618,12 @@ export function migrate(raw: unknown): AppData {
     lizardGems: num(oldGame.lizardGems, 0),
     spinTickets: num(oldGame.spinTickets, 0),
     spinHistory: Array.isArray(oldGame.spinHistory) ? oldGame.spinHistory : [],
-    freeSpinDate:
-      typeof oldGame.freeSpinDate === "string" ? oldGame.freeSpinDate : null,
+    freeSpinDate: typeof oldGame.freeSpinDate === "string" ? oldGame.freeSpinDate : null,
     wheelPity: num(oldGame.wheelPity, 0),
     totalSpins: num(oldGame.totalSpins, 0),
     jackpotsWon: num(oldGame.jackpotsWon, 0),
     water: { ...base.game.water, ...obj(oldGame.water) },
-    lastSalaryDate:
-      typeof oldGame.lastSalaryDate === "string"
-        ? oldGame.lastSalaryDate
-        : null,
+    lastSalaryDate: typeof oldGame.lastSalaryDate === "string" ? oldGame.lastSalaryDate : null,
   };
 
   const { gameState: _g, ...rest } = r;
@@ -692,9 +638,9 @@ export function migrate(raw: unknown): AppData {
     pomodoroMinutes: clampPomodoroMinutes(rawSettings.pomodoroMinutes),
     customPresets: normalizeCustomPresets(rawSettings.customPresets),
     ambient: {
-      kind: (
-        ["rain", "ocean", "campfire", "cafe", "night"] as AmbientSettingKind[]
-      ).includes(ambientRaw.kind as AmbientSettingKind)
+      kind: (["rain", "ocean", "campfire", "cafe", "night"] as AmbientSettingKind[]).includes(
+        ambientRaw.kind as AmbientSettingKind,
+      )
         ? (ambientRaw.kind as AmbientSettingKind)
         : null,
       volume: clamp01(num(ambientRaw.volume, 0.4), 0.4),
@@ -702,23 +648,20 @@ export function migrate(raw: unknown): AppData {
     breakMinutes: Math.min(30, Math.max(0, num(rawSettings.breakMinutes, 5))),
     autoBreak: rawSettings.autoBreak !== false,
     fxSound: rawSettings.fxSound !== false,
-    chime: (["soft", "bowl", "retro", "birds"] as const).includes(
-      rawSettings.chime as ChimeKind,
-    )
+    chime: (["soft", "bowl", "retro", "birds"] as const).includes(rawSettings.chime as ChimeKind)
       ? (rawSettings.chime as ChimeKind)
       : "soft",
     fxVolume: Math.min(100, Math.max(0, num(rawSettings.fxVolume, 80))),
     customChime: rawSettings.customChime === true,
     batterySaver: rawSettings.batterySaver === true,
+    autoSpin: rawSettings.autoSpin === true,
     navZodiac:
-      typeof rawSettings.navZodiac === "string" &&
-      isValidZodiacId(rawSettings.navZodiac)
+      typeof rawSettings.navZodiac === "string" && isValidZodiacId(rawSettings.navZodiac)
         ? rawSettings.navZodiac
         : DEFAULT_ZODIAC_ID,
     navZodiacAuto: rawSettings.navZodiacAuto === true,
     birthday:
-      typeof rawSettings.birthday === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(rawSettings.birthday)
+      typeof rawSettings.birthday === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawSettings.birthday)
         ? rawSettings.birthday
         : null,
     admin: rawSettings.admin === true,
@@ -750,18 +693,15 @@ export function migrate(raw: unknown): AppData {
         ? {
             ...base.streak,
             ...(r.streak as Partial<StreakState>),
-            freezeActive:
-              (r.streak as Record<string, unknown>).freezeActive === true,
+            freezeActive: (r.streak as Record<string, unknown>).freezeActive === true,
             today: {
               ...base.streak.today,
               ...obj((r.streak as Record<string, unknown>).today),
             },
-            restDates: Array.isArray(
-              (r.streak as Record<string, unknown>).restDates,
-            )
-              ? (
-                  (r.streak as Record<string, unknown>).restDates as unknown[]
-                ).filter((x) => typeof x === "string")
+            restDates: Array.isArray((r.streak as Record<string, unknown>).restDates)
+              ? ((r.streak as Record<string, unknown>).restDates as unknown[]).filter(
+                  (x) => typeof x === "string",
+                )
               : [],
           }
         : { ...base.streak, freezeActive: false, restDates: [] },
@@ -773,14 +713,9 @@ export function migrate(raw: unknown): AppData {
       materials: normalizeExtras(r).materials,
     },
     backup: {
-      lastBackupAt:
-        typeof backupRaw.lastBackupAt === "string"
-          ? backupRaw.lastBackupAt
-          : null,
+      lastBackupAt: typeof backupRaw.lastBackupAt === "string" ? backupRaw.lastBackupAt : null,
       lastReminderAt:
-        typeof backupRaw.lastReminderAt === "string"
-          ? backupRaw.lastReminderAt
-          : null,
+        typeof backupRaw.lastReminderAt === "string" ? backupRaw.lastReminderAt : null,
     },
     quests: {
       date: typeof questsRaw.date === "string" ? questsRaw.date : null,
@@ -789,8 +724,7 @@ export function migrate(raw: unknown): AppData {
         : [],
     },
     raid: {
-      weekStart:
-        typeof raidRaw.weekStart === "string" ? raidRaw.weekStart : null,
+      weekStart: typeof raidRaw.weekStart === "string" ? raidRaw.weekStart : null,
       claimed: raidRaw.claimed === true,
     },
     dailyBoss: {
@@ -814,10 +748,7 @@ export function migrate(raw: unknown): AppData {
         ].slice(0, 12)
       : [],
     weeklyGoal: {
-      minutes: Math.min(
-        10080,
-        Math.max(0, Math.round(num(obj(r.weeklyGoal).minutes, 300))),
-      ),
+      minutes: Math.min(10080, Math.max(0, Math.round(num(obj(r.weeklyGoal).minutes, 300)))),
       celebratedWeek:
         typeof obj(r.weeklyGoal).celebratedWeek === "string"
           ? (obj(r.weeklyGoal).celebratedWeek as string)
@@ -844,11 +775,7 @@ export function notesDoneCount(notes: NoteItem[], today = dateStr()): number {
   return notes.filter((n) => noteDoneToday(n, today)).length;
 }
 
-export function addNote(
-  data: AppData,
-  title: string,
-  now = new Date(),
-): AppData {
+export function addNote(data: AppData, title: string, now = new Date()): AppData {
   const clean = title.trim().slice(0, 120);
   if (!clean || data.notes.length >= NOTES_MAX) return data;
   const note: NoteItem = {
@@ -861,31 +788,19 @@ export function addNote(
 }
 
 /** Checks a note off for today (or unchecks it); the check itself does not touch XP, streak or coins. */
-export function toggleNote(
-  data: AppData,
-  noteId: string,
-  today = dateStr(),
-): AppData {
+export function toggleNote(data: AppData, noteId: string, today = dateStr()): AppData {
   const notes = data.notes.map((n) =>
-    n.id === noteId
-      ? { ...n, lastDoneDate: noteDoneToday(n, today) ? null : today }
-      : n,
+    n.id === noteId ? { ...n, lastDoneDate: noteDoneToday(n, today) ? null : today } : n,
   );
   return { ...data, notes };
 }
 
-export function renameNote(
-  data: AppData,
-  noteId: string,
-  title: string,
-): AppData {
+export function renameNote(data: AppData, noteId: string, title: string): AppData {
   const clean = title.trim().slice(0, 120);
   if (!clean) return data;
   return {
     ...data,
-    notes: data.notes.map((n) =>
-      n.id === noteId ? { ...n, title: clean } : n,
-    ),
+    notes: data.notes.map((n) => (n.id === noteId ? { ...n, title: clean } : n)),
   };
 }
 
@@ -913,18 +828,12 @@ export function normalizeNotes(raw: unknown): NoteItem[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((n): n is Record<string, unknown> => !!n && typeof n === "object")
-    .filter(
-      (n) => typeof n["title"] === "string" && (n["title"] as string).trim(),
-    )
+    .filter((n) => typeof n["title"] === "string" && (n["title"] as string).trim())
     .map((n) => ({
       id: typeof n["id"] === "string" ? n["id"] : uid("note"),
       title: (n["title"] as string).trim().slice(0, 120),
-      lastDoneDate:
-        typeof n["lastDoneDate"] === "string" ? n["lastDoneDate"] : null,
-      createdAt:
-        typeof n["createdAt"] === "string"
-          ? n["createdAt"]
-          : new Date().toISOString(),
+      lastDoneDate: typeof n["lastDoneDate"] === "string" ? n["lastDoneDate"] : null,
+      createdAt: typeof n["createdAt"] === "string" ? n["createdAt"] : new Date().toISOString(),
     }))
     .slice(0, NOTES_MAX);
 }
@@ -932,9 +841,7 @@ export function normalizeNotes(raw: unknown): NoteItem[] {
 /** Keeps the last 400 focus-session entries and drops malformed rows from old files. */
 function normalizeSessionLog(raw: unknown): SessionEntry[] {
   if (!Array.isArray(raw)) return [];
-  const rows = raw.filter(
-    (s): s is Record<string, unknown> => !!s && typeof s === "object",
-  );
+  const rows = raw.filter((s): s is Record<string, unknown> => !!s && typeof s === "object");
   return rows
     .filter((s) => typeof s["at"] === "string")
     .map((s) => {
@@ -946,8 +853,7 @@ function normalizeSessionLog(raw: unknown): SessionEntry[] {
       return {
         at: s["at"] as string,
         minutes: num(s["minutes"], 0),
-        kind:
-          s["kind"] === "warmup" ? ("warmup" as const) : ("pomodoro" as const),
+        kind: s["kind"] === "warmup" ? ("warmup" as const) : ("pomodoro" as const),
         ...(mood >= 1 ? { mood } : {}),
         ...(subject ? { subject } : {}),
       };
@@ -961,30 +867,19 @@ function extrasFrom(r: unknown) {
 }
 
 /** Saves the 1..4 mood the user felt right after finishing a timed task; mirrors it into the session log. */
-export function setTaskMood(
-  data: AppData,
-  taskId: string,
-  mood: number,
-): AppData {
+export function setTaskMood(data: AppData, taskId: string, mood: number): AppData {
   const m = Math.min(4, Math.max(1, Math.round(mood)));
-  const tasks = data.tasks.map((t) =>
-    t.id === taskId ? { ...t, mood: m } : t,
-  );
+  const tasks = data.tasks.map((t) => (t.id === taskId ? { ...t, mood: m } : t));
   const done = tasks.find((t) => t.id === taskId);
   const sessionLog =
     done?.completedAt && done.minutes > 0
-      ? data.sessionLog.map((s) =>
-          s.at === done.completedAt ? { ...s, mood: m } : s,
-        )
+      ? data.sessionLog.map((s) => (s.at === done.completedAt ? { ...s, mood: m } : s))
       : data.sessionLog;
   return { ...data, tasks, sessionLog };
 }
 
 /** Adds XP and handles multiple level-ups. Returns number of levels gained. */
-export function addXp(
-  game: GameState,
-  amount: number,
-): { game: GameState; levelsGained: number } {
+export function addXp(game: GameState, amount: number): { game: GameState; levelsGained: number } {
   let { level, xp } = game;
   xp += amount;
   let levelsGained = 0;
@@ -1017,11 +912,7 @@ export interface CompleteResult {
   bossDefeated: boolean;
 }
 
-export function addMaterial(
-  data: AppData,
-  id: MaterialId | null,
-  n = 1,
-): AppData {
+export function addMaterial(data: AppData, id: MaterialId | null, n = 1): AppData {
   if (!id) return data;
   const m = data.inventory.materials;
   return {
@@ -1099,8 +990,7 @@ export function completeTask(
   const tasksToday = (data.dailyStats[today]?.tasks ?? 0) + 1;
   const prevBoss: DailyBossState =
     data.dailyBoss.date === today ? data.dailyBoss : defaultDailyBoss();
-  const bossDefeated =
-    !prevBoss.defeated && tasksToday * DAILY_BOSS_TASK_DAMAGE >= BOSS_MAX_HP;
+  const bossDefeated = !prevBoss.defeated && tasksToday * DAILY_BOSS_TASK_DAMAGE >= BOSS_MAX_HP;
   const dailyBoss: DailyBossState = {
     date: today,
     defeated: prevBoss.defeated || bossDefeated,
@@ -1108,8 +998,7 @@ export function completeTask(
   const gameBoss = bossDefeated ? defeatBoss(game) : game;
   const pet = addPetXp(bumpPet(data.petState, 0, 5), earned);
   const drop = rollDrop(rng);
-  const pomodoroPatch =
-    task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {};
+  const pomodoroPatch = task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {};
   const achievements = bumpLifetime(data.achievements, {
     tasks: 1,
     ...pomodoroPatch,
@@ -1122,9 +1011,7 @@ export function completeTask(
     claimedAchievements: { ...achievements.claimed },
     dailyStats: bumpStats(data.dailyStats, today, {
       tasks: 1,
-      ...(task.kind === "pomodoro"
-        ? { focusMin: task.minutes, pomodoros: 1 }
-        : {}),
+      ...(task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {}),
     }),
     dailyBoss,
     game: {
@@ -1157,11 +1044,7 @@ export function completeTask(
           ].slice(-400)
         : data.sessionLog,
   };
-  const ach = applyAchievements(
-    addMaterial(base, drop),
-    { nightOwl: isNightOwlHour(now) },
-    now,
-  );
+  const ach = applyAchievements(addMaterial(base, drop), { nightOwl: isNightOwlHour(now) }, now);
   return {
     rewarded: true,
     levelsGained,
@@ -1196,12 +1079,9 @@ export function editTask(
     patch.minutes !== undefined
       ? Math.max(0, Math.round(num(patch.minutes, task.minutes)))
       : task.minutes;
-  const kind =
-    patch.kind && KINDS.includes(patch.kind) ? patch.kind : task.kind;
+  const kind = patch.kind && KINDS.includes(patch.kind) ? patch.kind : task.kind;
   const title =
-    patch.title !== undefined
-      ? patch.title.trim() || KIND_META[kind].label
-      : task.title;
+    patch.title !== undefined ? patch.title.trim() || KIND_META[kind].label : task.title;
   const date =
     typeof patch.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(patch.date)
       ? patch.date
@@ -1276,9 +1156,7 @@ export function completePomodoroSession(
     pomodoros: 1,
   });
   const record = makeTask(
-    kind === "warmup"
-      ? `Khởi động (${minutes} phút)`
-      : `Phiên tập trung (${minutes} phút)`,
+    kind === "warmup" ? `Khởi động (${minutes} phút)` : `Phiên tập trung (${minutes} phút)`,
     "pomodoro",
     minutes,
     today,
@@ -1289,10 +1167,7 @@ export function completePomodoroSession(
       completedAt: now.toISOString(),
     },
   );
-  const sessionLog = [
-    ...data.sessionLog,
-    { at: now.toISOString(), minutes, kind },
-  ].slice(-400);
+  const sessionLog = [...data.sessionLog, { at: now.toISOString(), minutes, kind }].slice(-400);
   const d = {
     ...data,
     achievements,
@@ -1343,8 +1218,7 @@ export function claimQuest(
   if (!quest) return { data, ok: false };
   const claimed = data.quests.date === today ? data.quests.claimed : [];
   if (claimed.includes(questId)) return { data, ok: false };
-  if (questProgress(data.dailyStats[today], quest) < quest.target)
-    return { data, ok: false };
+  if (questProgress(data.dailyStats[today], quest) < quest.target) return { data, ok: false };
   return {
     ok: true,
     data: {
@@ -1376,9 +1250,7 @@ export function claimRaid(
       lizardGems: data.game.lizardGems + RAID_REWARD.lizardGems,
     },
   };
-  const drops: MaterialId[] = Array.from({ length: RAID_LOOT }, () =>
-    pickMaterial(rng),
-  );
+  const drops: MaterialId[] = Array.from({ length: RAID_LOOT }, () => pickMaterial(rng));
   drops.forEach((d) => {
     next = addMaterial(next, d);
   });
@@ -1392,9 +1264,7 @@ export function addExam(
   data: AppData,
   name: string,
   date: string,
-  extra: Partial<
-    Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">
-  > = {},
+  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">> = {},
   now = new Date(),
 ): AppData {
   const clean = name.trim();
@@ -1416,17 +1286,11 @@ export function addExam(
 export function updateExam(
   data: AppData,
   examId: string,
-  patch: Partial<
-    Pick<
-      ExamEvent,
-      "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi"
-    >
-  >,
+  patch: Partial<Pick<ExamEvent, "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi">>,
   now = new Date(),
 ): AppData {
   if (!data.exams.some((e) => e.id === examId)) return data;
-  if (patch.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(patch.date))
-    return data;
+  if (patch.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(patch.date)) return data;
   if (patch.name !== undefined && !patch.name.trim()) return data;
   const extras = normalizeExamExtras(patch);
   return {
@@ -1464,19 +1328,12 @@ function normalizeExamExtras(
   extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">>,
 ): Partial<ExamEvent> {
   const out: Partial<ExamEvent> = {};
-  const buoi =
-    typeof extra.buoi === "string" ? extra.buoi.trim().slice(0, 8) : undefined;
+  const buoi = typeof extra.buoi === "string" ? extra.buoi.trim().slice(0, 8) : undefined;
   const thoiGian =
-    typeof extra.thoiGian === "string"
-      ? extra.thoiGian.trim().slice(0, 20)
-      : undefined;
-  const khoi =
-    typeof extra.khoi === "string" ? extra.khoi.trim().slice(0, 20) : undefined;
+    typeof extra.thoiGian === "string" ? extra.thoiGian.trim().slice(0, 20) : undefined;
+  const khoi = typeof extra.khoi === "string" ? extra.khoi.trim().slice(0, 20) : undefined;
   if (buoi) out.buoi = buoi;
-  if (
-    typeof extra.gioBatDau === "string" &&
-    /^\d{1,2}:\d{2}$/.test(extra.gioBatDau.trim())
-  ) {
+  if (typeof extra.gioBatDau === "string" && /^\d{1,2}:\d{2}$/.test(extra.gioBatDau.trim())) {
     out.gioBatDau = extra.gioBatDau.trim();
   }
   if (thoiGian) out.thoiGian = thoiGian;
@@ -1485,18 +1342,12 @@ function normalizeExamExtras(
 }
 
 /** Removes an exam event and untags its tasks. No-op for unknown ids. */
-export function removeExam(
-  data: AppData,
-  examId: string,
-  now = new Date(),
-): AppData {
+export function removeExam(data: AppData, examId: string, now = new Date()): AppData {
   if (!data.exams.some((e) => e.id === examId)) return data;
   return {
     ...data,
     exams: data.exams.filter((e) => e.id !== examId),
-    tasks: data.tasks.map((t) =>
-      t.examId === examId ? { ...t, examId: undefined } : t,
-    ),
+    tasks: data.tasks.map((t) => (t.examId === examId ? { ...t, examId: undefined } : t)),
     updatedAt: now.toISOString(),
   };
 }
@@ -1511,9 +1362,7 @@ export function setTaskExam(
   if (examId && !data.exams.some((e) => e.id === examId)) return data;
   return {
     ...data,
-    tasks: data.tasks.map((t) =>
-      t.id === taskId ? { ...t, examId: examId ?? undefined } : t,
-    ),
+    tasks: data.tasks.map((t) => (t.id === taskId ? { ...t, examId: examId ?? undefined } : t)),
     updatedAt: now.toISOString(),
   };
 }
@@ -1528,10 +1377,7 @@ export function saveTaskAsTemplate(
   if (!title) return data;
   if (
     data.templates.some(
-      (t) =>
-        t.title === title &&
-        t.kind === shape.kind &&
-        t.minutes === shape.minutes,
+      (t) => t.title === title && t.kind === shape.kind && t.minutes === shape.minutes,
     )
   )
     return data;
@@ -1559,19 +1405,13 @@ export function updateTemplate(
 ): AppData {
   const tpl = data.templates.find((t) => t.id === templateId);
   if (!tpl) return data;
-  const title =
-    typeof patch.title === "string"
-      ? patch.title.trim().slice(0, 80)
-      : tpl.title;
+  const title = typeof patch.title === "string" ? patch.title.trim().slice(0, 80) : tpl.title;
   if (!title) return data;
   const minutes =
     typeof patch.minutes === "number" && Number.isFinite(patch.minutes)
       ? Math.min(600, Math.max(0, Math.round(patch.minutes)))
       : tpl.minutes;
-  const emoji =
-    patch.emoji === null
-      ? undefined
-      : normalizeTemplateEmoji(patch.emoji ?? tpl.emoji);
+  const emoji = patch.emoji === null ? undefined : normalizeTemplateEmoji(patch.emoji ?? tpl.emoji);
   const next: TaskTemplate = {
     ...tpl,
     title,
@@ -1609,11 +1449,7 @@ export function taskFromTemplate(
 }
 
 /** Removes a template. Existing tasks stay untouched. */
-export function removeTemplate(
-  data: AppData,
-  templateId: string,
-  now = new Date(),
-): AppData {
+export function removeTemplate(data: AppData, templateId: string, now = new Date()): AppData {
   if (!data.templates.some((t) => t.id === templateId)) return data;
   return {
     ...data,
@@ -1649,9 +1485,7 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
   const old = next.tasks.filter((t) => t.pinned && t.date < today);
   if (old.length) {
     const keys = new Set(
-      next.tasks
-        .filter((t) => t.pinned && t.date === today)
-        .map((t) => `${t.kind}|${t.title}`),
+      next.tasks.filter((t) => t.pinned && t.date === today).map((t) => `${t.kind}|${t.title}`),
     );
     const keep = new Set<string>();
     [...old]
@@ -1682,8 +1516,7 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
     };
   }
   const sc = checkStreak(next.streak, next.inventory, today);
-  if (sc.streak !== next.streak)
-    next = { ...next, streak: sc.streak, inventory: sc.inventory };
+  if (sc.streak !== next.streak) next = { ...next, streak: sc.streak, inventory: sc.inventory };
   // Pet's adventure diary for the previous day, once per new calendar day.
   if (next.lastDiaryDate !== today) {
     if (next.lastDiaryDate) {
@@ -1695,10 +1528,7 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
       });
       next = {
         ...next,
-        adventureLog: [
-          entry,
-          ...next.adventureLog.filter((e) => e.date !== y),
-        ].slice(0, 60),
+        adventureLog: [entry, ...next.adventureLog.filter((e) => e.date !== y)].slice(0, 60),
       };
     }
     next = { ...next, lastDiaryDate: today };
@@ -1710,15 +1540,9 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
     const pins = hasExercise
       ? []
       : Array.from({ length: EXERCISE_SESSIONS }, (_, i) =>
-          makeTask(
-            `Tập thể dục giãn cơ (5 phút) #${i + 1}`,
-            "exercise",
-            5,
-            today,
-            {
-              pinned: true,
-            },
-          ),
+          makeTask(`Tập thể dục giãn cơ (5 phút) #${i + 1}`, "exercise", 5, today, {
+            pinned: true,
+          }),
         );
     next = {
       ...next,
@@ -1739,8 +1563,7 @@ export function addWaterCup(
   fresh: AchievementId[];
 } {
   const w = data.game.water;
-  if (w.cups >= WATER_GOAL)
-    return { data, goalReached: false, levelsGained: 0, fresh: [] };
+  if (w.cups >= WATER_GOAL) return { data, goalReached: false, levelsGained: 0, fresh: [] };
   const today = dateStr(now);
   const cups = w.cups + 1;
   let game: GameState = { ...data.game, water: { ...w, cups } };
@@ -1765,8 +1588,7 @@ export function addWaterCup(
     game,
     dailyStats: bumpStats(data.dailyStats, today, { water: 1 }),
   };
-  if (goalReached)
-    next = { ...next, achievements: recordWaterGoal(next.achievements, today) };
+  if (goalReached) next = { ...next, achievements: recordWaterGoal(next.achievements, today) };
   const ach = applyAchievements(next, {}, now);
   return { data: ach.data, goalReached, levelsGained, fresh: ach.fresh };
 }
@@ -1781,10 +1603,7 @@ const personalOf = (data: AppData, dayIndex: number): Slot[] =>
 
 /** Pushes personal-schedule slots whose start time has arrived (for today's weekday) into today's tasks, once per day per slot.
  * School TKB periods are display-only: they feed "Học trước cho ngày mai" but never auto-create tasks. */
-export function pushDueSlots(
-  data: AppData,
-  now = new Date(),
-): { data: AppData; pushed: Slot[] } {
+export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; pushed: Slot[] } {
   const today = dateStr(now);
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const due = personalOf(data, now.getDay()).filter(
@@ -1810,28 +1629,12 @@ export function pushDueSlots(
   };
 }
 
-export const WHEEL_PRIZES = [
-  "+10 XP",
-  "+2 😺",
-  "+1 🦎",
-  "+30 XP",
-  "+2 🎡",
-  "+5 😺",
-  "+15 XP",
-];
+export const WHEEL_PRIZES = ["+10 XP", "+2 😺", "+1 🦎", "+30 XP", "+2 🎡", "+5 😺", "+15 XP"];
 
 /** Vòng quay mở rộng: jackpot + pity + mega cuối tuần + lượt miễn phí mỗi ngày. */
 export const JACKPOT_PRIZE = "🎰 JACKPOT";
 export const JACKPOT_TICKETS = 10;
-export const MEGA_PRIZES = [
-  "+20 XP",
-  "+4 😺",
-  "+2 🦎",
-  "+60 XP",
-  "+4 🎡",
-  "+10 😺",
-  "+80 XP",
-];
+export const MEGA_PRIZES = ["+20 XP", "+4 😺", "+2 🦎", "+60 XP", "+4 🎡", "+10 😺", "+80 XP"];
 export const PITY_LIMIT = 25;
 export type SpinMode = "normal" | "free" | "mega";
 export const SPIN_COST: Record<SpinMode, number> = {
@@ -1885,11 +1688,7 @@ export function isWeekend(now = new Date()): boolean {
 }
 
 /** Whether this spin mode is allowed right now (tickets, once-per-day free, weekend mega). */
-export function canSpin(
-  game: GameState,
-  mode: SpinMode,
-  now = new Date(),
-): boolean {
+export function canSpin(game: GameState, mode: SpinMode, now = new Date()): boolean {
   if (game.spinTickets < SPIN_COST[mode]) return false;
   if (mode === "free") return game.freeSpinDate !== dateStr(now);
   if (mode === "mega") return isWeekend(now);
@@ -1933,11 +1732,57 @@ export function recordSpin(
   };
 }
 
-/** "Đồng bộ nhanh lịch hôm nay": add every personal-schedule slot of today not yet in the list (school TKB stays display-only). */
-export function syncTodaySlots(
-  data: AppData,
+/** Giá bán 1 lượt quay lấy 😺 — hơi dưới giá trị trung bình của một lượt quay thường (~8.8 😺) nên quay tay vẫn hời hơn, nhưng bán vẫn cân. */
+export const SPIN_SELL_COINS = 8;
+
+/** Bán lượt quay lấy 😺; mặc định bán toàn bộ lượt đang có. */
+export function sellSpinTickets(
+  game: GameState,
+  count: number = game.spinTickets,
+): { game: GameState; sold: number; coins: number } {
+  const sold = Math.max(0, Math.min(Math.floor(count), game.spinTickets));
+  if (sold === 0) return { game, sold: 0, coins: 0 };
+  const coins = sold * SPIN_SELL_COINS;
+  return {
+    game: {
+      ...game,
+      spinTickets: game.spinTickets - sold,
+      catCoins: game.catCoins + coins,
+    },
+    sold,
+    coins,
+  };
+}
+
+/** Danh sách lượt auto-spin được phép lúc này: miễn phí trước; cuối tuần ưu tiên MEGA theo cặp rồi phần lẻ quay thường; ngày thường giữ 2 lượt cho MEGA. */
+export function autoSpinModes(
+  game: GameState,
+  weekend = isWeekend(),
   now = new Date(),
-): { data: AppData; added: number } {
+): SpinMode[] {
+  const modes: SpinMode[] = [];
+  if (canSpin(game, "free", now)) modes.push("free");
+  let t = game.spinTickets;
+  if (weekend) {
+    while (t >= SPIN_COST.mega) {
+      modes.push("mega");
+      t -= SPIN_COST.mega;
+    }
+    while (t >= 1) {
+      modes.push("normal");
+      t -= 1;
+    }
+  } else {
+    while (t > SPIN_COST.mega) {
+      modes.push("normal");
+      t -= 1;
+    }
+  }
+  return modes;
+}
+
+/** "Đồng bộ nhanh lịch hôm nay": add every personal-schedule slot of today not yet in the list (school TKB stays display-only). */
+export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData; added: number } {
   const today = dateStr(now);
   const notPushed = (s: Slot, logKey: string) =>
     !data.timetableLog.includes(logKey) &&
@@ -1963,11 +1808,7 @@ export function syncTodaySlots(
 }
 
 /** Slots starting in exactly <=5 minutes (and not yet started) today. */
-export function upcomingSlots(
-  data: AppData,
-  now = new Date(),
-  leadMin = 5,
-): Slot[] {
+export function upcomingSlots(data: AppData, now = new Date(), leadMin = 5): Slot[] {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return [
     ...(data.timetable.days[now.getDay()]?.slots ?? []),
@@ -1982,10 +1823,9 @@ export function upcomingSlots(
 export function runningSlotToday(data: AppData, now = new Date()): Slot | null {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return (
-    [
-      ...(data.timetable.days[now.getDay()]?.slots ?? []),
-      ...personalOf(data, now.getDay()),
-    ].find((s) => toMin(s.start) <= nowMin && nowMin < toMin(s.end)) ?? null
+    [...(data.timetable.days[now.getDay()]?.slots ?? []), ...personalOf(data, now.getDay())].find(
+      (s) => toMin(s.start) <= nowMin && nowMin < toMin(s.end),
+    ) ?? null
   );
 }
 
@@ -1993,10 +1833,7 @@ export function runningSlotToday(data: AppData, now = new Date()): Slot | null {
 export function nextSlotToday(data: AppData, now = new Date()): Slot | null {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return (
-    [
-      ...(data.timetable.days[now.getDay()]?.slots ?? []),
-      ...personalOf(data, now.getDay()),
-    ]
+    [...(data.timetable.days[now.getDay()]?.slots ?? []), ...personalOf(data, now.getDay())]
       .sort((a, b) => toMin(a.start) - toMin(b.start))
       .find((s) => toMin(s.start) > nowMin) ?? null
   );
@@ -2016,8 +1853,7 @@ function cleanSubjectName(v: unknown): string {
 export function addSubject(data: AppData, name: string): AppData | null {
   const n = cleanSubjectName(name);
   if (!n) return null;
-  if (data.subjects.some((x) => x.toLowerCase() === n.toLowerCase()))
-    return null;
+  if (data.subjects.some((x) => x.toLowerCase() === n.toLowerCase())) return null;
   if (data.subjects.length >= SUBJECTS_MAX) return null;
   return { ...data, subjects: [...data.subjects, n] };
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import {
   WHEEL_PRIZES,
@@ -7,13 +8,16 @@ import {
   JACKPOT_TICKETS,
   PITY_LIMIT,
   SPIN_COST,
+  SPIN_SELL_COINS,
   canSpin,
   isWeekend,
+  sellSpinTickets,
   type SpinMode,
 } from "@/lib/tracker/model";
 import { Badge } from "@/components/ui/badge";
 import { wheelWinFx } from "@/lib/tracker/effects";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 const fills = [
   "var(--chart-1)",
@@ -32,7 +36,7 @@ const MODE_LABEL: Record<SpinMode, string> = {
 };
 
 export function Wheel() {
-  const { data, spin } = useTracker();
+  const { data, spin, update } = useTracker();
   const [rot, setRot] = useState(0);
   const [busy, setBusy] = useState(false);
   const [megaMode, setMegaMode] = useState(false);
@@ -59,6 +63,13 @@ export function Wheel() {
       setLastPrize(prize); // reveal + pop + FX only once the wheel has stopped
       wheelWinFx(prize === JACKPOT_PRIZE);
     }, 2700);
+  };
+
+  const sellAll = () => {
+    const r = sellSpinTickets(data.game);
+    if (!r.sold) return;
+    update((d) => ({ ...d, game: r.game }));
+    toast.success(`💱 Đã bán ${r.sold} lượt quay, +${r.coins} 😺`);
   };
 
   const bg = `conic-gradient(${display
@@ -141,6 +152,27 @@ export function Wheel() {
               {megaMode ? "Về vòng thường" : "Bật vòng MEGA"}
             </Button>
           )}
+          <Button variant="outline" onClick={sellAll} disabled={busy || game.spinTickets === 0}>
+            {game.spinTickets > 0
+              ? `💱 Bán ${game.spinTickets} lượt (+${game.spinTickets * SPIN_SELL_COINS} 😺)`
+              : "💱 Bán lượt quay (0 lượt)"}
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-secondary/40 px-3 py-2.5">
+          <div className="text-left">
+            <p className="text-sm font-medium">⚡ Quay giùm mình</p>
+            <p className="text-xs text-muted-foreground">
+              Tự quay lượt miễn phí + lượt thường khi mở app (ngày thường giữ 2 lượt cho MEGA cuối
+              tuần).
+            </p>
+          </div>
+          <Switch
+            checked={data.settings.autoSpin === true}
+            onCheckedChange={(v) =>
+              update((d) => ({ ...d, settings: { ...d.settings, autoSpin: v } }))
+            }
+          />
         </div>
       </div>
 
@@ -166,6 +198,7 @@ export function Wheel() {
             <li>💧 Đủ 8 ly nước trong ngày — +1 lượt</li>
             <li>🛒 Chợ Hư Không: 🎟️ Vé Quay giá 10 😺 (luân phiên mỗi tuần)</li>
             <li>🧪 Chế độ Admin test — nút +5 lượt</li>
+            <li>💱 Lười quay? Bán lượt — +{SPIN_SELL_COINS} 😺 mỗi lượt</li>
           </ul>
         </div>
 

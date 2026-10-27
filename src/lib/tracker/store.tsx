@@ -25,6 +25,8 @@ import {
   recordSpin,
   beginSpin,
   canSpin,
+  autoSpinModes,
+  isWeekend,
   JACKPOT_PRIZE,
   JACKPOT_TICKETS,
   upcomingSlots,
@@ -68,26 +70,14 @@ import {
   ting,
 } from "./effects";
 import { loadCustomChime } from "./chimeStore";
-import {
-  CAPSULE_INTERVAL_MS,
-  lastSnapshotAt,
-  saveSnapshot,
-} from "./timeCapsule";
-import {
-  createFile,
-  createWriter,
-  downloadData,
-  openFile,
-  type Handle,
-} from "./storage";
+import { CAPSULE_INTERVAL_MS, lastSnapshotAt, saveSnapshot } from "./timeCapsule";
+import { createFile, createWriter, downloadData, openFile, type Handle } from "./storage";
 
 /** True only when the user cancelled the file picker. */
 const isAbort = (e: unknown): boolean =>
   e instanceof Error
     ? e.name === "AbortError"
-    : e !== null &&
-      typeof e === "object" &&
-      (e as { name?: unknown }).name === "AbortError";
+    : e !== null && typeof e === "object" && (e as { name?: unknown }).name === "AbortError";
 
 export type SaveStatus = "none" | "saving" | "saved" | "dirty" | "error";
 
@@ -146,12 +136,9 @@ function announceAchievements(fresh: AchievementId[]) {
 }
 function announceDrop(drop: MaterialId | null) {
   if (drop)
-    toast(
-      `🎁 Rơi nguyên liệu: ${MATERIALS[drop].emoji} ${MATERIALS[drop].name}`,
-      {
-        className: "glass-toast",
-      },
-    );
+    toast(`🎁 Rơi nguyên liệu: ${MATERIALS[drop].emoji} ${MATERIALS[drop].name}`, {
+      className: "glass-toast",
+    });
 }
 
 // Keep one context instance across hot reloads so provider and consumers always match.
@@ -202,10 +189,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     );
   }, [data, ready]);
 
-  const update = useCallback(
-    (fn: (d: AppData) => AppData) => setData((d) => fn(d)),
-    [],
-  );
+  const update = useCallback((fn: (d: AppData) => AppData) => setData((d) => fn(d)), []);
 
   // Keep the effect-sound switch, style and volume in sync with the saved setting.
   useEffect(() => {
@@ -285,9 +269,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     setData((d) => applyAdminBoost(d, kind, amount));
   const download = () => {
     if (dataRef.current.settings.admin) {
-      toast.error(
-        "Chế độ test (Admin) đang bật — tắt trong Cài đặt để tải backup.",
-      );
+      toast.error("Chế độ test (Admin) đang bật — tắt trong Cài đặt để tải backup.");
       return;
     }
     const now = new Date();
@@ -327,13 +309,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const prev = dataRef.current;
     const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
     const prevFormEmoji = petEmoji(dataRef.current.petState);
-    const r = completeTask(
-      dataRef.current,
-      id,
-      new Date(),
-      Math.random,
-      xpMult,
-    );
+    const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
     if (!r.rewarded) return; // anti-spam
     setData(r.data);
     void saveSnapshot(r.data);
@@ -341,11 +317,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     celebrate();
     // A timed task finished by the clock (not the manual ✔ button) starts the
     // same auto-break a pet Pomodoro gets — PetWidget listens for this event.
-    if (
-      fromTimer &&
-      r.data.settings.autoBreak &&
-      r.data.settings.breakMinutes > 0
-    ) {
+    if (fromTimer && r.data.settings.autoBreak && r.data.settings.breakMinutes > 0) {
       window.dispatchEvent(new CustomEvent("pp-auto-break"));
     }
     toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
@@ -372,18 +344,14 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         `${TIER_BADGE[tierOf(r.data.petState.petLevel)]} Thú cưng tiến hóa thành ${petTitle(r.data.petState)}!`,
         { className: "glass-toast", duration: 6000 },
       );
-    } else if (r.petLevels > 0)
-      toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
+    } else if (r.petLevels > 0) toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
   }, []);
 
   // Timer tick based on wall clock → reaches 00:00 reliably even if tab was throttled.
   useEffect(() => {
     if (!timer) return;
     const iv = setInterval(() => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((timer.endAt - Date.now()) / 1000),
-      );
+      const remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
       if (remaining <= 0) {
         clearInterval(iv);
         finish(timer.taskId, true);
@@ -411,11 +379,9 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
 
   const startTimer = (id: string) => {
     const task = dataRef.current.tasks.find((t) => t.id === id);
-    if (!task || task.completed || task.rewardClaimed || task.minutes <= 0)
-      return;
+    if (!task || task.completed || task.rewardClaimed || task.minutes <= 0) return;
     if (timer) pauseTimer();
-    const secs =
-      task.remainingSeconds > 0 ? task.remainingSeconds : task.minutes * 60;
+    const secs = task.remainingSeconds > 0 ? task.remainingSeconds : task.minutes * 60;
     setTimer({ taskId: id, endAt: Date.now() + secs * 1000, remaining: secs });
   };
 
@@ -427,9 +393,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       const sal = claimDailySalary(d0, dateStr());
       if (sal.coins > 0) {
         ting();
-        toast.success(
-          `💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`,
-        );
+        toast.success(`💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`);
       }
       const { data: dp, pushed } = pushDueSlots(sal.data); // chain salary result so lastSalaryDate persists
       const pet = decayPet(
@@ -463,10 +427,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
           description: `${s.start} - ${s.end}`,
         });
         try {
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
+          if ("Notification" in window && Notification.permission === "granted") {
             new Notification(`🔔 5 phút nữa: ${s.title}`, {
               body: `${s.start} - ${s.end}`,
             });
@@ -483,9 +444,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         });
         d1 = next;
         ting();
-        toast.success(
-          `🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`,
-        );
+        toast.success(`🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`);
         expedition.drops.forEach(announceDrop);
       }
       const ach = applyAchievements(d1, {});
@@ -515,27 +474,54 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(iv);
   }, [ready]);
 
+  // ⚡ Auto-spin: quay giùm mình khi mở app (tuỳ chọn trong vòng quay).
+  // Miễn phí trước, cuối tuần ưu tiên MEGA; ngày thường giữ 2 lượt cho MEGA.
+  const autoSpin = () => {
+    const d = dataRef.current;
+    if (d.settings.autoSpin !== true) return;
+    const now = new Date();
+    const weekend = isWeekend(now);
+    const prizes: string[] = [];
+    let g = d.game;
+    let next = d;
+    let levels = 0;
+    for (let guard = 60; guard > 0; guard -= 1) {
+      const mode = autoSpinModes(g, weekend, now)[0];
+      if (!mode) break;
+      const begun = beginSpin(g, mode, now);
+      const r = recordSpin(begun.game, begun.prize, begun.jackpot, mode, now.toISOString());
+      const drop = rollDrop();
+      next = addMaterial({ ...next, game: r.game }, drop);
+      g = r.game;
+      levels += r.levelsGained;
+      prizes.push(begun.prize);
+    }
+    if (!prizes.length) return;
+    setData(next);
+    ting();
+    toast.success(`⚡ Quay giùm mình: ${prizes.join(" · ")}`);
+    onLevels(levels, g.level);
+  };
+
+  useEffect(() => {
+    if (ready) autoSpin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, data.settings.autoSpin]);
+
   const restore = (raw: unknown) => {
     setData(ensureDailyPins(migrate(raw)));
     setReady(true);
   };
 
-  const finishPomodoro = (
-    boss: boolean,
-    minutes: number,
-    kind?: "pomodoro" | "warmup",
-  ) => {
+  const finishPomodoro = (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => {
     const cur = dataRef.current;
     const today = dateStr(new Date());
     // One daily-boss reward per day: tasks may already have defeated it.
-    const bossDue =
-      boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
+    const bossDue = boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
     const game = bossDue
       ? defeatBoss(cur.game)
       : { ...cur.game, catCoins: cur.game.catCoins + POMODORO_REWARD };
-    const dailyBoss: DailyBossState = boss
-      ? { date: today, defeated: true }
-      : cur.dailyBoss;
+    const dailyBoss: DailyBossState = boss ? { date: today, defeated: true } : cur.dailyBoss;
     const r = completePomodoroSession(
       { ...cur, game, petState: bumpPet(cur.petState, 0, 10), dailyBoss },
       minutes,
@@ -551,8 +537,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     announceAchievements(r.fresh);
     return { bossDue };
   };
-  const bossCancel = () =>
-    setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
+  const bossCancel = () => setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
   const claimAchievement = (id: AchievementId) => {
     const next = claimAchievementReward(dataRef.current, id);
     if (!next) return false;
@@ -589,9 +574,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       announceDrop(drop);
       ting();
       toast.success(
-        jackpot
-          ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!`
-          : `🎡 Bạn nhận được ${prize}`,
+        jackpot ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!` : `🎡 Bạn nhận được ${prize}`,
       );
       onLevels(r.levelsGained, r.game.level);
     }, 2600);

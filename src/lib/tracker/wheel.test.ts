@@ -4,14 +4,19 @@ import {
   JACKPOT_TICKETS,
   MEGA_PRIZES,
   PITY_LIMIT,
+  SPIN_COST,
+  SPIN_SELL_COINS,
   WHEEL_PRIZES,
   applyPrize,
+  autoSpinModes,
   beginSpin,
   canSpin,
+  dateStr,
   defaultGame,
   isWeekend,
   recordSpin,
   rollWheel,
+  sellSpinTickets,
 } from "./model";
 
 const rng0 = () => 0; // always the first segment, never jackpot
@@ -116,5 +121,68 @@ describe("applyPrize", () => {
     expect(applyPrize(g, "+2 🎡").game.spinTickets).toBe(2);
     expect(WHEEL_PRIZES).toContain("+2 🎡"); // spin prize now gives 2 tickets (net +1 after the paid spin)
     expect(MEGA_PRIZES).toContain("+4 🎡");
+  });
+});
+
+describe("sellSpinTickets", () => {
+  it("sells every ticket at the balanced rate and adds catCoins", () => {
+    const g = { ...defaultGame(), spinTickets: 5, catCoins: 10 };
+    const r = sellSpinTickets(g);
+    expect(r.sold).toBe(5);
+    expect(r.coins).toBe(5 * SPIN_SELL_COINS);
+    expect(r.game.spinTickets).toBe(0);
+    expect(r.game.catCoins).toBe(10 + 5 * SPIN_SELL_COINS);
+  });
+
+  it("sells a partial amount and never goes below zero", () => {
+    const g = { ...defaultGame(), spinTickets: 3 };
+    expect(sellSpinTickets(g, 99).sold).toBe(3);
+    expect(sellSpinTickets(g, 1).game.spinTickets).toBe(2);
+    expect(sellSpinTickets(g, 0).sold).toBe(0);
+    expect(sellSpinTickets({ ...g, spinTickets: 0 }).sold).toBe(0);
+  });
+
+  it("keeps the free spin available after selling everything", () => {
+    const g = { ...defaultGame(), spinTickets: 4 };
+    const r = sellSpinTickets(g);
+    expect(canSpin(r.game, "free")).toBe(true);
+  });
+});
+
+describe("autoSpinModes", () => {
+  it("spins the free spin first, then keeps 2 tickets for weekend MEGA on a weekday", () => {
+    const modes = autoSpinModes({ ...defaultGame(), spinTickets: 3 }, false);
+    expect(modes[0]).toBe("free");
+    expect(modes.filter((m) => m === "normal")).toHaveLength(1);
+  });
+
+  it("leaves exactly 2 tickets untouched on a weekday", () => {
+    const modes = autoSpinModes(
+      { ...defaultGame(), freeSpinDate: dateStr(new Date()), spinTickets: 2 },
+      false,
+    );
+    expect(modes).toEqual([]);
+  });
+
+  it("prefers MEGA pairs on the weekend and spends the leftover normally", () => {
+    const modes = autoSpinModes(
+      { ...defaultGame(), freeSpinDate: dateStr(new Date()), spinTickets: 5 },
+      true,
+    );
+    expect(modes.filter((m) => m === "mega")).toHaveLength(2);
+    expect(modes.filter((m) => m === "normal")).toHaveLength(1);
+  });
+
+  it("returns nothing when the free spin is used and there are no tickets", () => {
+    const modes = autoSpinModes({ ...defaultGame(), freeSpinDate: dateStr(new Date()) }, false);
+    expect(modes).toEqual([]);
+  });
+
+  it("matches SPIN_COST so a weekday never dips into the MEGA reserve", () => {
+    const modes = autoSpinModes(
+      { ...defaultGame(), freeSpinDate: dateStr(new Date()), spinTickets: SPIN_COST.mega },
+      false,
+    );
+    expect(modes).toEqual([]);
   });
 });
