@@ -77,6 +77,7 @@ import type { WeekGoal } from "./goals";
 import {
   defaultTemplates,
   newTemplateId,
+  normalizeTemplateEmoji,
   normalizeTemplates,
   type TaskTemplate,
 } from "./templates";
@@ -110,6 +111,7 @@ export interface Task {
   mood?: number; // 1..4 feeling after finishing a timed task (1 = tuyệt vời)
   subject?: string; // study subject tag (from data.subjects) used by the per-subject chart
   remindAt?: string; // "HH:MM" — same-day reminder time; the app pings when it passes
+  emoji?: string; // custom icon (e.g. 🧘) shown instead of the kind emoji
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
 }
@@ -534,6 +536,7 @@ export function migrate(raw: unknown): AppData {
       completed: !!t.completed,
       completedAt: t.completedAt ?? null,
       rewardClaimed: t.rewardClaimed ?? !!t.completed,
+      emoji: normalizeTemplateEmoji(t.emoji),
       createdAt: t.createdAt ?? new Date().toISOString(),
     };
   });
@@ -1301,7 +1304,7 @@ export function setTaskExam(
 /** Saves a task's shape as a reusable template. No-op for blank titles or exact duplicates. */
 export function saveTaskAsTemplate(
   data: AppData,
-  shape: Pick<Task, "title" | "kind" | "minutes">,
+  shape: Pick<Task, "title" | "kind" | "minutes"> & { emoji?: string },
   now = new Date(),
 ): AppData {
   const title = shape.title.trim();
@@ -1312,13 +1315,45 @@ export function saveTaskAsTemplate(
     )
   )
     return data;
+  const emoji = normalizeTemplateEmoji(shape.emoji);
   const template: TaskTemplate = {
     id: newTemplateId(),
     title,
     kind: shape.kind,
     minutes: shape.minutes,
+    ...(emoji ? { emoji } : {}),
   };
   return { ...data, templates: [...data.templates, template], updatedAt: now.toISOString() };
+}
+
+/** Edits a template's title/minutes/emoji. Unknown ids are a no-op; null emoji clears the custom icon. */
+export function updateTemplate(
+  data: AppData,
+  templateId: string,
+  patch: { title?: string; minutes?: number; emoji?: string | null },
+  now = new Date(),
+): AppData {
+  const tpl = data.templates.find((t) => t.id === templateId);
+  if (!tpl) return data;
+  const title = typeof patch.title === "string" ? patch.title.trim().slice(0, 80) : tpl.title;
+  if (!title) return data;
+  const minutes =
+    typeof patch.minutes === "number" && Number.isFinite(patch.minutes)
+      ? Math.min(600, Math.max(0, Math.round(patch.minutes)))
+      : tpl.minutes;
+  const emoji = patch.emoji === null ? undefined : normalizeTemplateEmoji(patch.emoji ?? tpl.emoji);
+  const next: TaskTemplate = {
+    ...tpl,
+    title,
+    minutes,
+    ...(emoji ? { emoji } : {}),
+  };
+  if (!emoji) delete next.emoji;
+  return {
+    ...data,
+    templates: data.templates.map((t) => (t.id === templateId ? next : t)),
+    updatedAt: now.toISOString(),
+  };
 }
 
 /** Creates a task from a template for the given date. Returns null for unknown template ids. */
@@ -1330,7 +1365,9 @@ export function taskFromTemplate(
 ): { data: AppData; task: Task } | null {
   const tpl = data.templates.find((t) => t.id === templateId);
   if (!tpl) return null;
-  const task = makeTask(tpl.title, tpl.kind, tpl.minutes, date);
+  const task = makeTask(tpl.title, tpl.kind, tpl.minutes, date, {
+    ...(tpl.emoji ? { emoji: tpl.emoji } : {}),
+  });
   return { data: { ...data, tasks: [...data.tasks, task], updatedAt: now.toISOString() }, task };
 }
 
