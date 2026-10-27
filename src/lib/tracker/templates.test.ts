@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { migrate, removeTemplate, saveTaskAsTemplate, taskFromTemplate } from "./model";
+import {
+  migrate,
+  removeTemplate,
+  saveTaskAsTemplate,
+  taskFromTemplate,
+  updateTemplate,
+} from "./model";
 import { normalizeTemplates } from "./templates";
 
 const today = "2026-10-20";
@@ -84,5 +90,48 @@ describe("removeTemplate", () => {
 describe("migrate", () => {
   it("fills templates on old files", () => {
     expect(migrate({ app: "local-task-tracker-pro", version: 3, tasks: [] }).templates).toEqual([]);
+  });
+});
+
+describe("template emoji", () => {
+  it("keeps a custom emoji, drops blank ones and caps the length", () => {
+    const out = normalizeTemplates([
+      { id: "t1", title: "Thiền", kind: "custom", minutes: 10, emoji: "🧘" },
+      { id: "t2", title: "Blank", kind: "custom", minutes: 5, emoji: "   " },
+      { id: "t3", title: "Long", kind: "custom", minutes: 5, emoji: "x".repeat(20) },
+      { id: "t4", title: "Weird type", kind: "custom", minutes: 5, emoji: 42 },
+    ]);
+    expect(out[0]!.emoji).toBe("🧘");
+    expect(out[1]!.emoji).toBeUndefined();
+    expect(out[2]!.emoji).toHaveLength(8);
+    expect(out[3]!.emoji).toBeUndefined();
+  });
+
+  it("saves a template with a custom icon and stamps it onto new tasks", () => {
+    let data = migrate(null);
+    data = saveTaskAsTemplate(data, { title: "Thiền", kind: "custom", minutes: 10, emoji: "🧘" });
+    expect(data.templates[0]!.emoji).toBe("🧘");
+    const r = taskFromTemplate(data, data.templates[0]!.id, today);
+    expect(r).not.toBeNull();
+    expect(r!.task.emoji).toBe("🧘");
+  });
+
+  it("updateTemplate edits title/minutes/emoji, clears the emoji and ignores unknown ids", () => {
+    let data = migrate(null);
+    data = saveTaskAsTemplate(data, { title: "Đọc sách", kind: "pomodoro", minutes: 30 });
+    const id = data.templates[0]!.id;
+    data = updateTemplate(data, id, { title: "Đọc truyện", minutes: 15, emoji: "📖" });
+    expect(data.templates[0]).toMatchObject({ title: "Đọc truyện", minutes: 15, emoji: "📖" });
+    data = updateTemplate(data, id, { emoji: null });
+    expect(data.templates[0]!.emoji).toBeUndefined();
+    expect(updateTemplate(data, "nope", { title: "X" })).toBe(data);
+    expect(updateTemplate(data, id, { title: "   " })).toBe(data);
+  });
+
+  it("migrate keeps an existing emoji on old task files", () => {
+    const data = migrate({
+      tasks: [{ id: "a", title: "Thiền", kind: "custom", minutes: 10, emoji: "🧘" }],
+    });
+    expect(data.tasks[0]!.emoji).toBe("🧘");
   });
 });
