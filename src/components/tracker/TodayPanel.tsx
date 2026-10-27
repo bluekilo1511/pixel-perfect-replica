@@ -20,6 +20,7 @@ import {
   makeTask,
   removeExam,
   removeTemplate,
+  updateTemplate,
   saveTaskAsTemplate,
   setTaskMood,
   syncTodaySlots,
@@ -57,6 +58,7 @@ import { weakTopics } from "@/lib/tracker/subjectNotes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInputVN } from "./DateInputVN";
+import { requestTimerFullscreen } from "./TimerFullscreen";
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -231,7 +233,7 @@ function TaskRow({ task }: { task: Task }) {
           📚 {task.subject}
         </span>
       )}
-      <span className="text-xl">{KIND_META[task.kind].emoji}</span>
+      <span className="text-xl">{task.emoji ?? KIND_META[task.kind].emoji}</span>
       <div className="min-w-0 flex-1">
         <p className={`truncate font-medium ${locked ? "line-through" : ""}`}>{task.title}</p>
         <p className="text-xs text-muted-foreground">
@@ -326,9 +328,20 @@ function TaskRow({ task }: { task: Task }) {
           </Button>
           {task.minutes > 0 &&
             (running ? (
-              <Button size="sm" variant="secondary" onClick={pauseTimer}>
-                ⏸ Dừng
-              </Button>
+              <>
+                <Button size="sm" variant="secondary" onClick={pauseTimer} title="Tạm dừng đồng hồ">
+                  ⏸ Dừng
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label="Phóng to toàn màn hình"
+                  title="Ghim đồng hồ lên toàn màn hình — vòng tiến độ + pet canh chừng"
+                  onClick={requestTimerFullscreen}
+                >
+                  ⛶
+                </Button>
+              </>
             ) : (
               <Button size="sm" onClick={() => startTimer(task.id)}>
                 ▶ Bắt đầu
@@ -607,44 +620,110 @@ function ExamCard() {
 
 function TemplatesCard() {
   const { data, update } = useTracker();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ title: "", minutes: 0, emoji: "" });
   if (!data.templates.length) return null;
+  const startEdit = (id: string) => {
+    const tpl = data.templates.find((t) => t.id === id);
+    if (!tpl) return;
+    setDraft({ title: tpl.title, minutes: tpl.minutes, emoji: tpl.emoji ?? "" });
+    setEditId(id);
+  };
+  const saveEdit = () => {
+    if (!editId) return;
+    update((d) => updateTemplate(d, editId, { ...draft, emoji: draft.emoji || null }));
+    setEditId(null);
+    toast.success("Đã lưu mẫu ⭐");
+  };
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-muted-foreground">⭐ Mẫu có sẵn:</span>
-      {data.templates.map((tpl) => (
-        <span
-          key={tpl.id}
-          className="flex items-center gap-1 rounded-full border border-border bg-muted py-1 pl-3 pr-1 text-sm"
-        >
-          <span className="max-w-[160px] truncate">
-            {KIND_META[tpl.kind].emoji} {tpl.title}
-            {tpl.minutes > 0 ? ` · ${tpl.minutes}p` : ""}
-          </span>
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-label={`Thêm "${tpl.title}"`}
-            title="Thêm nhiệm vụ từ mẫu này"
-            className="h-6 px-2"
-            onClick={() => {
-              update((d) => taskFromTemplate(d, tpl.id, dateStr())?.data ?? d);
-              toast.success(`Đã thêm "${tpl.title}" ✅`);
-            }}
-          >
-            +
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-label={`Xóa mẫu ${tpl.title}`}
-            title="Xóa mẫu này"
-            className="h-6 px-1 opacity-60 hover:opacity-100"
-            onClick={() => update((d) => removeTemplate(d, tpl.id))}
-          >
-            ✕
-          </Button>
-        </span>
-      ))}
+    <div className="mt-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">⭐ Mẫu có sẵn:</span>
+        {data.templates.map((tpl) =>
+          editId === tpl.id ? (
+            <span
+              key={tpl.id}
+              className="flex flex-wrap items-center gap-1.5 rounded-xl border border-primary/40 bg-muted p-2 text-sm"
+            >
+              <Input
+                className="h-8 w-16 text-center"
+                value={draft.emoji}
+                onChange={(e) => setDraft({ ...draft, emoji: e.target.value })}
+                aria-label="Biểu tượng của mẫu"
+                placeholder="📚"
+                maxLength={8}
+              />
+              <Input
+                className="h-8 w-36"
+                value={draft.title}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                aria-label="Tên mẫu"
+              />
+              <Input
+                type="number"
+                min={0}
+                className="h-8 w-20"
+                value={draft.minutes}
+                onChange={(e) => setDraft({ ...draft, minutes: Math.max(0, +e.target.value) })}
+                aria-label="Số phút"
+              />
+              <Button size="sm" className="h-8" onClick={saveEdit}>
+                💾
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditId(null)}>
+                Hủy
+              </Button>
+            </span>
+          ) : (
+            <span
+              key={tpl.id}
+              className="flex items-center gap-1 rounded-full border border-border bg-muted py-1 pl-3 pr-1 text-sm"
+            >
+              <span className="max-w-[160px] truncate">
+                {tpl.emoji ?? KIND_META[tpl.kind].emoji} {tpl.title}
+                {tpl.minutes > 0 ? ` · ${tpl.minutes}p` : ""}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Thêm "${tpl.title}"`}
+                title="Thêm nhiệm vụ từ mẫu này"
+                className="h-6 px-2"
+                onClick={() => {
+                  update((d) => taskFromTemplate(d, tpl.id, dateStr())?.data ?? d);
+                  toast.success(`Đã thêm "${tpl.title}" ✅`);
+                }}
+              >
+                +
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Sửa mẫu ${tpl.title}`}
+                title="Sửa biểu tượng, tên, số phút của mẫu"
+                className="h-6 px-1 opacity-60 hover:opacity-100"
+                onClick={() => startEdit(tpl.id)}
+              >
+                ✎
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Xóa mẫu ${tpl.title}`}
+                title="Xóa mẫu này"
+                className="h-6 px-1 opacity-60 hover:opacity-100"
+                onClick={() => update((d) => removeTemplate(d, tpl.id))}
+              >
+                ✕
+              </Button>
+            </span>
+          ),
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Mẫu cũng xuất hiện trong mục chọn "loại nhiệm vụ" khi thêm việc — bấm ✎ để đổi biểu tượng,
+        tên hoặc số phút.
+      </p>
     </div>
   );
 }
@@ -692,6 +771,26 @@ function AddTask() {
   const [minutes, setMinutes] = useState(25);
   const [examId, setExamId] = useState<string>("");
   const [remind, setRemind] = useState("");
+  // Emoji picked from a saved template; cleared whenever the user switches back to a plain kind.
+  const [tplEmoji, setTplEmoji] = useState<string | null>(null);
+  // What the select itself shows (a kind or "tpl:<id>") so a template choice doesn't snap back.
+  const [sel, setSel] = useState<string>("pomodoro");
+  const pickValue = (value: string) => {
+    setSel(value);
+    if (value.startsWith("tpl:")) {
+      const tpl = data.templates.find((t) => t.id === value.slice(4));
+      if (!tpl) return;
+      setKind(tpl.kind);
+      setMinutes(tpl.minutes);
+      setTitle(tpl.title);
+      setTplEmoji(tpl.emoji ?? null);
+      return;
+    }
+    const k = value as TaskKind;
+    setKind(k);
+    setMinutes(KIND_META[k].minutes || minutes);
+    setTplEmoji(null);
+  };
   const add = () => {
     const name = title.trim() || KIND_META[kind].label;
     update((d) => {
@@ -721,12 +820,14 @@ function AddTask() {
             ...(examId ? { examId } : {}),
             ...(subject ? { subject } : {}),
             ...(remind ? { remindAt: remind } : {}),
+            ...(tplEmoji ? { emoji: tplEmoji } : {}),
           }),
         ],
       };
     });
     setTitle("");
     setRemind("");
+    setTplEmoji(null);
   };
   return (
     <div className="flex flex-wrap gap-2">
@@ -739,21 +840,31 @@ function AddTask() {
         onKeyDown={(e) => e.key === "Enter" && add()}
       />
       <select
-        className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
-        value={kind}
-        onChange={(e) => {
-          const k = e.target.value as TaskKind;
-          setKind(k);
-          setMinutes(KIND_META[k].minutes || minutes);
-        }}
+        className="h-9 min-w-[170px] rounded-md border border-input bg-popover px-2 text-sm"
+        value={sel}
+        onChange={(e) => pickValue(e.target.value)}
+        aria-label="Loại nhiệm vụ"
+        title="Loại có sẵn hoặc mẫu bạn đã lưu"
       >
-        {(Object.keys(KIND_META) as TaskKind[])
-          .filter((k) => k !== "water")
-          .map((k) => (
-            <option key={k} value={k}>
-              {KIND_META[k].emoji} {KIND_META[k].label}
-            </option>
-          ))}
+        <optgroup label="Loại có sẵn">
+          {(Object.keys(KIND_META) as TaskKind[])
+            .filter((k) => k !== "water")
+            .map((k) => (
+              <option key={k} value={k}>
+                {KIND_META[k].emoji} {KIND_META[k].label}
+              </option>
+            ))}
+        </optgroup>
+        {data.templates.length > 0 && (
+          <optgroup label="⭐ Mẫu của bạn">
+            {data.templates.map((tpl) => (
+              <option key={tpl.id} value={`tpl:${tpl.id}`}>
+                {tpl.emoji ?? KIND_META[tpl.kind].emoji} {tpl.title}
+                {tpl.minutes > 0 ? ` · ${tpl.minutes}p` : ""}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <Input
         type="number"
