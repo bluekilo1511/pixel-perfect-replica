@@ -1559,3 +1559,39 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   25% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -50%) rotate(-45deg) scale(1.5); }
 }
+
+/* --- Focus mode: fullscreen pinned countdown ------------------------------- */
+.focus-star {
+  opacity: 0.25;
+  animation: focus-star-drift ease-in-out infinite alternate;
+}
+@keyframes focus-star-drift {
+  0% { opacity: 0.15; transform: translateY(0) scale(1); }
+  100% { opacity: 0.7; transform: translateY(-14px) scale(1.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-star { animation: none; opacity: 0.35; }
+}
+.fx-lite .focus-star { animation: none; opacity: 0.35; }
+
+/* The live arc: smooth 1s sweep between ticks. */
+.focus-ring-arc {
+  transition: stroke-dashoffset 1s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-ring-arc { transition: none; }
+}
+.fx-lite .focus-ring-arc { transition: none; }
+
+/* Slow spin of the dashed halo + svg block (skipped in battery saver / reduced motion). */
+.focus-ring-spin {
+  animation: focus-ring-rotate 24s linear infinite;
+}
+@keyframes focus-ring-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-ring-spin { animation: none; }
+}
+.fx-lite .focus-ring-spin { animation: none; }
