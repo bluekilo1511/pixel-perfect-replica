@@ -90,10 +90,15 @@ export function TimerFullscreen() {
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-hidden bg-[radial-gradient(ellipse_at_center,hsl(var(--card))_0%,hsl(var(--background))_75%)]"
+      className="fixed inset-0 z-50 overflow-hidden bg-[#070d1f]"
       role="dialog"
       aria-label="Đồng hồ toàn màn hình"
     >
+      {/* Opaque deep-navy backdrop: hides the whole app behind the overlay. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,64,143,0.45)_0%,transparent_70%)]"
+      />
       {/* Drifting stars — skipped in battery saver / reduced motion. */}
       {!calm && (
         <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -114,7 +119,7 @@ export function TimerFullscreen() {
         </div>
       )}
       <div className="relative grid h-full place-items-center p-6">
-        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/10 bg-black/35 px-8 py-8 text-center shadow-2xl backdrop-blur-md sm:px-12">
           <span className="max-w-[80vw] truncate text-lg font-semibold">
             <span className="mr-2">{task.emoji ?? meta.emoji}</span>
             {task.title}
