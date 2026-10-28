@@ -9,6 +9,7 @@ import {
 } from "@/lib/tracker/gamify";
 import { petEmoji } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
+import { BreathWidget } from "@/components/tracker/BreathWidget";
 import { AmbientControl } from "./AmbientControl";
 
 const fmt = (s: number) =>
@@ -84,9 +85,12 @@ export function FocusMode({
           {fmt(onBreak ? breakLeft : left)}
         </p>
         {onBreak ? (
-          <p className="font-mono text-xs uppercase tracking-wider text-hunger">
-            ☕ Giờ nghỉ giải lao — nghỉ ngơi đi, sắp nhắc quay lại rồi!
-          </p>
+          <>
+            <p className="font-mono text-xs uppercase tracking-wider text-hunger">
+              ☕ Giờ nghỉ giải lao — nghỉ ngơi đi, sắp nhắc quay lại rồi!
+            </p>
+            <BreathWidget />
+          </>
         ) : (
           <>
             {strikes > 0 && (

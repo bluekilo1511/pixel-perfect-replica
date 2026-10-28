@@ -81,6 +81,7 @@ import {
   normalizeTemplates,
   type TaskTemplate,
 } from "./templates";
+import { normalizeFlashcards, type Flashcard } from "./flashcards";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -243,6 +244,7 @@ export interface AppData {
   templates: TaskTemplate[];
   sessionLog: SessionEntry[];
   notes: NoteItem[];
+  flashcards: Flashcard[]; // study flashcards with SM-2-lite spaced repetition (see flashcards.ts)
   market: MarketState;
   subjects: string[]; // user-managed study subjects (max 12)
   subjectNotes: SubjectNoteMap; // per-subject note + weak/strong topic marks
@@ -377,6 +379,7 @@ export function defaultData(): AppData {
     templates: defaultTemplates(),
     sessionLog: [],
     notes: [],
+    flashcards: [],
     market: defaultMarket(),
     subjects: [],
     subjectNotes: {},
@@ -736,6 +739,7 @@ export function migrate(raw: unknown): AppData {
     templates: normalizeTemplates(r.templates),
     sessionLog: normalizeSessionLog(r.sessionLog),
     notes: normalizeNotes(r.notes),
+    flashcards: normalizeFlashcards(r.flashcards),
     market: normalizeMarket(r.market),
     subjects: Array.isArray(r.subjects)
       ? [

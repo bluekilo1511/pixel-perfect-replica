@@ -1,6 +1,6 @@
 import { useTracker } from "@/lib/tracker/store";
 import { dateStr } from "@/lib/tracker/model";
-import { goldenHours, sessionsOn } from "@/lib/tracker/sessions";
+import { goldenHours, goldenSuggestion, sessionsOn, topHours } from "@/lib/tracker/sessions";
 
 const MOOD_FACES: Record<number, string> = { 1: "😄", 2: "🙂", 3: "😐", 4: "😪" };
 
@@ -16,11 +16,27 @@ export function FocusJournalCard() {
   return (
     <section className="glass p-5">
       <h2 className="mb-1 text-lg font-semibold">📒 Sổ tay phiên</h2>
-      <p className="mb-3 text-xs text-muted-foreground">
+      <p className="mb-2 text-xs text-muted-foreground">
         {g.total > 0
           ? `⭐ Giờ vàng: ${g.best}:00 — ${bestPct}% thời lượng focus 14 ngày qua rơi vào khung này`
           : "Chưa có dữ liệu — hoàn thành phiên học để soi ra giờ vàng của bạn."}
       </p>
+      {g.total > 0 && topHours(g).length > 1 && (
+        <p className="mb-2 text-xs text-muted-foreground">
+          🏆 Top giờ tập trung:{" "}
+          {topHours(g)
+            .map((h) => `${h}:00 (${g.buckets[h]}p)`)
+            .join(" · ")}
+        </p>
+      )}
+      {(() => {
+        const sug = goldenSuggestion(g, data.tasks, dateStr(now));
+        return sug ? (
+          <p className="mb-3 rounded-lg bg-xp/10 px-2.5 py-1.5 text-xs text-xp">
+            💡 Bạn học tốt nhất lúc {sug.hour}:00 — nên đặt “{sug.title}” vào khung này.
+          </p>
+        ) : null;
+      })()}
       {g.total > 0 && (
         <div className="mb-4 flex h-16 items-end gap-[3px]" aria-label="Focus theo giờ trong ngày">
           {g.buckets.map((v, h) => (

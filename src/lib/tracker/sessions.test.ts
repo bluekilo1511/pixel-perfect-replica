@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { goldenHours, sessionsOn } from "./sessions";
-import type { SessionEntry } from "./model";
+import { goldenHours, goldenSuggestion, sessionsOn, topHours } from "./sessions";
+import type { SessionEntry, Task } from "./model";
 
 const at = (y: number, m: number, d: number, h: number, min = 0) =>
   new Date(y, m - 1, d, h, min).toISOString();
@@ -46,4 +46,82 @@ describe("sessionsOn", () => {
     expect(today.length).toBe(1);
     expect(today[0]!.minutes).toBe(25);
   });
+});
+
+describe("golden hour extras", () => {
+  it("ranks top hours best-first with earlier-hour tiebreak", () => {
+    const log = [
+      ...Array.from({ length: 6 }, () => mkSession("2026-10-28T09:30:00")),
+      ...Array.from({ length: 6 }, () => mkSession("2026-10-28T21:30:00")),
+      ...Array.from({ length: 2 }, () => mkSession("2026-10-28T07:30:00")),
+    ];
+    const g = goldenHours(log, new Date("2026-10-28T12:00:00"));
+    expect(topHours(g, 3)).toEqual([9, 21, 7]);
+    expect(topHours(g, 0)).toEqual([]);
+  });
+
+  it("suggests pairing the golden hour with today's longest open task", () => {
+    const log = Array.from({ length: 3 }, () => mkSession("2026-10-28T19:30:00"));
+    const g = goldenHours(log, new Date("2026-10-28T20:00:00"));
+    const tasks = [
+      {
+        id: "a",
+        title: "Uống nước",
+        minutes: 0,
+        date: "2026-10-28",
+        completed: false,
+        completedAt: null,
+        rewardClaimed: false,
+        remainingSeconds: 0,
+        kind: "water",
+      },
+      {
+        id: "b",
+        title: "Ôn Hóa chương 3",
+        minutes: 50,
+        date: "2026-10-28",
+        completed: false,
+        completedAt: null,
+        rewardClaimed: false,
+        remainingSeconds: 0,
+        kind: "pomodoro",
+      },
+      {
+        id: "c",
+        title: "Xong rồi",
+        minutes: 90,
+        date: "2026-10-28",
+        completed: true,
+        completedAt: null,
+        rewardClaimed: false,
+        remainingSeconds: 0,
+        kind: "pomodoro",
+      },
+      {
+        id: "d",
+        title: "Của ngày mai",
+        minutes: 120,
+        date: "2026-10-29",
+        completed: false,
+        completedAt: null,
+        rewardClaimed: false,
+        remainingSeconds: 0,
+        kind: "pomodoro",
+      },
+    ] as unknown as Task[];
+    expect(goldenSuggestion(g, tasks, "2026-10-28")).toEqual({
+      hour: 19,
+      title: "Ôn Hóa chương 3",
+    });
+    expect(goldenSuggestion(g, [], "2026-10-28")).toBeNull();
+    expect(
+      goldenSuggestion({ buckets: Array(24).fill(0), best: null, total: 0 }, tasks, "2026-10-28"),
+    ).toBeNull();
+  });
+});
+
+const mkSession = (iso: string, minutes = 25): SessionEntry => ({
+  at: new Date(iso).toISOString(),
+  minutes,
+  kind: "pomodoro",
 });

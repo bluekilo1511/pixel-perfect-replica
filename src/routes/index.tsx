@@ -8,6 +8,7 @@ import { HeatmapCard } from "@/components/tracker/HeatmapCard";
 import { SubjectChartCard } from "@/components/tracker/SubjectChartCard";
 import { GradeBookCard } from "@/components/tracker/GradeBookCard";
 import { FocusJournalCard } from "@/components/tracker/FocusJournal";
+import { FlashcardsCard } from "@/components/tracker/FlashcardsCard";
 import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
 import { FriendViewCard } from "@/components/tracker/FriendView";
 import { Timetable } from "@/components/tracker/Timetable";
@@ -108,6 +109,7 @@ function AppInner() {
             <GradeBookCard />
             <SubjectChartCard />
             <FocusJournalCard />
+            <FlashcardsCard />
             <MonthlyReportCard />
             <FriendViewCard />
           </div>

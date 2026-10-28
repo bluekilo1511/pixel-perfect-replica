@@ -1,5 +1,5 @@
 // Pure golden-hour analytics over the focus-session log (no browser APIs, so it is testable).
-import type { SessionEntry } from "./model";
+import type { SessionEntry, Task } from "./model";
 
 export interface GoldenHours {
   buckets: number[]; // focus minutes per hour 0..23 (local time)
@@ -33,4 +33,29 @@ export function sessionsOn(log: SessionEntry[], date: string): SessionEntry[] {
     const at = new Date(s.at);
     return !Number.isNaN(at.getTime()) && dayKey(at) === date;
   });
+}
+
+/** Hours with any focus, best first (ties keep the earlier hour). */
+export function topHours(g: GoldenHours, n = 3): number[] {
+  const hours = g.buckets.map((v, h) => ({ v, h })).filter((x) => x.v > 0);
+  hours.sort((a, b) => b.v - a.v || a.h - b.h);
+  return hours.slice(0, n).map((x) => x.h);
+}
+
+/**
+ * Pairs the golden hour with today's longest unfinished task — "put your hardest
+ * task at your best hour". Returns null when either side is missing.
+ */
+export function goldenSuggestion(
+  g: GoldenHours,
+  tasks: Task[],
+  today: string,
+): { hour: number; title: string } | null {
+  if (g.best === null || g.total <= 0) return null;
+  const open = tasks
+    .filter((t) => t.date === today && !t.completed && t.title.trim())
+    .sort((a, b) => b.minutes - a.minutes);
+  const task = open[0];
+  if (!task) return null;
+  return { hour: g.best, title: task.title.trim() };
 }
