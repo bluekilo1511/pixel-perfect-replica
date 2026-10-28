@@ -29,6 +29,7 @@ import {
 } from "@/lib/tracker/extras";
 import { dateStr } from "@/lib/tracker/model";
 import { MarketCard } from "./MarketCard";
+import { ConvenienceCard } from "./ConvenienceCard";
 import { celebrate } from "@/lib/tracker/effects";
 
 export function PetShop() {
@@ -390,6 +391,7 @@ export function PetShop() {
           </Button>
         </div>
       </section>
+      <ConvenienceCard />
       <MarketCard />
     </div>
   );
