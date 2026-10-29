@@ -320,12 +320,22 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     if (fromTimer && r.data.settings.autoBreak && r.data.settings.breakMinutes > 0) {
       window.dispatchEvent(new CustomEvent("pp-auto-break"));
     }
+    // Targeted undo: put back just this task record. Restoring the whole old
+    // snapshot would also roll back everything done since (other tasks, salary,
+    // spins…). Rewards stay granted — no accidental data loss.
+    const prevTask = prev.tasks.find((t) => t.id === id) ?? null;
     toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
       action: {
         label: "Hoàn tác",
         onClick: () => {
-          setData(prev);
-          void saveSnapshot(prev);
+          if (!prevTask) return;
+          setData((d) => ({
+            ...d,
+            tasks: d.tasks.some((t) => t.id === id)
+              ? d.tasks.map((t) => (t.id === id ? prevTask : t))
+              : [...d.tasks, prevTask],
+          }));
+          toast("↩️ Đã trả lại nhiệm vụ (phần thưởng giữ nguyên)");
         },
       },
     });
@@ -402,9 +412,11 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         weatherEffect(weatherFromData(dp)).petDecayMult,
       );
       let d1 = pet === dp.petState ? dp : { ...dp, petState: pet };
+      // Only speak up when a freeze was actually consumed — grace days and
+      // marked rest days also move lastQualifiedDate, without touching 🧊.
       if (
-        d0.streak !== dataRef.current.streak &&
-        d0.streak.lastQualifiedDate !== dataRef.current.streak.lastQualifiedDate
+        d0.streak.lastQualifiedDate !== dataRef.current.streak.lastQualifiedDate &&
+        d0.inventory.freezes < dataRef.current.inventory.freezes
       ) {
         toast("🧊 Bình đóng băng đã cứu chuỗi streak của bạn!");
       }
@@ -563,20 +575,19 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const d = dataRef.current;
     if (!canSpin(d.game, mode)) return null;
     const begun = beginSpin(d.game, mode);
-    setData({ ...d, game: begun.game });
     const { prize, jackpot } = begun;
-    // apply prize after the wheel animation
+    // Grant the prize immediately — closing the tab mid-animation must not eat the reward.
+    const spun = recordSpin(begun.game, prize, jackpot, mode);
+    const drop = rollDrop();
+    setData(addMaterial({ ...d, game: spun.game }, drop));
+    // ...the animation, sound and reveal just catch up 2.6s later.
     setTimeout(() => {
-      const cur = dataRef.current;
-      const r = recordSpin(cur.game, prize, jackpot, mode);
-      const drop = rollDrop();
-      setData(addMaterial({ ...cur, game: r.game }, drop));
       announceDrop(drop);
       ting();
       toast.success(
         jackpot ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!` : `🎡 Bạn nhận được ${prize}`,
       );
-      onLevels(r.levelsGained, r.game.level);
+      onLevels(spun.levelsGained, spun.game.level);
     }, 2600);
     return prize;
   };

@@ -1,1 +1,86 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGV4cGVjdCwgaXQgfSBmcm9tICJ2aXRlc3QiOwppbXBvcnQgeyBDT05WRU5JRU5DRV9JVEVNUywgYnV5Q29udmVuaWVuY2UsIHR5cGUgQ29udmVuaWVuY2VEYXRhIH0gZnJvbSAiLi9jb252ZW5pZW5jZSI7CmltcG9ydCB7IGRhdGVTdHIsIGRlZmF1bHREYXRhIH0gZnJvbSAiLi9tb2RlbCI7CmltcG9ydCB7IGRlZmF1bHRQZXQgfSBmcm9tICIuL2dhbWlmeSI7Cgpjb25zdCBiYXNlID0gKCk6IENvbnZlbmllbmNlRGF0YSA9PiAoewogIGdhbWU6IHsgbGV2ZWw6IDEsIHhwOiAwLCBjYXRDb2luczogMTAwIH0sCiAgaW52ZW50b3J5OiB7IGZyZWV6ZXM6IDAgfSwKICBwZXRTdGF0ZTogZGVmYXVsdFBldChuZXcgRGF0ZSgpKSwKfSk7CgpkZXNjcmliZSgiY29udmVuaWVuY2UiLCAoKSA9PiB7CiAgaXQoImhhcyBmaXZlIGl0ZW1zIHdpdGggcG9zaXRpdmUgcHJpY2VzIiwgKCkgPT4gewogICAgY29uc3QgaXRlbXMgPSBPYmplY3QudmFsdWVzKENPTlZFTklFTkNFX0lURU1TKTsKICAgIGV4cGVjdChpdGVtcykudG9IYXZlTGVuZ3RoKDUpOwogICAgZm9yIChjb25zdCBpdCBvZiBpdGVtcykgZXhwZWN0KGl0LnByaWNlKS50b0JlR3JlYXRlclRoYW4oMCk7CiAgfSk7CgogIGl0KCJjaGFybSBidXlzIGEgZnJlZXplIHdpdGggY29pbnMiLCAoKSA9PiB7CiAgICBjb25zdCByID0gYnV5Q29udmVuaWVuY2UoYmFzZSgpLCAiY2hhcm0iKTsKICAgIGV4cGVjdChyLm9rKS50b0JlKHRydWUpOwogICAgaWYgKCFyLm9rKSByZXR1cm47CiAgICBleHBlY3Qoci5kYXRhLmludmVudG9yeS5mcmVlemVzKS50b0JlKDEpOwogICAgZXhwZWN0KHIuZGF0YS5nYW1lLmNhdENvaW5zKS50b0JlKDcwKTsKICB9KTsKCiAgaXQoInJlamVjdHMgd2hlbiBjb2lucyBhcmUgc2hvcnQiLCAoKSA9PiB7CiAgICBjb25zdCBkID0gYmFzZSgpOwogICAgZC5nYW1lLmNhdENvaW5zID0gNTsKICAgIGNvbnN0IHIgPSBidXlDb252ZW5pZW5jZShkLCAiY2hhcm0iKTsKICAgIGV4cGVjdChyKS50b0VxdWFsKHsgb2s6IGZhbHNlLCByZWFzb246ICJub3QtZW5vdWdoLWNvaW5zIiB9KTsKICB9KTsKCiAgaXQoImZlYXN0IGZlZWRzIHRoZSBwZXQgYW5kIGNsYW1wcyBhdCAxMDAiLCAoKSA9PiB7CiAgICBjb25zdCBkID0gYmFzZSgpOwogICAgZC5wZXRTdGF0ZS5odW5nZXIgPSA5MDsKICAgIGQucGV0U3RhdGUuaGFwcGluZXNzID0gOTU7CiAgICBjb25zdCByID0gYnV5Q29udmVuaWVuY2UoZCwgImZlYXN0Iik7CiAgICBleHBlY3Qoci5vaykudG9CZSh0cnVlKTsKICAgIGlmICghci5vaykgcmV0dXJuOwogICAgZXhwZWN0KHIuZGF0YS5wZXRTdGF0ZS5odW5nZXIpLnRvQmUoMTAwKTsKICAgIGV4cGVjdChyLmRhdGEucGV0U3RhdGUuaGFwcGluZXNzKS50b0JlKDEwMCk7CiAgICBleHBlY3Qoci5kYXRhLmdhbWUuY2F0Q29pbnMpLnRvQmUoOTApOwogIH0pOwoKICBpdCgiY2Fyb3VzZWwgbGlmdHMgaGFwcGluZXNzIiwgKCkgPT4gewogICAgY29uc3QgZCA9IGJhc2UoKTsKICAgIGQucGV0U3RhdGUuaGFwcGluZXNzID0gMjA7CiAgICBjb25zdCByID0gYnV5Q29udmVuaWVuY2UoZCwgImNhcm91c2VsIik7CiAgICBpZiAoIXIub2spIHRocm93IG5ldyBFcnJvcigiYnV5IGZhaWxlZCIpOwogICAgZXhwZWN0KHIuZGF0YS5wZXRTdGF0ZS5oYXBwaW5lc3MpLnRvQmUoODApOwogIH0pOwoKICBpdCgic3RhcmR1c3QgZ3JhbnRzIHVzZXIgeHAgYW5kIGNhbiBsZXZlbCB1cCIsICgpID0+IHsKICAgIGNvbnN0IGQgPSBiYXNlKCk7CiAgICBkLmdhbWUueHAgPSA5MDsKICAgIGNvbnN0IHIgPSBidXlDb252ZW5pZW5jZShkLCAic3RhcmR1c3QiKTsKICAgIGlmICghci5vaykgdGhyb3cgbmV3IEVycm9yKCJidXkgZmFpbGVkIik7CiAgICBleHBlY3Qoci5kYXRhLmdhbWUubGV2ZWwpLnRvQmUoMik7CiAgICBleHBlY3Qoci5kYXRhLmdhbWUueHApLnRvQmUoMzApOwogICAgZXhwZWN0KHIubGV2ZWxzR2FpbmVkKS50b0JlKDEpOwogIH0pOwoKICBpdCgiaG9uZXlNaW5pIGdyYW50cyBwZXQgeHAgYW5kIGNhbiBsZXZlbCB0aGUgcGV0IiwgKCkgPT4gewogICAgY29uc3QgZCA9IGJhc2UoKTsKICAgIGQucGV0U3RhdGUucGV0WHAgPSA4MDsKICAgIGNvbnN0IHIgPSBidXlDb252ZW5pZW5jZShkLCAiaG9uZXlNaW5pIik7CiAgICBpZiAoIXIub2spIHRocm93IG5ldyBFcnJvcigiYnV5IGZhaWxlZCIpOwogICAgZXhwZWN0KHIuZGF0YS5wZXRTdGF0ZS5wZXRMZXZlbCkudG9CZSgyKTsKICAgIGV4cGVjdChyLmRhdGEucGV0U3RhdGUucGV0WHApLnRvQmUoMTApOwogICAgZXhwZWN0KHIucGV0TGV2ZWxzR2FpbmVkKS50b0JlKDEpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJmZWFzdCBxdWVzdCBjcmVkaXQiLCAoKSA9PiB7CiAgaXQoImEgc2hvcCBmZWFzdCBjb3VudHMgdG93YXJkIHRoZSBkYWlseSBmZWVkIHF1ZXN0IiwgKCkgPT4gewogICAgY29uc3QgYmFzZSA9IGRlZmF1bHREYXRhKCk7CiAgICBjb25zdCBkID0geyAuLi5iYXNlLCBnYW1lOiB7IC4uLmJhc2UuZ2FtZSwgY2F0Q29pbnM6IDEwMCB9IH07CiAgICBjb25zdCByID0gYnV5Q29udmVuaWVuY2UoZCwgImZlYXN0Iik7CiAgICBleHBlY3Qoci5vaykudG9CZSh0cnVlKTsKICAgIGlmIChyLm9rKSB7CiAgICAgIGNvbnN0IHRvZGF5ID0gci5kYXRhLmRhaWx5U3RhdHM/LltkYXRlU3RyKCldPy50cmVhdHMgPz8gMDsKICAgICAgZXhwZWN0KHRvZGF5KS50b0JlKDEpOwogICAgfQogIH0pOwp9KTsK
+import { describe, expect, it } from "vitest";
+import { CONVENIENCE_ITEMS, buyConvenience, type ConvenienceData } from "./convenience";
+import { dateStr, defaultData } from "./model";
+import { defaultPet } from "./gamify";
+
+const base = (): ConvenienceData => ({
+  game: { level: 1, xp: 0, catCoins: 100 },
+  inventory: { freezes: 0 },
+  petState: defaultPet(new Date()),
+});
+
+describe("convenience", () => {
+  it("has five items with positive prices", () => {
+    const items = Object.values(CONVENIENCE_ITEMS);
+    expect(items).toHaveLength(5);
+    for (const it of items) expect(it.price).toBeGreaterThan(0);
+  });
+
+  it("charm buys a freeze with coins", () => {
+    const r = buyConvenience(base(), "charm");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.inventory.freezes).toBe(1);
+    expect(r.data.game.catCoins).toBe(70);
+  });
+
+  it("rejects when coins are short", () => {
+    const d = base();
+    d.game.catCoins = 5;
+    const r = buyConvenience(d, "charm");
+    expect(r).toEqual({ ok: false, reason: "not-enough-coins" });
+  });
+
+  it("feast feeds the pet and clamps at 100", () => {
+    const d = base();
+    d.petState.hunger = 90;
+    d.petState.happiness = 95;
+    const r = buyConvenience(d, "feast");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.petState.hunger).toBe(100);
+    expect(r.data.petState.happiness).toBe(100);
+    expect(r.data.game.catCoins).toBe(90);
+  });
+
+  it("carousel lifts happiness", () => {
+    const d = base();
+    d.petState.happiness = 20;
+    const r = buyConvenience(d, "carousel");
+    if (!r.ok) throw new Error("buy failed");
+    expect(r.data.petState.happiness).toBe(80);
+  });
+
+  it("stardust grants user xp and can level up", () => {
+    const d = base();
+    d.game.xp = 90;
+    const r = buyConvenience(d, "stardust");
+    if (!r.ok) throw new Error("buy failed");
+    expect(r.data.game.level).toBe(2);
+    expect(r.data.game.xp).toBe(30);
+    expect(r.levelsGained).toBe(1);
+  });
+
+  it("honeyMini grants pet xp and can level the pet", () => {
+    const d = base();
+    d.petState.petXp = 80;
+    const r = buyConvenience(d, "honeyMini");
+    if (!r.ok) throw new Error("buy failed");
+    expect(r.data.petState.petLevel).toBe(2);
+    expect(r.data.petState.petXp).toBe(10);
+    expect(r.petLevelsGained).toBe(1);
+  });
+});
+
+describe("feast quest credit", () => {
+  it("a shop feast counts toward the daily feed quest", () => {
+    const base = defaultData();
+    const d = { ...base, game: { ...base.game, catCoins: 100 } };
+    const r = buyConvenience(d, "feast");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const today = r.data.dailyStats?.[dateStr()]?.treats ?? 0;
+      expect(today).toBe(1);
+    }
+  });
+});

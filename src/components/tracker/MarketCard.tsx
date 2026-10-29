@@ -1,1 +1,102 @@
-aW1wb3J0IHsgdG9hc3QgfSBmcm9tICJzb25uZXIiOwppbXBvcnQgeyB1c2VUcmFja2VyIH0gZnJvbSAiQC9saWIvdHJhY2tlci9zdG9yZSI7CmltcG9ydCB7CiAgYnV5TWFya2V0LAogIE1BUktFVF9JVEVNUywKICBtYXJrZXRQcmljZSwKICBtYXJrZXRTdG9jaywKICB3ZWVrU3RhcnQsCiAgdHlwZSBNYXJrZXRJdGVtSWQsCn0gZnJvbSAiQC9saWIvdHJhY2tlci9tYXJrZXQiOwppbXBvcnQgeyBwZXRFbW9qaSwgdGllck9mIH0gZnJvbSAiQC9saWIvdHJhY2tlci9leHRyYXMiOwppbXBvcnQgeyBCdXR0b24gfSBmcm9tICJAL2NvbXBvbmVudHMvdWkvYnV0dG9uIjsKCi8qKiBDaOG7oyBIxrAgS2jDtG5nIOKAlCB3ZWVrbHkgcm90YXRpbmcgc2hvcCBwYWlkIGluIGNhdCBjb2lucy4gKi8KZXhwb3J0IGZ1bmN0aW9uIE1hcmtldENhcmQoKSB7CiAgY29uc3QgeyBkYXRhLCB1cGRhdGUgfSA9IHVzZVRyYWNrZXIoKTsKICBjb25zdCBub3cgPSBuZXcgRGF0ZSgpOwogIGNvbnN0IHN0b2NrID0gbWFya2V0U3RvY2sobm93KTsKICBjb25zdCB3ZWVrID0gd2Vla1N0YXJ0KG5vdyk7CgogIHJldHVybiAoCiAgICA8c2VjdGlvbiBjbGFzc05hbWU9ImdsYXNzIHAtNSI+CiAgICAgIDxkaXYgY2xhc3NOYW1lPSJtYi0xIGZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktYmV0d2VlbiI+CiAgICAgICAgPGgyIGNsYXNzTmFtZT0iZm9udC1kaXNwbGF5IHRleHQteGwgZm9udC1ib2xkIj7wn4yAIENo4bujIEjGsCBLaMO0bmc8L2gyPgogICAgICAgIDxzcGFuIGNsYXNzTmFtZT0icm91bmRlZC1mdWxsIGJnLXNlY29uZGFyeSBweC0yIHB5LTAuNSB0ZXh0LXhzIj4KICAgICAgICAgIHtkYXRhLmdhbWUuY2F0Q29pbnN9IPCfmLoKICAgICAgICA8L3NwYW4+CiAgICAgIDwvZGl2PgogICAgICA8cCBjbGFzc05hbWU9Im1iLTQgdGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQiPgogICAgICAgIENo4bujIG7huqFwIGjDoG5nIG5n4bqrdSBuaGnDqm4gbeG7l2kgdGjhu6kgSGFpLCBt4buXaSBtw7NuIG11YSAxIGzhuqduL3R14bqnbiDigJQgaMOgbmcgaGnhur9tIGPhuqduIMSR4bunIGPhuqVwIMSR4buZIHbDoCBjaOG7iQogICAgICAgIGPDsyDhu58gxJHDonkuCiAgICAgICAge3RpZXJPZihkYXRhLnBldFN0YXRlLnBldExldmVsIHx8IDEpID49IDIgJiYKICAgICAgICAgIGAgJHtwZXRFbW9qaShkYXRhLnBldFN0YXRlKX0gVGjDuiBjxrBuZyB0aWVyIDIgY+G7p2EgYuG6oW4gxJHGsOG7o2MgZ2nhuqNtIDEwJSBt4buNaSBtw7NuIWB9CiAgICAgIDwvcD4KICAgICAgPHVsIGNsYXNzTmFtZT0iZ3JpZCBnYXAtMiBzbTpncmlkLWNvbHMtMyI+CiAgICAgICAge3N0b2NrLm1hcCgoaWQ6IE1hcmtldEl0ZW1JZCkgPT4gewogICAgICAgICAgY29uc3QgbSA9IE1BUktFVF9JVEVNU1tpZF07CiAgICAgICAgICBjb25zdCBzb2xkT3V0ID0gZGF0YS5tYXJrZXQuYm91Z2h0W2lkXSA9PT0gd2VlazsKICAgICAgICAgIGNvbnN0IGxvY2tlZCA9IG0ubWluTGV2ZWwgIT0gbnVsbCAmJiBkYXRhLmdhbWUubGV2ZWwgPCBtLm1pbkxldmVsOwogICAgICAgICAgY29uc3Qgb3duZWREZWNvciA9CiAgICAgICAgICAgIChpZCA9PT0gImdhbGF4eSIgfHwgaWQgPT09ICJzdGFyQ2xvY2siIHx8IGlkID09PSAibW9vbkxhbXAiIHx8IGlkID09PSAicGhvZW5peCIpICYmCiAgICAgICAgICAgIGRhdGEucGV0U3RhdGUuZGVjb3JPd25lZC5pbmNsdWRlcyhpZCk7CiAgICAgICAgICBjb25zdCBwcmljZSA9IG1hcmtldFByaWNlKG0sIGRhdGEucGV0U3RhdGUpOwogICAgICAgICAgY29uc3QgZGlzY291bnRlZCA9IHByaWNlIDwgbS5wcmljZTsKICAgICAgICAgIHJldHVybiAoCiAgICAgICAgICAgIDxsaQogICAgICAgICAgICAgIGtleT17aWR9CiAgICAgICAgICAgICAgY2xhc3NOYW1lPXtgcm91bmRlZC14bCBwLTMgdGV4dC1jZW50ZXIgJHtzb2xkT3V0IHx8IGxvY2tlZCB8fCBvd25lZERlY29yID8gImJnLW11dGVkIG9wYWNpdHktNzAiIDogImJnLW11dGVkIn1gfQogICAgICAgICAgICA+CiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9InRleHQtM3hsIj57bG9ja2VkID8gIvCflJIiIDogbS5lbW9qaX08L2Rpdj4KICAgICAgICAgICAgICA8cCBjbGFzc05hbWU9Im15LTEgdGV4dC14cyBmb250LW1lZGl1bSI+e20ubmFtZX08L3A+CiAgICAgICAgICAgICAgPHAgY2xhc3NOYW1lPSJtYi0yIHRleHQtWzExcHhdIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+e20uZGVzY308L3A+CiAgICAgICAgICAgICAge293bmVkRGVjb3IgPyAoCiAgICAgICAgICAgICAgICA8QnV0dG9uIHNpemU9InNtIiB2YXJpYW50PSJvdXRsaW5lIiBkaXNhYmxlZD4KICAgICAgICAgICAgICAgICAgxJDDoyBz4bufIGjhu691IOKckwogICAgICAgICAgICAgICAgPC9CdXR0b24+CiAgICAgICAgICAgICAgKSA6IHNvbGRPdXQgPyAoCiAgICAgICAgICAgICAgICA8QnV0dG9uIHNpemU9InNtIiB2YXJpYW50PSJvdXRsaW5lIiBkaXNhYmxlZD4KICAgICAgICAgICAgICAgICAgxJDDoyBtdWEgdHXhuqduIG7DoHkKICAgICAgICAgICAgICAgIDwvQnV0dG9uPgogICAgICAgICAgICAgICkgOiBsb2NrZWQgPyAoCiAgICAgICAgICAgICAgICA8QnV0dG9uIHNpemU9InNtIiB2YXJpYW50PSJvdXRsaW5lIiBkaXNhYmxlZD4KICAgICAgICAgICAgICAgICAg8J+UkiBD4bqnbiBMdiB7bS5taW5MZXZlbH0KICAgICAgICAgICAgICAgIDwvQnV0dG9uPgogICAgICAgICAgICAgICkgOiAoCiAgICAgICAgICAgICAgICA8QnV0dG9uCiAgICAgICAgICAgICAgICAgIHNpemU9InNtIgogICAgICAgICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiB7CiAgICAgICAgICAgICAgICAgICAgY29uc3QgciA9IGJ1eU1hcmtldChkYXRhLCBpZCwgbmV3IERhdGUoKSk7CiAgICAgICAgICAgICAgICAgICAgaWYgKCFyLm9rKSB7CiAgICAgICAgICAgICAgICAgICAgICB0b2FzdC5lcnJvcigKICAgICAgICAgICAgICAgICAgICAgICAgci5yZWFzb24gPT09ICJub3QtZW5vdWdoLWNvaW5zIgogICAgICAgICAgICAgICAgICAgICAgICAgID8gIkNoxrBhIMSR4bunIPCfmLog4oCUIGzDoG0gbmhp4buHbSB24bulIHRow6ptIG7DoG8hIgogICAgICAgICAgICAgICAgICAgICAgICAgIDogci5yZWFzb24gPT09ICJvd25lZCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgID8gIkLhuqFuIMSRYW5nIHPhu58gaOG7r3UgbcOzbiBkZWNvciBuw6B5IHLhu5NpIOKcqCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgIDogci5yZWFzb24gPT09ICJsb2NrZWQiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID8gYPCflJIgQ+G6p24gTHYgJHttLm1pbkxldmVsfSBt4bubaSBtdWEgxJHGsOG7o2MgbcOzbiBuw6B5YAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICA6ICJIaeG7h24ga2jDtG5nIG11YSDEkcaw4bujYyBtw7NuIG7DoHkiLAogICAgICAgICAgICAgICAgICAgICAgKTsKICAgICAgICAgICAgICAgICAgICAgIHJldHVybjsKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgdXBkYXRlKCgpID0+IHIuZGF0YSk7CiAgICAgICAgICAgICAgICAgICAgdG9hc3Quc3VjY2VzcyhyLm1lc3NhZ2UpOwogICAgICAgICAgICAgICAgICB9fQogICAgICAgICAgICAgICAgPgogICAgICAgICAgICAgICAgICB7ZGlzY291bnRlZCA/ICgKICAgICAgICAgICAgICAgICAgICA8c3BhbiB0aXRsZT0i8J+QviDGr3UgxJHDo2kgdGjDuiBjxrBuZyB0aWVyIDI6IGdp4bqjbSAxMCUiPgogICAgICAgICAgICAgICAgICAgICAgPHMgY2xhc3NOYW1lPSJtci0xIG9wYWNpdHktNjAiPnttLnByaWNlfTwvcz4KICAgICAgICAgICAgICAgICAgICAgIHtwcmljZX0g8J+YugogICAgICAgICAgICAgICAgICAgIDwvc3Bhbj4KICAgICAgICAgICAgICAgICAgKSA6ICgKICAgICAgICAgICAgICAgICAgICBgJHttLnByaWNlfSDwn5i6YAogICAgICAgICAgICAgICAgICApfQogICAgICAgICAgICAgICAgPC9CdXR0b24+CiAgICAgICAgICAgICAgKX0KICAgICAgICAgICAgPC9saT4KICAgICAgICAgICk7CiAgICAgICAgfSl9CiAgICAgIDwvdWw+CiAgICA8L3NlY3Rpb24+CiAgKTsKfQo=
+import { toast } from "sonner";
+import { useTracker } from "@/lib/tracker/store";
+import {
+  buyMarket,
+  MARKET_ITEMS,
+  marketPrice,
+  marketStock,
+  weekStart,
+  type MarketItemId,
+} from "@/lib/tracker/market";
+import { petEmoji, tierOf } from "@/lib/tracker/extras";
+import { Button } from "@/components/ui/button";
+
+/** Chợ Hư Không — weekly rotating shop paid in cat coins. */
+export function MarketCard() {
+  const { data, update } = useTracker();
+  const now = new Date();
+  const stock = marketStock(now);
+  const week = weekStart(now);
+
+  return (
+    <section className="glass p-5">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="font-display text-xl font-bold">🌀 Chợ Hư Không</h2>
+        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
+          {data.game.catCoins} 😺
+        </span>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Chợ nạp hàng ngẫu nhiên mỗi thứ Hai, mỗi món mua 1 lần/tuần — hàng hiếm cần đủ cấp độ và chỉ
+        có ở đây.
+        {tierOf(data.petState.petLevel || 1) >= 2 &&
+          ` ${petEmoji(data.petState)} Thú cưng tier 2 của bạn được giảm 10% mọi món!`}
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-3">
+        {stock.map((id: MarketItemId) => {
+          const m = MARKET_ITEMS[id];
+          const soldOut = data.market.bought[id] === week;
+          const locked = m.minLevel != null && data.game.level < m.minLevel;
+          const ownedDecor =
+            (id === "galaxy" || id === "starClock" || id === "moonLamp" || id === "phoenix") &&
+            data.petState.decorOwned.includes(id);
+          const price = marketPrice(m, data.petState);
+          const discounted = price < m.price;
+          return (
+            <li
+              key={id}
+              className={`rounded-xl p-3 text-center ${soldOut || locked || ownedDecor ? "bg-muted opacity-70" : "bg-muted"}`}
+            >
+              <div className="text-3xl">{locked ? "🔒" : m.emoji}</div>
+              <p className="my-1 text-xs font-medium">{m.name}</p>
+              <p className="mb-2 text-[11px] text-muted-foreground">{m.desc}</p>
+              {ownedDecor ? (
+                <Button size="sm" variant="outline" disabled>
+                  Đã sở hữu ✓
+                </Button>
+              ) : soldOut ? (
+                <Button size="sm" variant="outline" disabled>
+                  Đã mua tuần này
+                </Button>
+              ) : locked ? (
+                <Button size="sm" variant="outline" disabled>
+                  🔒 Cần Lv {m.minLevel}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const r = buyMarket(data, id, new Date());
+                    if (!r.ok) {
+                      toast.error(
+                        r.reason === "not-enough-coins"
+                          ? "Chưa đủ 😺 — làm nhiệm vụ thêm nào!"
+                          : r.reason === "owned"
+                            ? "Bạn đang sở hữu món decor này rồi ✨"
+                            : r.reason === "locked"
+                              ? `🔒 Cần Lv ${m.minLevel} mới mua được món này`
+                              : "Hiện không mua được món này",
+                      );
+                      return;
+                    }
+                    update(() => r.data);
+                    toast.success(r.message);
+                  }}
+                >
+                  {discounted ? (
+                    <span title="🐾 Ưu đãi thú cưng tier 2: giảm 10%">
+                      <s className="mr-1 opacity-60">{m.price}</s>
+                      {price} 😺
+                    </span>
+                  ) : (
+                    `${m.price} 😺`
+                  )}
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}

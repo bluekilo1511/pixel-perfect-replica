@@ -1302,7 +1302,24 @@ html.theme-dragon button.bg-primary:not(:disabled) {
   position: absolute;
   inset: -58%;
   background: radial-gradient(circle, #fff6d8 0 32%, #ffd76a 66%, transparent 76%);
-  clip-path: polygon(50% 0%, 57.7% 31.5%, 85.4% 14.6%, 68.5% 42.3%, 100% 50%, 68.5% 57.7%, 85.4% 85.4%, 57.7% 68.5%, 50% 100%, 42.3% 68.5%, 14.6% 85.4%, 31.5% 57.7%, 0% 50%, 31.5% 42.3%, 14.6% 14.6%, 42.3% 31.5%);
+  clip-path: polygon(
+    50% 0%,
+    57.7% 31.5%,
+    85.4% 14.6%,
+    68.5% 42.3%,
+    100% 50%,
+    68.5% 57.7%,
+    85.4% 85.4%,
+    57.7% 68.5%,
+    50% 100%,
+    42.3% 68.5%,
+    14.6% 85.4%,
+    31.5% 57.7%,
+    0% 50%,
+    31.5% 42.3%,
+    14.6% 14.6%,
+    42.3% 31.5%
+  );
   opacity: 0.5;
   filter: drop-shadow(0 0 3px rgb(255 215 106 / 0.65));
   transition: opacity 0.2s ease;
@@ -1319,9 +1336,7 @@ html.theme-dragon button.bg-primary:not(:disabled) {
     filter: drop-shadow(0 0 5px rgb(255 215 106 / 0.85));
   }
   to {
-    filter:
-      drop-shadow(0 0 9px rgb(255 215 106 / 1))
-      drop-shadow(0 0 18px rgb(255 215 106 / 0.75));
+    filter: drop-shadow(0 0 9px rgb(255 215 106 / 1)) drop-shadow(0 0 18px rgb(255 215 106 / 0.75));
   }
 }
 @keyframes star-twinkle-strong {
@@ -1414,7 +1429,6 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: none;
 }
 
-
 /* ---- Sky band readability guarantee: the band is always a dark starry sky,
    so its labels and icons stay light in every theme and time of day ---- */
 .zodiac-sky .zodiac-star {
@@ -1438,18 +1452,20 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   height: 16px;
 }
 ::-webkit-scrollbar-track {
-  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)) no-repeat center / 2px 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)) no-repeat center /
+    2px 100%;
 }
 ::-webkit-scrollbar-track:hover {
-  background: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)) no-repeat center / 2px 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)) no-repeat
+    center / 2px 100%;
 }
 ::-webkit-scrollbar-thumb {
   min-height: 26px;
   background:
-    radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, rgba(59, 130, 246, 0) 60%)
-    no-repeat center / 16px 16px,
+    radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, rgba(59, 130, 246, 0) 60%) no-repeat
+      center / 16px 16px,
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' stroke='%233b82f6' stroke-width='1.6' stroke-linejoin='round' d='M12 2l2.7 6.4 6.9.6-5.2 4.5 1.5 6.8L12 16.8 6.1 20.3l1.5-6.8L2.4 9l6.9-.6z'/%3E%3C/svg%3E")
-    no-repeat center / 12px 12px;
+      no-repeat center / 12px 12px;
   filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.9));
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -1467,8 +1483,12 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: exp-cloud linear infinite;
 }
 @keyframes exp-cloud {
-  from { transform: translateX(15vw); }
-  to { transform: translateX(-115vw); }
+  from {
+    transform: translateX(15vw);
+  }
+  to {
+    transform: translateX(-115vw);
+  }
 }
 .exp-parallax-slow {
   animation: exp-loop 75s linear infinite;
@@ -1480,57 +1500,111 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: exp-loop 7s linear infinite;
 }
 @keyframes exp-loop {
-  from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
 }
 .exp-run {
   animation: exp-run 0.5s ease-in-out infinite;
 }
 @keyframes exp-run {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-9%) rotate(-4deg); }
-  50% { transform: translateY(0) rotate(0deg); }
-  75% { transform: translateY(-6%) rotate(3deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-9%) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-6%) rotate(3deg);
+  }
 }
 .exp-hustle {
   animation: exp-hustle 0.4s ease-in-out infinite;
 }
 @keyframes exp-hustle {
-  0%, 100% { transform: translateY(0) scaleX(1); }
-  50% { transform: translateY(-8%) scaleX(0.97); }
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    transform: translateY(-8%) scaleX(0.97);
+  }
 }
 .exp-dust {
   animation: exp-dust 0.9s ease-out infinite;
   opacity: 0;
 }
 @keyframes exp-dust {
-  0% { opacity: 0.85; transform: translate(0, 0) scale(0.6); }
-  100% { opacity: 0; transform: translate(-26px, -10px) scale(1.5); }
+  0% {
+    opacity: 0.85;
+    transform: translate(0, 0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-26px, -10px) scale(1.5);
+  }
 }
 .exp-clash {
   animation: exp-clash 0.55s ease-in-out 1;
 }
 @keyframes exp-clash {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  20% { transform: translateX(-7px) rotate(-9deg); }
-  45% { transform: translateX(5px) rotate(7deg); }
-  70% { transform: translateX(-4px) rotate(-6deg); }
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-7px) rotate(-9deg);
+  }
+  45% {
+    transform: translateX(5px) rotate(7deg);
+  }
+  70% {
+    transform: translateX(-4px) rotate(-6deg);
+  }
 }
 .exp-spark {
   animation: exp-spark 0.55s ease-out 1;
 }
 @keyframes exp-spark {
-  0% { opacity: 0; transform: scale(0.4) rotate(-15deg); }
-  30% { opacity: 1; transform: scale(1.35) rotate(10deg); }
-  100% { opacity: 0; transform: scale(1) rotate(0deg); }
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-15deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.35) rotate(10deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1) rotate(0deg);
+  }
 }
 .exp-poof {
   animation: exp-poof 0.75s ease-out forwards;
 }
 @keyframes exp-poof {
-  0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-  60% { opacity: 0.55; transform: scale(1.45) translateY(-10px); filter: blur(3px); }
-  100% { opacity: 0; transform: scale(2) translateY(-22px); filter: blur(7px); }
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+  60% {
+    opacity: 0.55;
+    transform: scale(1.45) translateY(-10px);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2) translateY(-22px);
+    filter: blur(7px);
+  }
 }
 
 /* Winged sword companion (Cánh Thiên Thần Vũ Trụ equipped) */
@@ -1538,8 +1612,13 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: exp-sword-bob 1.6s ease-in-out infinite;
 }
 @keyframes exp-sword-bob {
-  0%, 100% { transform: rotate(-12deg) translateY(0); }
-  50% { transform: rotate(-12deg) translateY(-5px); }
+  0%,
+  100% {
+    transform: rotate(-12deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-12deg) translateY(-5px);
+  }
 }
 .exp-sword-wings {
   transform-box: fill-box;
@@ -1547,17 +1626,30 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: exp-wing-flap 0.5s ease-in-out infinite;
 }
 @keyframes exp-wing-flap {
-  0%, 100% { transform: scaleX(1); }
-  50% { transform: scaleX(0.45); }
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.45);
+  }
 }
 .exp-slash {
   opacity: 0;
   animation: exp-slash 0.5s ease-out 1;
 }
 @keyframes exp-slash {
-  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-45deg) scale(0.3); }
-  25% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) rotate(-45deg) scale(1.5); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-45deg) scale(0.3);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-45deg) scale(1.5);
+  }
 }
 
 /* --- Focus mode: fullscreen pinned countdown ------------------------------- */
@@ -1566,32 +1658,56 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   animation: focus-star-drift ease-in-out infinite alternate;
 }
 @keyframes focus-star-drift {
-  0% { opacity: 0.15; transform: translateY(0) scale(1); }
-  100% { opacity: 0.7; transform: translateY(-14px) scale(1.25); }
+  0% {
+    opacity: 0.15;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0.7;
+    transform: translateY(-14px) scale(1.25);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .focus-star { animation: none; opacity: 0.35; }
+  .focus-star {
+    animation: none;
+    opacity: 0.35;
+  }
 }
-.fx-lite .focus-star { animation: none; opacity: 0.35; }
+.fx-lite .focus-star {
+  animation: none;
+  opacity: 0.35;
+}
 
 /* The live arc: smooth 1s sweep between ticks. */
 .focus-ring-arc {
   transition: stroke-dashoffset 1s linear;
 }
 @media (prefers-reduced-motion: reduce) {
-  .focus-ring-arc { transition: none; }
+  .focus-ring-arc {
+    transition: none;
+  }
 }
-.fx-lite .focus-ring-arc { transition: none; }
+.fx-lite .focus-ring-arc {
+  transition: none;
+}
 
 /* Slow spin of the dashed halo + svg block (skipped in battery saver / reduced motion). */
 .focus-ring-spin {
   animation: focus-ring-rotate 24s linear infinite;
 }
 @keyframes focus-ring-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .focus-ring-spin { animation: none; }
+  .focus-ring-spin {
+    animation: none;
+  }
 }
-.fx-lite .focus-ring-spin { animation: none; }
+.fx-lite .focus-ring-spin {
+  animation: none;
+}

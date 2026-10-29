@@ -11,6 +11,8 @@ export interface PersistedSession {
   endAt: number | null; // wall-clock finish of the running Pomodoro (may be past — completion still fires)
   breakEndAt: number | null; // wall-clock finish of the auto-break
   warmup: boolean; // the session is a 5-minute warmup
+  minutes: number | null; // planned length of THIS session (survives preset changes)
+  strikes: number; // break-in count for this session (survives tab switches)
   savedAt: number;
 }
 
@@ -22,6 +24,8 @@ const empty = (): PersistedSession => ({
   endAt: null,
   breakEndAt: null,
   warmup: false,
+  minutes: null,
+  strikes: 0,
   savedAt: 0,
 });
 
@@ -44,6 +48,8 @@ export function loadSession(now = Date.now()): PersistedSession {
       endAt,
       breakEndAt: breakEndAt !== null && breakEndAt > now ? breakEndAt : null,
       warmup: p.warmup === true,
+      minutes: num(p.minutes),
+      strikes: Math.max(0, Math.floor(num(p.strikes) ?? 0)),
       savedAt,
     };
   } catch {
@@ -55,6 +61,8 @@ export function saveSession(
   endAt: number | null,
   breakEndAt: number | null,
   warmup: boolean,
+  minutes: number | null = null,
+  strikes = 0,
   now = Date.now(),
 ): void {
   try {
@@ -63,7 +71,7 @@ export function saveSession(
       localStorage.removeItem(KEY);
       return;
     }
-    const s: PersistedSession = { endAt, breakEndAt, warmup, savedAt: now };
+    const s: PersistedSession = { endAt, breakEndAt, warmup, minutes, strikes, savedAt: now };
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {
     /* storage unavailable — the session just won't survive remounts */

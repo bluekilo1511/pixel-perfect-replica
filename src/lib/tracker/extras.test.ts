@@ -1,1 +1,147 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGV4cGVjdCwgaXQgfSBmcm9tICJ2aXRlc3QiOwppbXBvcnQgewogIGFkZFBldFhwLAogIGNhbkNyYWZ0LAogIGNoZWNrQWNoaWV2ZW1lbnRzLAogIGRlZmF1bHRBY2hpZXZlbWVudHMsCiAgZW1wdHlNYXRlcmlhbHMsCiAgcmVjb3JkV2F0ZXJHb2FsLAogIFJFQ0lQRVMsCiAgZXhwZWRpdGlvblN0YXR1cywKICBub3JtYWxpemVFeHRyYXMsCiAgcmVzb2x2ZUV4cGVkaXRpb24sCiAgcm9sbERyb3AsCiAgc3RhcnRFeHBlZGl0aW9uLAogIHdlYXRoZXJPZiwKICB3ZWVrU3VtbWFyeSwKICB3cml0ZURpYXJ5LAp9IGZyb20gIi4vZXh0cmFzIjsKaW1wb3J0IHsgZGVmYXVsdFBldCB9IGZyb20gIi4vZ2FtaWZ5IjsKaW1wb3J0IHsKICBhZGRXYXRlckN1cCwKICBjb21wbGV0ZVRhc2ssCiAgZGVmYXVsdERhdGEsCiAgZW5zdXJlRGFpbHlQaW5zLAogIG1ha2VUYXNrLAogIG1pZ3JhdGUsCn0gZnJvbSAiLi9tb2RlbCI7CgpkZXNjcmliZSgicHJlbWl1bSBleHRyYXMiLCAoKSA9PiB7CiAgaXQoImRyb3BzIGEgbWF0ZXJpYWwgMjAlIG9mIHRoZSB0aW1lIiwgKCkgPT4gewogICAgZXhwZWN0KHJvbGxEcm9wKCgpID0+IDAuMTkpKS5ub3QudG9CZU51bGwoKTsKICAgIGV4cGVjdChyb2xsRHJvcCgoKSA9PiAwLjIpKS50b0JlTnVsbCgpOwogIH0pOwogIGl0KCJwZXQgZ2V0cyAxMCUgb2YgdXNlciB4cCBhbmQgbGV2ZWxzIGF0IHBldExldmVsKjEwMCIsICgpID0+IHsKICAgIGNvbnN0IHIgPSBhZGRQZXRYcCh7IC4uLmRlZmF1bHRQZXQoKSwgcGV0WHA6IDk1IH0sIDYwKTsKICAgIGV4cGVjdChyLnBldC5wZXRMZXZlbCkudG9CZSgyKTsKICAgIGV4cGVjdChyLnBldC5wZXRYcCkudG9CZSgxKTsKICAgIGNvbnN0IGV2byA9IGFkZFBldFhwKHsgLi4uZGVmYXVsdFBldCgpLCBwZXRMZXZlbDogMiwgcGV0WHA6IDE5OSB9LCAxMCk7CiAgICBleHBlY3QoZXZvLnBldC5wZXRMZXZlbCkudG9CZSgzKTsKICAgIGV4cGVjdChldm8uZXZvbHZlZCkudG9CZSh0cnVlKTsKICB9KTsKICBpdCgiY3JhZnRpbmcgbmVlZHMgdGhlIGxpc3RlZCBtYXRlcmlhbHMiLCAoKSA9PiB7CiAgICBjb25zdCB3aW5ncyA9IFJFQ0lQRVMuZmluZCgocikgPT4gci5pZCA9PT0gIndpbmdzIikhOwogICAgZXhwZWN0KGNhbkNyYWZ0KGVtcHR5TWF0ZXJpYWxzKCksIHdpbmdzKSkudG9CZShmYWxzZSk7CiAgICBleHBlY3QoY2FuQ3JhZnQoeyBtYWdpY0ZlYXRoZXI6IDMsIHN0YXJTaGFyZDogMiwgbXlzdGljSGVyYjogMCB9LCB3aW5ncykpLnRvQmUodHJ1ZSk7CiAgfSk7CiAgaXQoImhpZGRlbiBhY2hpZXZlbWVudHMiLCAoKSA9PiB7CiAgICBjb25zdCBuaWdodCA9IGNoZWNrQWNoaWV2ZW1lbnRzKGRlZmF1bHRBY2hpZXZlbWVudHMoKSwgeyBwZXQ6IGRlZmF1bHRQZXQoKSwgbmlnaHRPd2w6IHRydWUgfSk7CiAgICBleHBlY3QobmlnaHQuZnJlc2gpLnRvRXF1YWwoWyJuaWdodE93bCJdKTsKICAgIGV4cGVjdCgKICAgICAgY2hlY2tBY2hpZXZlbWVudHMoZGVmYXVsdEFjaGlldmVtZW50cygpLCB7IHBldDogeyAuLi5kZWZhdWx0UGV0KCksIGh1bmdlcjogOSB9IH0pLmZyZXNoLAogICAgKS50b0VxdWFsKFsibmVnbGVjdGZ1bE1hc3RlciJdKTsKICAgIGV4cGVjdCgKICAgICAgY2hlY2tBY2hpZXZlbWVudHMoZGVmYXVsdEFjaGlldmVtZW50cygpLCB7IHBldDogeyAuLi5kZWZhdWx0UGV0KCksIGh1bmdlcjogMTAgfSB9KS5mcmVzaCwKICAgICkudG9FcXVhbChbXSk7CiAgICBsZXQgYSA9IGRlZmF1bHRBY2hpZXZlbWVudHMoKTsKICAgIGEgPSByZWNvcmRXYXRlckdvYWwoCiAgICAgIHJlY29yZFdhdGVyR29hbChyZWNvcmRXYXRlckdvYWwoYSwgIjIwMjYtMTAtMTYiKSwgIjIwMjYtMTAtMTciKSwKICAgICAgIjIwMjYtMTAtMTgiLAogICAgKTsKICAgIGV4cGVjdChjaGVja0FjaGlldmVtZW50cyhhLCB7IHBldDogZGVmYXVsdFBldCgpIH0pLmZyZXNoKS50b0VxdWFsKFsiaHlkcm9Ib21pZSJdKTsKICAgIGNvbnN0IGdhcCA9IHJlY29yZFdhdGVyR29hbChyZWNvcmRXYXRlckdvYWwoZGVmYXVsdEFjaGlldmVtZW50cygpLCAiMjAyNi0xMC0xNSIpLCAiMjAyNi0xMC0xNyIpOwogICAgZXhwZWN0KGdhcC53YXRlclN0cmVhay5jb3VudCkudG9CZSgxKTsKICB9KTsKICBpdCgiYWNoaWV2ZW1lbnQgdW5sb2NrIGRvZXMgbm90IHBheSB1bnRpbCBjbGFpbWVkIiwgKCkgPT4gewogICAgY29uc3QgZCA9IGRlZmF1bHREYXRhKCk7CiAgICBkLnRhc2tzID0gW21ha2VUYXNrKCJ4IiwgImN1c3RvbSIsIDAsICIyMDI2LTEwLTE4IildOwogICAgY29uc3QgciA9IGNvbXBsZXRlVGFzayhkLCBkLnRhc2tzWzBdIS5pZCwgbmV3IERhdGUoMjAyNiwgOSwgMTgsIDIsIDApLCAoKSA9PiAwLjkpOwogICAgZXhwZWN0KHIuZnJlc2gpLnRvRXF1YWwoWyJuaWdodE93bCJdKTsKICAgIGV4cGVjdChyLmRhdGEuZ2FtZS5saXphcmRHZW1zKS50b0JlKDApOwogICAgZXhwZWN0KHIuZGF0YS5kYWlseVN0YXRzWyIyMDI2LTEwLTE4Il0hLnRhc2tzKS50b0JlKDEpOwogIH0pOwogIGl0KCJ3ZWF0aGVyIHJ1bGVzIiwgKCkgPT4gewogICAgY29uc3QgcGV0ID0gZGVmYXVsdFBldCgpOwogICAgZXhwZWN0KHdlYXRoZXJPZih7IHRvZGF5RG9uZTogNCwgcG9tb2Rvcm9zVG9kYXk6IDAsIG92ZXJkdWU6IDAsIHBldCB9KSkudG9CZSgic3VubnkiKTsKICAgIGV4cGVjdCh3ZWF0aGVyT2YoeyB0b2RheURvbmU6IDMsIHBvbW9kb3Jvc1RvZGF5OiAxLCBvdmVyZHVlOiAwLCBwZXQgfSkpLnRvQmUoInN1bm55Iik7CiAgICBleHBlY3Qod2VhdGhlck9mKHsgdG9kYXlEb25lOiAzLCBwb21vZG9yb3NUb2RheTogMCwgb3ZlcmR1ZTogMSwgcGV0IH0pKS50b0JlKCJzbm93eSIpOwogICAgZXhwZWN0KAogICAgICB3ZWF0aGVyT2YoeyB0b2RheURvbmU6IDAsIHBvbW9kb3Jvc1RvZGF5OiAwLCBvdmVyZHVlOiAwLCBwZXQ6IHsgLi4ucGV0LCBodW5nZXI6IDM5IH0gfSksCiAgICApLnRvQmUoInJhaW55Iik7CiAgICBleHBlY3Qod2VhdGhlck9mKHsgdG9kYXlEb25lOiAwLCBwb21vZG9yb3NUb2RheTogMCwgb3ZlcmR1ZTogMCwgcGV0IH0pKS50b0JlKCJmb2dneSIpOwogIH0pOwogIGl0KCJkaWFyeSBpcyB3cml0dGVuIGZvciB5ZXN0ZXJkYXkgb24gYSBuZXcgZGF5IiwgKCkgPT4gewogICAgY29uc3QgZCA9IHsKICAgICAgLi4uZGVmYXVsdERhdGEoKSwKICAgICAgbGFzdERpYXJ5RGF0ZTogIjIwMjYtMTAtMTgiLAogICAgICBkYWlseVN0YXRzOiB7ICIyMDI2LTEwLTE4IjogeyB0YXNrczogNSwgZm9jdXNNaW46IDEwMCwgd2F0ZXI6IDgsIHRyZWF0czogMiwgcG9tb2Rvcm9zOiAyIH0gfSwKICAgIH07CiAgICBjb25zdCBuID0gZW5zdXJlRGFpbHlQaW5zKGQsICIyMDI2LTEwLTE5Iik7CiAgICBleHBlY3Qobi5hZHZlbnR1cmVMb2dbMF0hLmRhdGUpLnRvQmUoIjIwMjYtMTAtMTgiKTsKICAgIGV4cGVjdChuLmFkdmVudHVyZUxvZ1swXSEubW9vZCkudG9CZSgiZ3JlYXQiKTsKICAgIGV4cGVjdCgKICAgICAgd3JpdGVEaWFyeSgiMjAyNi0xMC0xOSIsIHVuZGVmaW5lZCwgeyBwZXROYW1lOiAiTcOobyIsIGZyZWV6ZVVzZWQ6IHRydWUsIHN0cmVha0Jyb2tlOiBmYWxzZSB9KQogICAgICAgIC50ZXh0LAogICAgKS50b0NvbnRhaW4oIkLDrG5oIMSRw7NuZyBixINuZyIpOwogIH0pOwogIGl0KCJ3ZWVrbHkgc3VtbWFyeSBzdW1zIFN1bmRheS1zdGFydCB3ZWVrIGFuZCB3YXRlciBjb3VudHMiLCAoKSA9PiB7CiAgICBsZXQgZCA9IGRlZmF1bHREYXRhKCk7CiAgICBkID0gYWRkV2F0ZXJDdXAoZCwgbmV3IERhdGUoMjAyNiwgOSwgMTgsIDEwKSkuZGF0YTsKICAgIGNvbnN0IHcgPSB3ZWVrU3VtbWFyeShkLmRhaWx5U3RhdHMsICIyMDI2LTEwLTE4Iik7CiAgICBleHBlY3Qody5kYXlzWzBdKS50b0JlKCIyMDI2LTEwLTE4Iik7CiAgICBleHBlY3Qody53YXRlcikudG9CZSgxKTsKICB9KTsKICBpdCgib2xkIHYzIGZpbGVzIG1pZ3JhdGUgc2FmZWx5IiwgKCkgPT4gewogICAgY29uc3QgbSA9IG1pZ3JhdGUoewogICAgICB2ZXJzaW9uOiAzLAogICAgICBwZXRTdGF0ZTogeyBzcGVjaWVzOiAiZG9nIiwgaHVuZ2VyOiA1MCB9LAogICAgICBpbnZlbnRvcnk6IHsgZnJlZXplczogMiB9LAogICAgfSk7CiAgICBleHBlY3QobS5wZXRTdGF0ZS5wZXRMZXZlbCkudG9CZSgxKTsKICAgIGV4cGVjdChtLmludmVudG9yeS5tYXRlcmlhbHMpLnRvRXF1YWwoeyBtYWdpY0ZlYXRoZXI6IDAsIHN0YXJTaGFyZDogMCwgbXlzdGljSGVyYjogMCB9KTsKICAgIGV4cGVjdChtLmFjaGlldmVtZW50cy51bmxvY2tlZCkudG9FcXVhbCh7fSk7CiAgICBleHBlY3QobS5hZHZlbnR1cmVMb2cpLnRvRXF1YWwoW10pOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJzdHJlYWsgYWNoaWV2ZW1lbnRzIGFuZCBleHBlZGl0aW9uIHJlbG9hZCIsICgpID0+IHsKICBpdCgic3RyZWFrIGFjaGlldmVtZW50cyB1bmxvY2sgZnJvbSBzdHJlYWsuYmVzdCAocGFzc2VkIGJ5IGFwcGx5QWNoaWV2ZW1lbnRzKSIsICgpID0+IHsKICAgIGNvbnN0IHIgPSBjaGVja0FjaGlldmVtZW50cyhkZWZhdWx0QWNoaWV2ZW1lbnRzKCksIHsgcGV0OiBkZWZhdWx0UGV0KCksIHN0cmVha0Jlc3Q6IDcgfSk7CiAgICBleHBlY3Qoci5mcmVzaCkudG9Db250YWluKCJzdHJlYWs3Iik7CiAgICBjb25zdCByMyA9IGNoZWNrQWNoaWV2ZW1lbnRzKGRlZmF1bHRBY2hpZXZlbWVudHMoKSwgeyBwZXQ6IGRlZmF1bHRQZXQoKSwgc3RyZWFrQmVzdDogMyB9KTsKICAgIGV4cGVjdChyMy5mcmVzaCkudG9Db250YWluKCJzdHJlYWszIik7CiAgfSk7CgogIGl0KCJhIHJlbG9hZCBtaWQtdHJpcCBrZWVwcyB0aGUgZGFpbHkgdHJpcCBjb3VudCBhbmQgbGltaXQiLCAoKSA9PiB7CiAgICBjb25zdCBlID0gbm9ybWFsaXplRXh0cmFzKHsKICAgICAgZXhwZWRpdGlvbjogewogICAgICAgIHN0YXJ0ZWRBdDogIjIwMjYtMTAtMjlUMDk6MDA6MDAuMDAwWiIsCiAgICAgICAgZW5kQXQ6ICIyMDI2LTEwLTI5VDA5OjMwOjAwLjAwMFoiLAogICAgICAgIGxhc3RUcmlnZ2VyRGF0ZTogIjIwMjYtMTAtMjkiLAogICAgICAgIHRyaXBzVG9kYXk6IDIsCiAgICAgIH0sCiAgICB9KTsKICAgIGNvbnN0IG5vdyA9IG5ldyBEYXRlKCIyMDI2LTEwLTI5VDA5OjEwOjAwLjAwMFoiKTsKICAgIGNvbnN0IHN0ID0gZXhwZWRpdGlvblN0YXR1cyhlLmV4cGVkaXRpb24sIDUwMCwgbm93KTsKICAgIGV4cGVjdChzdC50cmlwc1RvZGF5KS50b0JlKDIpOwogICAgLy8gQWZ0ZXIgdGhlIHRyaXAgcmVzb2x2ZXMsIG9uZSBtb3JlIGlzIGFsbG93ZWQg4oCUIHRoZW4gdGhlIGRheSBpcyBmdWxsLgogICAgY29uc3QgcmVzb2x2ZWQgPSByZXNvbHZlRXhwZWRpdGlvbihlLmV4cGVkaXRpb24sIG5ldyBEYXRlKCIyMDI2LTEwLTI5VDA5OjMxOjAwLjAwMFoiKSk7CiAgICBleHBlY3QocmVzb2x2ZWQ/LmV4cGVkaXRpb24udHJpcHNUb2RheSkudG9CZSgyKTsKICAgIGNvbnN0IHRoaXJkID0gc3RhcnRFeHBlZGl0aW9uKHJlc29sdmVkIS5leHBlZGl0aW9uLCA1MDAsIG5ldyBEYXRlKCIyMDI2LTEwLTI5VDA5OjMxOjAwLjAwMFoiKSk7CiAgICBleHBlY3QodGhpcmQudHJpcHNUb2RheSkudG9CZSgzKTsKICAgIGNvbnN0IGRvbmUgPSByZXNvbHZlRXhwZWRpdGlvbih0aGlyZCwgbmV3IERhdGUoIjIwMjYtMTAtMjlUMTA6MDU6MDAuMDAwWiIpKTsKICAgIGV4cGVjdChzdGFydEV4cGVkaXRpb24oZG9uZSEuZXhwZWRpdGlvbiwgNTAwLCBuZXcgRGF0ZSgiMjAyNi0xMC0yOVQxMDowNjowMC4wMDBaIikpKS50b0JlKAogICAgICBkb25lIS5leHBlZGl0aW9uLAogICAgKTsKICB9KTsKfSk7Cg==
+import { describe, expect, it } from "vitest";
+import {
+  addPetXp,
+  canCraft,
+  checkAchievements,
+  defaultAchievements,
+  emptyMaterials,
+  recordWaterGoal,
+  RECIPES,
+  expeditionStatus,
+  normalizeExtras,
+  resolveExpedition,
+  rollDrop,
+  startExpedition,
+  weatherOf,
+  weekSummary,
+  writeDiary,
+} from "./extras";
+import { defaultPet } from "./gamify";
+import {
+  addWaterCup,
+  completeTask,
+  defaultData,
+  ensureDailyPins,
+  makeTask,
+  migrate,
+} from "./model";
+
+describe("premium extras", () => {
+  it("drops a material 20% of the time", () => {
+    expect(rollDrop(() => 0.19)).not.toBeNull();
+    expect(rollDrop(() => 0.2)).toBeNull();
+  });
+  it("pet gets 10% of user xp and levels at petLevel*100", () => {
+    const r = addPetXp({ ...defaultPet(), petXp: 95 }, 60);
+    expect(r.pet.petLevel).toBe(2);
+    expect(r.pet.petXp).toBe(1);
+    const evo = addPetXp({ ...defaultPet(), petLevel: 2, petXp: 199 }, 10);
+    expect(evo.pet.petLevel).toBe(3);
+    expect(evo.evolved).toBe(true);
+  });
+  it("crafting needs the listed materials", () => {
+    const wings = RECIPES.find((r) => r.id === "wings")!;
+    expect(canCraft(emptyMaterials(), wings)).toBe(false);
+    expect(canCraft({ magicFeather: 3, starShard: 2, mysticHerb: 0 }, wings)).toBe(true);
+  });
+  it("hidden achievements", () => {
+    const night = checkAchievements(defaultAchievements(), { pet: defaultPet(), nightOwl: true });
+    expect(night.fresh).toEqual(["nightOwl"]);
+    expect(
+      checkAchievements(defaultAchievements(), { pet: { ...defaultPet(), hunger: 9 } }).fresh,
+    ).toEqual(["neglectfulMaster"]);
+    expect(
+      checkAchievements(defaultAchievements(), { pet: { ...defaultPet(), hunger: 10 } }).fresh,
+    ).toEqual([]);
+    let a = defaultAchievements();
+    a = recordWaterGoal(
+      recordWaterGoal(recordWaterGoal(a, "2026-10-16"), "2026-10-17"),
+      "2026-10-18",
+    );
+    expect(checkAchievements(a, { pet: defaultPet() }).fresh).toEqual(["hydroHomie"]);
+    const gap = recordWaterGoal(recordWaterGoal(defaultAchievements(), "2026-10-15"), "2026-10-17");
+    expect(gap.waterStreak.count).toBe(1);
+  });
+  it("achievement unlock does not pay until claimed", () => {
+    const d = defaultData();
+    d.tasks = [makeTask("x", "custom", 0, "2026-10-18")];
+    const r = completeTask(d, d.tasks[0]!.id, new Date(2026, 9, 18, 2, 0), () => 0.9);
+    expect(r.fresh).toEqual(["nightOwl"]);
+    expect(r.data.game.lizardGems).toBe(0);
+    expect(r.data.dailyStats["2026-10-18"]!.tasks).toBe(1);
+  });
+  it("weather rules", () => {
+    const pet = defaultPet();
+    expect(weatherOf({ todayDone: 4, pomodorosToday: 0, overdue: 0, pet })).toBe("sunny");
+    expect(weatherOf({ todayDone: 3, pomodorosToday: 1, overdue: 0, pet })).toBe("sunny");
+    expect(weatherOf({ todayDone: 3, pomodorosToday: 0, overdue: 1, pet })).toBe("snowy");
+    expect(
+      weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet: { ...pet, hunger: 39 } }),
+    ).toBe("rainy");
+    expect(weatherOf({ todayDone: 0, pomodorosToday: 0, overdue: 0, pet })).toBe("foggy");
+  });
+  it("diary is written for yesterday on a new day", () => {
+    const d = {
+      ...defaultData(),
+      lastDiaryDate: "2026-10-18",
+      dailyStats: { "2026-10-18": { tasks: 5, focusMin: 100, water: 8, treats: 2, pomodoros: 2 } },
+    };
+    const n = ensureDailyPins(d, "2026-10-19");
+    expect(n.adventureLog[0]!.date).toBe("2026-10-18");
+    expect(n.adventureLog[0]!.mood).toBe("great");
+    expect(
+      writeDiary("2026-10-19", undefined, { petName: "Mèo", freezeUsed: true, streakBroke: false })
+        .text,
+    ).toContain("Bình đóng băng");
+  });
+  it("weekly summary sums Sunday-start week and water counts", () => {
+    let d = defaultData();
+    d = addWaterCup(d, new Date(2026, 9, 18, 10)).data;
+    const w = weekSummary(d.dailyStats, "2026-10-18");
+    expect(w.days[0]).toBe("2026-10-18");
+    expect(w.water).toBe(1);
+  });
+  it("old v3 files migrate safely", () => {
+    const m = migrate({
+      version: 3,
+      petState: { species: "dog", hunger: 50 },
+      inventory: { freezes: 2 },
+    });
+    expect(m.petState.petLevel).toBe(1);
+    expect(m.inventory.materials).toEqual({ magicFeather: 0, starShard: 0, mysticHerb: 0 });
+    expect(m.achievements.unlocked).toEqual({});
+    expect(m.adventureLog).toEqual([]);
+  });
+});
+
+describe("streak achievements and expedition reload", () => {
+  it("streak achievements unlock from streak.best (passed by applyAchievements)", () => {
+    const r = checkAchievements(defaultAchievements(), { pet: defaultPet(), streakBest: 7 });
+    expect(r.fresh).toContain("streak7");
+    const r3 = checkAchievements(defaultAchievements(), { pet: defaultPet(), streakBest: 3 });
+    expect(r3.fresh).toContain("streak3");
+  });
+
+  it("a reload mid-trip keeps the daily trip count and limit", () => {
+    const e = normalizeExtras({
+      expedition: {
+        startedAt: "2026-10-29T09:00:00.000Z",
+        endAt: "2026-10-29T09:30:00.000Z",
+        lastTriggerDate: "2026-10-29",
+        tripsToday: 2,
+      },
+    });
+    const now = new Date("2026-10-29T09:10:00.000Z");
+    const st = expeditionStatus(e.expedition, 500, now);
+    expect(st.tripsToday).toBe(2);
+    // After the trip resolves, one more is allowed — then the day is full.
+    const resolved = resolveExpedition(e.expedition, new Date("2026-10-29T09:31:00.000Z"));
+    expect(resolved?.expedition.tripsToday).toBe(2);
+    const third = startExpedition(resolved!.expedition, 500, new Date("2026-10-29T09:31:00.000Z"));
+    expect(third.tripsToday).toBe(3);
+    const done = resolveExpedition(third, new Date("2026-10-29T10:05:00.000Z"));
+    expect(startExpedition(done!.expedition, 500, new Date("2026-10-29T10:06:00.000Z"))).toBe(
+      done!.expedition,
+    );
+  });
+});

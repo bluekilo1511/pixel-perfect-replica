@@ -1,1 +1,145 @@
-Ly8gVGnhu4dtIFRp4buHbiDDjWNoIOKAlCBldmVyeWRheSBjb252ZW5pZW5jZSBzdG9yZTogdW5saW1pdGVkIGNvaW4tYm91Z2h0IGNvbnN1bWFibGVzLgovLyBVbmxpa2UgQ2jhu6MgSMawIEtow7RuZyAod2Vla2x5IHJvdGF0aW9uLCAxIGJ1eS9pdGVtL3dlZWspIHRoZXNlIGFyZSBhbHdheXMgaW4gc3RvY2suCi8vIFB1cmUgbG9naWM6IHRoZSBjYWxsZXIgb3ducyB0aGUgZGF0YSBvYmplY3QsIHRoaXMgb25seSByZXNoYXBlcyBpdC4KaW1wb3J0IHsgYnVtcFBldCwgdHlwZSBJbnZlbnRvcnksIHR5cGUgUGV0U3RhdGUgfSBmcm9tICIuL2dhbWlmeSI7CmltcG9ydCB7IGdyYW50UGV0WHAgfSBmcm9tICIuL2V4dHJhcyI7CmltcG9ydCB7IGFkZFhwLCBkYXRlU3RyLCB0eXBlIEdhbWVTdGF0ZSB9IGZyb20gIi4vbW9kZWwiOwoKZXhwb3J0IHR5cGUgQ29udmVuaWVuY2VJZCA9ICJjaGFybSIgfCAiZmVhc3QiIHwgImNhcm91c2VsIiB8ICJzdGFyZHVzdCIgfCAiaG9uZXlNaW5pIjsKCmV4cG9ydCBpbnRlcmZhY2UgQ29udmVuaWVuY2VJdGVtIHsKICBpZDogQ29udmVuaWVuY2VJZDsKICBlbW9qaTogc3RyaW5nOwogIG5hbWU6IHN0cmluZzsKICBkZXNjOiBzdHJpbmc7CiAgcHJpY2U6IG51bWJlcjsgLy8g8J+YuiBjYXQgY29pbnMKfQoKZXhwb3J0IGNvbnN0IENPTlZFTklFTkNFX0lURU1TOiBSZWNvcmQ8Q29udmVuaWVuY2VJZCwgQ29udmVuaWVuY2VJdGVtPiA9IHsKICBjaGFybTogewogICAgaWQ6ICJjaGFybSIsCiAgICBlbW9qaTogIvCfm6HvuI8iLAogICAgbmFtZTogIkLDuWEgR2nhu68gQ2h14buXaSIsCiAgICBkZXNjOiAiKzEg8J+niiBi4bqjbyBo4buZIHN0cmVhayDigJQgbXVhIHRob+G6o2kgbcOhaSwga2jDtG5nIGdp4bubaSBo4bqhbiB0deG6p24iLAogICAgcHJpY2U6IDMwLAogIH0sCiAgZmVhc3Q6IHsKICAgIGlkOiAiZmVhc3QiLAogICAgZW1vamk6ICLwn42cIiwKICAgIG5hbWU6ICJC4buvYSBUaOG7i25oIFNv4bqhbiIsCiAgICBkZXNjOiAiVGjDuiBjxrBuZyBubyBjxINuZzogKzYwIPCfjZYgbm8gYuG7pW5nLCArMTAg8J+SlyB2dWkgduG6uyIsCiAgICBwcmljZTogMTAsCiAgfSwKICBjYXJvdXNlbDogewogICAgaWQ6ICJjYXJvdXNlbCIsCiAgICBlbW9qaTogIvCfjqAiLAogICAgbmFtZTogIlbDsm5nIFhvYXkgTmjhuqFjIiwKICAgIGRlc2M6ICJUaMO6IGPGsG5nIHZ1aSBo4bq/dCBu4bqlYzogKzYwIPCfkpcgdnVpIHbhursiLAogICAgcHJpY2U6IDEwLAogIH0sCiAgc3RhcmR1c3Q6IHsKICAgIGlkOiAic3RhcmR1c3QiLAogICAgZW1vamk6ICLinKgiLAogICAgbmFtZTogIkjhuqF0IELhu6VpIFNhbyIsCiAgICBkZXNjOiAiKzQwIOKtkCBraW5oIG5naGnhu4dtIGNobyBjaMOtbmggYuG6oW4g4oCUIMSDbiBuaGFuaCBn4bqlcCBN4bqtdCBUdeG7hyIsCiAgICBwcmljZTogOCwKICB9LAogIGhvbmV5TWluaTogewogICAgaWQ6ICJob25leU1pbmkiLAogICAgZW1vamk6ICLwn42vIiwKICAgIG5hbWU6ICJN4bqtdCBOaOG7jyIsCiAgICBkZXNjOiAiKzMwIPCfkqsga2luaCBuZ2hp4buHbSB0aMO6IGPGsG5nIiwKICAgIHByaWNlOiA4LAogIH0sCn07CgovKiogTWluaW1hbCBzaGFwZSB0aGUgc2hvcCBuZWVkcyDigJQgZnVsbCBhcHAgZGF0YSBpcyBhIHN1cGVyc2V0LiAqLwpleHBvcnQgaW50ZXJmYWNlIENvbnZlbmllbmNlRGF0YSB7CiAgZ2FtZTogUGljazxHYW1lU3RhdGUsICJsZXZlbCIgfCAieHAiIHwgImNhdENvaW5zIj47CiAgaW52ZW50b3J5OiBQaWNrPEludmVudG9yeSwgImZyZWV6ZXMiPjsKICBwZXRTdGF0ZTogUGljazxQZXRTdGF0ZSwgImh1bmdlciIgfCAiaGFwcGluZXNzIiB8ICJwZXRMZXZlbCIgfCAicGV0WHAiPjsKICBkYWlseVN0YXRzPzogUmVjb3JkPHN0cmluZywgeyB0cmVhdHM/OiBudW1iZXIgfT47Cn0KCmV4cG9ydCB0eXBlIENvbnZlbmllbmNlQnV5UmVzdWx0PFQgZXh0ZW5kcyBDb252ZW5pZW5jZURhdGE+ID0KICB8IHsKICAgICAgb2s6IHRydWU7CiAgICAgIGRhdGE6IFQ7CiAgICAgIG1lc3NhZ2U6IHN0cmluZzsKICAgICAgbGV2ZWxzR2FpbmVkOiBudW1iZXI7CiAgICAgIHBldExldmVsc0dhaW5lZDogbnVtYmVyOwogICAgfQogIHwgeyBvazogZmFsc2U7IHJlYXNvbjogInVua25vd24iIHwgIm5vdC1lbm91Z2gtY29pbnMiIH07CgovKiogQnV5cyBvbmUgY29udmVuaWVuY2UgaXRlbS4gTXV0YXRlcyBub3RoaW5nOyByZXR1cm5zIGEgbmV3IGRhdGEgb2JqZWN0IG9yIGEgZmFpbHVyZSByZWFzb24uICovCmV4cG9ydCBmdW5jdGlvbiBidXlDb252ZW5pZW5jZTxUIGV4dGVuZHMgQ29udmVuaWVuY2VEYXRhPigKICBkYXRhOiBULAogIGlkOiBDb252ZW5pZW5jZUlkLAopOiBDb252ZW5pZW5jZUJ1eVJlc3VsdDxUPiB7CiAgY29uc3QgaXRlbSA9IENPTlZFTklFTkNFX0lURU1TW2lkXTsKICBpZiAoIWl0ZW0pIHJldHVybiB7IG9rOiBmYWxzZSwgcmVhc29uOiAidW5rbm93biIgfTsKICBpZiAoZGF0YS5nYW1lLmNhdENvaW5zIDwgaXRlbS5wcmljZSkgcmV0dXJuIHsgb2s6IGZhbHNlLCByZWFzb246ICJub3QtZW5vdWdoLWNvaW5zIiB9OwoKICBjb25zdCBiYXNlOiBUID0gewogICAgLi4uZGF0YSwKICAgIGdhbWU6IHsgLi4uZGF0YS5nYW1lLCBjYXRDb2luczogZGF0YS5nYW1lLmNhdENvaW5zIC0gaXRlbS5wcmljZSB9LAogIH07CiAgc3dpdGNoIChpZCkgewogICAgY2FzZSAiY2hhcm0iOgogICAgICByZXR1cm4gewogICAgICAgIG9rOiB0cnVlLAogICAgICAgIGRhdGE6IHsKICAgICAgICAgIC4uLmJhc2UsCiAgICAgICAgICBpbnZlbnRvcnk6IHsgLi4uYmFzZS5pbnZlbnRvcnksIGZyZWV6ZXM6IGJhc2UuaW52ZW50b3J5LmZyZWV6ZXMgKyAxIH0sCiAgICAgICAgfSwKICAgICAgICBtZXNzYWdlOiAi8J+boe+4jyArMSDwn6eKIGLhuqNvIGjhu5kgc3RyZWFrISIsCiAgICAgICAgbGV2ZWxzR2FpbmVkOiAwLAogICAgICAgIHBldExldmVsc0dhaW5lZDogMCwKICAgICAgfTsKICAgIGNhc2UgImZlYXN0IjogewogICAgICAvLyBBIHNob3AgZmVhc3QgaXMgc3RpbGwgZmVlZGluZyB0aGUgcGV0IOKAlCBpdCBjb3VudHMgdG93YXJkIHRoZSBkYWlseSBxdWVzdC4KICAgICAgY29uc3QgdG9kYXkgPSBkYXRlU3RyKCk7CiAgICAgIGNvbnN0IGRzID0gYmFzZS5kYWlseVN0YXRzID8/IHt9OwogICAgICBjb25zdCB0cmVhdHMgPSBkc1t0b2RheV0/LnRyZWF0cyA/PyAwOwogICAgICByZXR1cm4gewogICAgICAgIG9rOiB0cnVlLAogICAgICAgIGRhdGE6IHsKICAgICAgICAgIC4uLmJhc2UsCiAgICAgICAgICBkYWlseVN0YXRzOiB7IC4uLmRzLCBbdG9kYXldOiB7IC4uLmRzW3RvZGF5XSwgdHJlYXRzOiB0cmVhdHMgKyAxIH0gfSwKICAgICAgICAgIHBldFN0YXRlOiBidW1wUGV0KGJhc2UucGV0U3RhdGUgYXMgUGV0U3RhdGUsIDYwLCAxMCksCiAgICAgICAgfSwKICAgICAgICBtZXNzYWdlOiAi8J+NnCBUaMO6IGPGsG5nIG5vIGPEg25nIGLhu6VuZyEiLAogICAgICAgIGxldmVsc0dhaW5lZDogMCwKICAgICAgICBwZXRMZXZlbHNHYWluZWQ6IDAsCiAgICAgIH07CiAgICB9CiAgICBjYXNlICJjYXJvdXNlbCI6CiAgICAgIHJldHVybiB7CiAgICAgICAgb2s6IHRydWUsCiAgICAgICAgZGF0YTogeyAuLi5iYXNlLCBwZXRTdGF0ZTogYnVtcFBldChiYXNlLnBldFN0YXRlIGFzIFBldFN0YXRlLCAwLCA2MCkgfSwKICAgICAgICBtZXNzYWdlOiAi8J+OoCBUaMO6IGPGsG5nIHZ1aSBo4bq/dCBu4bqlYyEiLAogICAgICAgIGxldmVsc0dhaW5lZDogMCwKICAgICAgICBwZXRMZXZlbHNHYWluZWQ6IDAsCiAgICAgIH07CiAgICBjYXNlICJzdGFyZHVzdCI6IHsKICAgICAgY29uc3QgeyBnYW1lLCBsZXZlbHNHYWluZWQgfSA9IGFkZFhwKGJhc2UuZ2FtZSBhcyBHYW1lU3RhdGUsIDQwKTsKICAgICAgcmV0dXJuIHsKICAgICAgICBvazogdHJ1ZSwKICAgICAgICBkYXRhOiB7IC4uLmJhc2UsIGdhbWUgfSwKICAgICAgICBtZXNzYWdlOiAi4pyoICs0MCDirZAga2luaCBuZ2hp4buHbSEiLAogICAgICAgIGxldmVsc0dhaW5lZCwKICAgICAgICBwZXRMZXZlbHNHYWluZWQ6IDAsCiAgICAgIH07CiAgICB9CiAgICBjYXNlICJob25leU1pbmkiOiB7CiAgICAgIGNvbnN0IHIgPSBncmFudFBldFhwKGJhc2UucGV0U3RhdGUgYXMgUGV0U3RhdGUsIDMwKTsKICAgICAgcmV0dXJuIHsKICAgICAgICBvazogdHJ1ZSwKICAgICAgICBkYXRhOiB7IC4uLmJhc2UsIHBldFN0YXRlOiByLnBldCB9LAogICAgICAgIG1lc3NhZ2U6ICLwn42vIFRow7ogY8awbmcgKzMwIPCfkqsga2luaCBuZ2hp4buHbSEiLAogICAgICAgIGxldmVsc0dhaW5lZDogMCwKICAgICAgICBwZXRMZXZlbHNHYWluZWQ6IHIubGV2ZWxzR2FpbmVkLAogICAgICB9OwogICAgfQogIH0KfQo=
+// Tiệm Tiện Ích — everyday convenience store: unlimited coin-bought consumables.
+// Unlike Chợ Hư Không (weekly rotation, 1 buy/item/week) these are always in stock.
+// Pure logic: the caller owns the data object, this only reshapes it.
+import { bumpPet, type Inventory, type PetState } from "./gamify";
+import { grantPetXp } from "./extras";
+import { addXp, dateStr, type GameState } from "./model";
+
+export type ConvenienceId = "charm" | "feast" | "carousel" | "stardust" | "honeyMini";
+
+export interface ConvenienceItem {
+  id: ConvenienceId;
+  emoji: string;
+  name: string;
+  desc: string;
+  price: number; // 😺 cat coins
+}
+
+export const CONVENIENCE_ITEMS: Record<ConvenienceId, ConvenienceItem> = {
+  charm: {
+    id: "charm",
+    emoji: "🛡️",
+    name: "Bùa Giữ Chuỗi",
+    desc: "+1 🧊 bảo hộ streak — mua thoải mái, không giới hạn tuần",
+    price: 30,
+  },
+  feast: {
+    id: "feast",
+    emoji: "🍜",
+    name: "Bữa Thịnh Soạn",
+    desc: "Thú cưng no căng: +60 🍖 no bụng, +10 💗 vui vẻ",
+    price: 10,
+  },
+  carousel: {
+    id: "carousel",
+    emoji: "🎠",
+    name: "Vòng Xoay Nhạc",
+    desc: "Thú cưng vui hết nấc: +60 💗 vui vẻ",
+    price: 10,
+  },
+  stardust: {
+    id: "stardust",
+    emoji: "✨",
+    name: "Hạt Bụi Sao",
+    desc: "+40 ⭐ kinh nghiệm cho chính bạn — ăn nhanh gấp Mật Tuệ",
+    price: 8,
+  },
+  honeyMini: {
+    id: "honeyMini",
+    emoji: "🍯",
+    name: "Mật Nhỏ",
+    desc: "+30 💫 kinh nghiệm thú cưng",
+    price: 8,
+  },
+};
+
+/** Minimal shape the shop needs — full app data is a superset. */
+export interface ConvenienceData {
+  game: Pick<GameState, "level" | "xp" | "catCoins">;
+  inventory: Pick<Inventory, "freezes">;
+  petState: Pick<PetState, "hunger" | "happiness" | "petLevel" | "petXp">;
+  dailyStats?: Record<string, { treats?: number }>;
+}
+
+export type ConvenienceBuyResult<T extends ConvenienceData> =
+  | {
+      ok: true;
+      data: T;
+      message: string;
+      levelsGained: number;
+      petLevelsGained: number;
+    }
+  | { ok: false; reason: "unknown" | "not-enough-coins" };
+
+/** Buys one convenience item. Mutates nothing; returns a new data object or a failure reason. */
+export function buyConvenience<T extends ConvenienceData>(
+  data: T,
+  id: ConvenienceId,
+): ConvenienceBuyResult<T> {
+  const item = CONVENIENCE_ITEMS[id];
+  if (!item) return { ok: false, reason: "unknown" };
+  if (data.game.catCoins < item.price) return { ok: false, reason: "not-enough-coins" };
+
+  const base: T = {
+    ...data,
+    game: { ...data.game, catCoins: data.game.catCoins - item.price },
+  };
+  switch (id) {
+    case "charm":
+      return {
+        ok: true,
+        data: {
+          ...base,
+          inventory: { ...base.inventory, freezes: base.inventory.freezes + 1 },
+        },
+        message: "🛡️ +1 🧊 bảo hộ streak!",
+        levelsGained: 0,
+        petLevelsGained: 0,
+      };
+    case "feast": {
+      // A shop feast is still feeding the pet — it counts toward the daily quest.
+      const today = dateStr();
+      const ds = base.dailyStats ?? {};
+      const treats = ds[today]?.treats ?? 0;
+      return {
+        ok: true,
+        data: {
+          ...base,
+          dailyStats: { ...ds, [today]: { ...ds[today], treats: treats + 1 } },
+          petState: bumpPet(base.petState as PetState, 60, 10),
+        },
+        message: "🍜 Thú cưng no căng bụng!",
+        levelsGained: 0,
+        petLevelsGained: 0,
+      };
+    }
+    case "carousel":
+      return {
+        ok: true,
+        data: { ...base, petState: bumpPet(base.petState as PetState, 0, 60) },
+        message: "🎠 Thú cưng vui hết nấc!",
+        levelsGained: 0,
+        petLevelsGained: 0,
+      };
+    case "stardust": {
+      const { game, levelsGained } = addXp(base.game as GameState, 40);
+      return {
+        ok: true,
+        data: { ...base, game },
+        message: "✨ +40 ⭐ kinh nghiệm!",
+        levelsGained,
+        petLevelsGained: 0,
+      };
+    }
+    case "honeyMini": {
+      const r = grantPetXp(base.petState as PetState, 30);
+      return {
+        ok: true,
+        data: { ...base, petState: r.pet },
+        message: "🍯 Thú cưng +30 💫 kinh nghiệm!",
+        levelsGained: 0,
+        petLevelsGained: r.levelsGained,
+      };
+    }
+  }
+}
