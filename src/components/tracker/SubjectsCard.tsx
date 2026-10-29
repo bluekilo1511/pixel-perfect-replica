@@ -53,7 +53,8 @@ export function SubjectsCard() {
     <section className="glass p-5" aria-label="Môn học">
       <h2 className="mb-2 text-sm font-semibold">📚 Môn học</h2>
       <p className="mb-2 text-xs text-muted-foreground">
-        Bấm vào một môn để ghi chú và đánh dấu chủ điểm cần học lại / yếu / tốt.
+        Bấm vào một môn để ghi chú, đánh dấu chủ điểm cần học lại / yếu / tốt, hoặc ghép 🧩 môn tổ
+        hợp (vd: KHTN = Lý + Hóa + Sinh).
       </p>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {data.subjects.map((s) => {
@@ -89,6 +90,30 @@ export function SubjectsCard() {
           <span className="text-xs text-muted-foreground">Chưa có môn nào — thêm bên dưới.</span>
         )}
       </div>
+      {Object.keys(data.subjectCombos ?? {}).length > 0 && (
+        <div className="mb-2 rounded-lg border border-border bg-background/50 p-2">
+          <p className="mb-1 text-[11px] font-semibold">🧩 Tổ hợp đang ghép</p>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(data.subjectCombos ?? {}).map(([name, ms]) => (
+              <button
+                key={name}
+                type="button"
+                title="Bấm để xem / sửa tổ hợp này"
+                onClick={() => {
+                  setOpenSubject(name);
+                  setComboPicks([]);
+                }}
+                className="rounded-full bg-secondary px-2 py-0.5 text-xs transition hover:bg-secondary/70"
+              >
+                {name} = {ms.join(" + ")}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Bấm vào môn chủ của tổ hợp (ở trên) để sửa hoặc gỡ.
+          </p>
+        </div>
+      )}
       {openSubject && (
         <div className="mb-3 rounded-xl border border-border bg-muted p-3">
           <div className="mb-2 flex items-center justify-between">

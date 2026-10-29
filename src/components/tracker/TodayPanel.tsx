@@ -16,7 +16,6 @@ import {
   editTask,
   setTaskSubject,
   KIND_META,
-  SUBJECTS_MAX,
   makeTask,
   removeExam,
   removeTemplate,
@@ -801,6 +800,7 @@ function AddTask() {
   const [kind, setKind] = useState<TaskKind>("pomodoro");
   const [minutes, setMinutes] = useState(25);
   const [examId, setExamId] = useState<string>("");
+  const [subjectSel, setSubjectSel] = useState<string>("");
   const [remind, setRemind] = useState("");
   // Emoji picked from a saved template; cleared whenever the user switches back to a plain kind.
   const [tplEmoji, setTplEmoji] = useState<string | null>(null);
@@ -825,26 +825,14 @@ function AddTask() {
   const add = () => {
     const name = title.trim() || KIND_META[kind].label;
     update((d) => {
-      const tagMatch = name.match(/#([^\s#]{1,24})(?=\s|$)/);
-      const cleanName =
-        (tagMatch ? name.replace(tagMatch[0], " ").replace(/\s+/g, " ").trim() : name) ||
-        KIND_META[kind].label;
-      let subject: string | null = null;
-      let subjects = d.subjects;
-      if (tagMatch) {
-        const tag = tagMatch[1]!;
-        const found = d.subjects.find((x) => x.toLowerCase() === tag.toLowerCase());
-        if (found) subject = found;
-        else if (d.subjects.length < SUBJECTS_MAX) {
-          subject = tag;
-          subjects = [...d.subjects, tag];
-        }
-      } else {
-        subject = d.subjects.find((x) => cleanName.toLowerCase().includes(x.toLowerCase())) ?? null;
-      }
+      const cleanName = name || KIND_META[kind].label;
+      // Study tasks (📚) can pick a subject from the dropdown; other kinds
+      // (and an empty pick) fall back to matching the subject by title.
+      const auto =
+        d.subjects.find((x) => cleanName.toLowerCase().includes(x.toLowerCase())) ?? null;
+      const subject = kind === "pomodoro" ? subjectSel || auto : auto;
       return {
         ...d,
-        subjects,
         tasks: [
           ...d.tasks,
           makeTask(cleanName, kind, minutes, dateStr(), {
@@ -905,6 +893,22 @@ function AddTask() {
         onChange={(e) => setMinutes(Math.max(0, +e.target.value))}
         aria-label="Số phút"
       />
+      {kind === "pomodoro" && data.subjects.length > 0 && (
+        <select
+          className="h-9 min-w-[150px] rounded-md border border-input bg-popover px-2 text-sm"
+          value={subjectSel}
+          onChange={(e) => setSubjectSel(e.target.value)}
+          aria-label="Gắn môn học"
+          title="Gắn nhiệm vụ với một môn (tuỳ chọn)"
+        >
+          <option value="">Môn: tự ghép theo tên</option>
+          {data.subjects.map((sub) => (
+            <option key={sub} value={sub}>
+              📘 {sub}
+            </option>
+          ))}
+        </select>
+      )}
       {data.exams.length > 0 && (
         <select
           className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
