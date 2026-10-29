@@ -22,6 +22,7 @@ import {
   type GradeType,
   type Semester,
 } from "@/lib/tracker/grades";
+import { comboGrade, comboMembers } from "@/lib/tracker/combos";
 
 const TYPE_BUTTONS: { type: GradeType; label: string }[] = [
   { type: "tx", label: "+ TX" },
@@ -239,9 +240,13 @@ export function GradeBookCard() {
 
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {chips.map((c) => {
-          const g = subjectGrade(data.gradeBook, c, semester);
+          const members = comboMembers(data, c);
+          const g = members
+            ? comboGrade(data.gradeBook, members, semester)
+            : subjectGrade(data.gradeBook, c, semester);
           return (
             <button key={c} type="button" onClick={() => setSel(c)} className={chipCls(c)}>
+              {members && <span title="Môn tổ hợp">🧩</span>}
               {c}
               {g !== null && <span className="ml-1 tabular-nums opacity-75">{g}</span>}
             </button>
@@ -267,6 +272,36 @@ export function GradeBookCard() {
           </Button>
         </span>
       </div>
+
+      {(() => {
+        const members = active ? comboMembers(data, active) : undefined;
+        if (!members) return null;
+        const avg = comboGrade(data.gradeBook, members, semester);
+        return (
+          <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <p className="mb-2 text-sm font-medium">
+              🧩 {active} là môn tổ hợp — mỗi môn thành viên có sổ điểm riêng của nó.
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {members.map((m) => {
+                const g = subjectGrade(data.gradeBook, m, semester);
+                return (
+                  <button key={m} type="button" onClick={() => setSel(m)} className={chipCls(m)}>
+                    {m}
+                    {g !== null && <span className="ml-1 tabular-nums opacity-75">{g}</span>}
+                  </button>
+                );
+              })}
+              <span className="ml-1 text-sm">
+                Điểm tổ hợp: <strong className="tabular-nums">{avg !== null ? avg : "—"}</strong>{" "}
+                <span className="text-xs text-muted-foreground">
+                  (trung bình các môn đã có điểm)
+                </span>
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       {!active ? (
         <p className="py-4 text-center text-sm text-muted-foreground">

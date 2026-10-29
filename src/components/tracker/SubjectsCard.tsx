@@ -3,6 +3,13 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { addSubject, removeSubject, SUBJECTS_MAX } from "@/lib/tracker/model";
 import {
+  clearSubjectCombo,
+  comboMembers,
+  COMBO_MEMBERS_MAX,
+  COMBO_MEMBERS_MIN,
+  setSubjectCombo,
+} from "@/lib/tracker/combos";
+import {
   setSubjectNote,
   setTopicMark,
   TOPIC_MARK_META,
@@ -18,6 +25,7 @@ export function SubjectsCard() {
   const [name, setName] = useState("");
   const [openSubject, setOpenSubject] = useState<string | null>(null);
   const [topicDraft, setTopicDraft] = useState("");
+  const [comboPicks, setComboPicks] = useState<string[]>([]);
   const add = () => {
     const n = name.trim();
     if (!n) return;
@@ -60,6 +68,7 @@ export function SubjectsCard() {
               onClick={() => {
                 setOpenSubject(openSubject === s ? null : s);
                 setTopicDraft("");
+                setComboPicks([]);
               }}
               aria-expanded={openSubject === s}
               className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition ${
@@ -70,6 +79,7 @@ export function SubjectsCard() {
                     : "bg-secondary"
               }`}
             >
+              {comboMembers(data, s) && <span title="Môn tổ hợp">🧩</span>}
               {s}
               {weakCount > 0 && <span title={`${weakCount} chủ điểm cần ôn`}>🔻{weakCount}</span>}
             </button>
@@ -94,6 +104,102 @@ export function SubjectsCard() {
             >
               Xoá môn
             </Button>
+          </div>
+          <div className="mb-3 rounded-lg border border-border bg-background/50 p-2.5">
+            <p className="mb-1 text-xs font-semibold">🧩 Môn tổ hợp</p>
+            {(() => {
+              const members = comboMembers(data, openSubject);
+              if (members) {
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Ghép từ:</span>
+                    {members.map((m) => (
+                      <span key={m} className="rounded-full bg-secondary px-2 py-0.5 text-xs">
+                        {m}
+                      </span>
+                    ))}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => update(() => clearSubjectCombo(data, openSubject))}
+                    >
+                      Gỡ tổ hợp
+                    </Button>
+                  </div>
+                );
+              }
+              const taken = new Set<string>();
+              for (const [name, ms] of Object.entries(data.subjectCombos ?? {})) {
+                if (name !== openSubject) {
+                  taken.add(name);
+                  for (const m of ms) taken.add(m);
+                }
+              }
+              const candidates = data.subjects.filter((x) => x !== openSubject && !taken.has(x));
+              const toggle = (x: string) =>
+                setComboPicks((p) =>
+                  p.includes(x)
+                    ? p.filter((y) => y !== x)
+                    : p.length < COMBO_MEMBERS_MAX
+                      ? [...p, x]
+                      : p,
+                );
+              const save = () => {
+                const r = setSubjectCombo(data, openSubject, comboPicks);
+                if (!r) {
+                  toast.error(
+                    `Chọn ${COMBO_MEMBERS_MIN}–${COMBO_MEMBERS_MAX} môn khác để ghép nhé 🧩`,
+                  );
+                  return;
+                }
+                update(() => r);
+                setComboPicks([]);
+                toast.success("Đã ghép môn tổ hợp 🧩");
+              };
+              return (
+                <>
+                  <p className="mb-1.5 text-[11px] text-muted-foreground">
+                    Ghép 2–3 môn thành một, vd: KHTN = Lý + Hóa + Sinh. TKB, thi và học trước bài
+                    mai vẫn dùng tên tổ hợp; sổ điểm giữ riêng từng môn thành viên.
+                  </p>
+                  {candidates.length >= COMBO_MEMBERS_MIN ? (
+                    <>
+                      <div className="mb-1.5 flex flex-wrap gap-1">
+                        {candidates.map((x) => (
+                          <button
+                            key={x}
+                            type="button"
+                            aria-pressed={comboPicks.includes(x)}
+                            onClick={() => toggle(x)}
+                            className={`rounded-full px-2 py-0.5 text-xs transition ${
+                              comboPicks.includes(x)
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary"
+                            }`}
+                          >
+                            {x}
+                          </button>
+                        ))}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={comboPicks.length < COMBO_MEMBERS_MIN}
+                        onClick={save}
+                      >
+                        Lưu tổ hợp{comboPicks.length > 0 ? ` (${comboPicks.length})` : ""}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Cần thêm ít nhất {COMBO_MEMBERS_MIN} môn còn trống để ghép.
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <textarea
             className="mb-2 min-h-16 w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-xs"

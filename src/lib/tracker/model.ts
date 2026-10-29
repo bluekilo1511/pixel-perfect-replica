@@ -13,6 +13,7 @@ import {
   type StreakState,
 } from "./gamify";
 import { defaultMarket, type MarketState } from "./market";
+import { normalizeSubjectCombos, removeSubjectFromCombos } from "./combos";
 import { DEFAULT_ZODIAC_ID, isValidZodiacId } from "./zodiac";
 import { DEFAULT_SPECIAL_DAYS, normalizeSpecialDays, type SpecialDay } from "./specialDays";
 import { defaultShootingStar, normalizeShootingStar, type ShootingStarState } from "./shootingStar";
@@ -248,6 +249,7 @@ export interface AppData {
   flashcards: Flashcard[]; // study flashcards with SM-2-lite spaced repetition (see flashcards.ts)
   market: MarketState;
   subjects: string[]; // user-managed study subjects (max 12)
+  subjectCombos: Record<string, string[]>; // combo subjects -> 2-3 member subjects (see combos.ts)
   subjectNotes: SubjectNoteMap; // per-subject note + weak/strong topic marks
   weekGoals: WeekGoal[]; // goals pinned for the whole week
   gradeBook: GradeEntry[]; // teacher-style grade columns per subject/semester (see grades.ts)
@@ -383,6 +385,7 @@ export function defaultData(): AppData {
     flashcards: [],
     market: defaultMarket(),
     subjects: [],
+    subjectCombos: {},
     subjectNotes: {},
     weekGoals: [],
     journal: [],
@@ -450,9 +453,7 @@ function normalizeSlot(input: unknown): Slot {
     kind,
     minutes: num(s.minutes, KIND_META[kind].minutes),
     ...(typeof s.teacher === "string" && s.teacher.trim() ? { teacher: s.teacher.trim() } : {}),
-    ...(typeof s.mon === "string" && s.mon.trim()
-      ? { mon: s.mon.trim().slice(0, 24) }
-      : {}),
+    ...(typeof s.mon === "string" && s.mon.trim() ? { mon: s.mon.trim().slice(0, 24) } : {}),
     ...(s.session === "morning" || s.session === "afternoon" ? { session: s.session } : {}),
     ...(s.tracked === false ? { tracked: false } : {}),
   };
@@ -755,6 +756,7 @@ export function migrate(raw: unknown): AppData {
           ),
         ].slice(0, 12)
       : [],
+    subjectCombos: normalizeSubjectCombos(obj(r.subjectCombos), r.subjects as string[]),
     weeklyGoal: {
       minutes: Math.min(10080, Math.max(0, Math.round(num(obj(r.weeklyGoal).minutes, 300)))),
       celebratedWeek:
@@ -1294,7 +1296,9 @@ export function addExam(
 export function updateExam(
   data: AppData,
   examId: string,
-  patch: Partial<Pick<ExamEvent, "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi" | "mon">>,
+  patch: Partial<
+    Pick<ExamEvent, "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi" | "mon">
+  >,
   now = new Date(),
 ): AppData {
   if (!data.exams.some((e) => e.id === examId)) return data;
@@ -1638,9 +1642,7 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
     makeTask(s.title, s.kind, s.minutes, today, {
       fromSlotId: s.id,
       timeRange: `${s.start} - ${s.end}`,
-      ...(boundSlotSubject(data, s)
-        ? { subject: boundSlotSubject(data, s) as string }
-        : {}),
+      ...(boundSlotSubject(data, s) ? { subject: boundSlotSubject(data, s) as string } : {}),
     }),
   );
   const log = [
@@ -1819,9 +1821,7 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
     makeTask(s.title, s.kind, s.minutes, today, {
       fromSlotId: s.id,
       timeRange: `${s.start} - ${s.end}`,
-      ...(boundSlotSubject(data, s)
-        ? { subject: boundSlotSubject(data, s) as string }
-        : {}),
+      ...(boundSlotSubject(data, s) ? { subject: boundSlotSubject(data, s) as string } : {}),
     }),
   );
   return {
@@ -1890,6 +1890,7 @@ export function removeSubject(data: AppData, name: string): AppData {
   const withoutSubject = {
     ...data,
     subjects: data.subjects.filter((x) => x !== name),
+    subjectCombos: removeSubjectFromCombos(data, name),
   };
   return removeSubjectNote(withoutSubject, name);
 }
