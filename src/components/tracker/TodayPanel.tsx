@@ -42,7 +42,7 @@ import {
   EXAM_PREP_PER_DAY,
   EXAM_PREP_WINDOW,
   nextPrepSuggestion,
-  matchSubject,
+  slotSubject,
 } from "@/lib/tracker/tkb";
 import { shiftDate } from "@/lib/tracker/gamify";
 import {
@@ -373,6 +373,7 @@ function TaskRow({ task }: { task: Task }) {
 type ExamDraft = {
   name: string;
   date: string;
+  mon: string;
   buoi: string;
   gioBatDau: string;
   thoiGian: string;
@@ -382,6 +383,7 @@ type ExamDraft = {
 const emptyExamDraft = (): ExamDraft => ({
   name: "",
   date: "",
+  mon: "",
   buoi: "",
   gioBatDau: "",
   thoiGian: "",
@@ -391,13 +393,22 @@ const emptyExamDraft = (): ExamDraft => ({
 const examDraftOf = (e: ExamEvent): ExamDraft => ({
   name: e.name,
   date: e.date,
+  mon: e.mon ?? "",
   buoi: e.buoi ?? "",
   gioBatDau: e.gioBatDau ?? "",
   thoiGian: e.thoiGian ?? "",
   khoi: e.khoi ?? "",
 });
 
-function ExamForm({ draft, setDraft }: { draft: ExamDraft; setDraft: (d: ExamDraft) => void }) {
+function ExamForm({
+  draft,
+  setDraft,
+  subjects,
+}: {
+  draft: ExamDraft;
+  setDraft: (d: ExamDraft) => void;
+  subjects: string[];
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Input
@@ -413,6 +424,20 @@ function ExamForm({ draft, setDraft }: { draft: ExamDraft; setDraft: (d: ExamDra
         onChange={(iso) => setDraft({ ...draft, date: iso })}
         ariaLabel="Ngày thi (dd/mm/yyyy)"
       />
+      <select
+        className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
+        value={draft.mon}
+        onChange={(e) => setDraft({ ...draft, mon: e.target.value })}
+        aria-label="Gắn môn học"
+        title="Gắn kỳ thi với một môn học (tùy chọn) — việc ôn sẽ mang đúng môn"
+      >
+        <option value="">— gắn môn? —</option>
+        {subjects.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+      </select>
       <select
         className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
         value={draft.buoi}
@@ -452,9 +477,13 @@ function ExamForm({ draft, setDraft }: { draft: ExamDraft; setDraft: (d: ExamDra
 }
 
 function ExamDetail({ e }: { e: ExamEvent }) {
-  const bits = [e.buoi, e.gioBatDau, e.thoiGian, e.khoi ? `Khối ${e.khoi}` : ""].filter(
-    Boolean,
-  ) as string[];
+  const bits = [
+    e.mon ? `🔗 ${e.mon}` : "",
+    e.buoi,
+    e.gioBatDau,
+    e.thoiGian,
+    e.khoi ? `Khối ${e.khoi}` : "",
+  ].filter(Boolean) as string[];
   if (!bits.length) return null;
   return <p className="text-xs text-muted-foreground">{bits.join(" · ")}</p>;
 }
@@ -476,6 +505,7 @@ function ExamCard() {
     }
     update((d) =>
       addExam(d, draft.name, draft.date, {
+        mon: draft.mon,
         buoi: draft.buoi,
         gioBatDau: draft.gioBatDau,
         thoiGian: draft.thoiGian,
@@ -493,6 +523,7 @@ function ExamCard() {
       updateExam(d, id, {
         name: editDraft.name,
         date: editDraft.date,
+        mon: editDraft.mon,
         buoi: editDraft.buoi,
         gioBatDau: editDraft.gioBatDau,
         thoiGian: editDraft.thoiGian,
@@ -513,7 +544,7 @@ function ExamCard() {
           {upcoming.map((e) =>
             editingId === e.id ? (
               <li key={e.id} className="rounded-xl border border-primary/50 bg-muted p-3">
-                <ExamForm draft={editDraft} setDraft={setEditDraft} />
+                <ExamForm draft={editDraft} setDraft={setEditDraft} subjects={data.subjects} />
                 <div className="mt-2 flex gap-2">
                   <Button size="sm" onClick={() => saveEdit(e.id)}>
                     💾 Lưu
@@ -611,7 +642,7 @@ function ExamCard() {
         </details>
       )}
       <div className="space-y-2">
-        <ExamForm draft={draft} setDraft={setDraft} />
+        <ExamForm draft={draft} setDraft={setDraft} subjects={data.subjects} />
         <Button onClick={add}>+ Thêm kỳ thi</Button>
       </div>
     </section>
@@ -735,7 +766,7 @@ function PrepSuggestionBar() {
   const start = () => {
     const today = dateStr();
     const tomorrow = shiftDate(today, 1);
-    const subject = matchSubject(data, pick.slot.title);
+    const subject = slotSubject(data, pick.slot);
     const t = makeTask(
       `Ôn: ${pick.slot.title} (mai ${pick.slot.start})`,
       "pomodoro",

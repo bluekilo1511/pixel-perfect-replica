@@ -17,9 +17,11 @@ type Editing = { dayIndex: number; slot: Slot; isNew: boolean } | null;
 
 /** Drops an empty teacher label and trims a filled one before saving. */
 const cleanSlot = (s: Slot): Slot => {
-  if (s.teacher && s.teacher.trim()) return { ...s, teacher: s.teacher.trim() };
   const out: Partial<Slot> = { ...s };
-  delete out.teacher;
+  if (out.teacher && out.teacher.trim()) out.teacher = out.teacher.trim();
+  else delete out.teacher;
+  if (out.mon && out.mon.trim()) out.mon = out.mon.trim();
+  else delete out.mon;
   return out as Slot;
 };
 
@@ -126,6 +128,7 @@ export function Timetable() {
         {s.start}–{s.end}
       </div>
       <div className="mt-0.5 truncate font-medium leading-tight">{s.title}</div>
+      {s.mon && <div className="truncate text-[10px] font-medium text-primary/90">🔗 {s.mon}</div>}
       {s.teacher && <div className="truncate text-[10px] text-muted-foreground">{s.teacher}</div>}
       {s.tracked === false && (
         <span className="absolute right-1 top-1 text-[9px] text-muted-foreground/70">👁</span>
@@ -227,6 +230,7 @@ export function Timetable() {
           onSave={save}
           onDelete={remove}
           dayLabel={data.timetable.days[editing.dayIndex]?.label ?? ""}
+          subjects={data.subjects}
         />
       )}
     </section>
@@ -239,9 +243,11 @@ function SlotDialog({
   onSave,
   onDelete,
   dayLabel,
+  subjects,
 }: {
   editing: NonNullable<Editing>;
   dayLabel: string;
+  subjects: string[];
   onClose: () => void;
   onSave: (e: NonNullable<Editing>, all: boolean) => void;
   onDelete: (e: NonNullable<Editing>) => void;
@@ -300,6 +306,28 @@ function SlotDialog({
               onChange={(e) => set({ teacher: e.target.value })}
             />
           </div>
+          {subjects.length > 0 && (
+            <div>
+              <Label htmlFor="smn">Gắn môn học (tùy chọn)</Label>
+              <select
+                id="smn"
+                className="mt-1 h-9 w-full rounded-md border border-input bg-popover px-2 text-sm"
+                value={slot.mon ?? ""}
+                onChange={(e) => set({ mon: e.target.value })}
+                title="Gắn tiết này với một môn học để task tự sinh mang đúng môn"
+              >
+                <option value="">— không gắn —</option>
+                {subjects.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Task tự sinh và “Ôn: …” sẽ mang môn này để nối với sổ điểm, biểu đồ.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label htmlFor="ss">Bắt đầu</Label>

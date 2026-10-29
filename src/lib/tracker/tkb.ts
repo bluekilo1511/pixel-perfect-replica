@@ -229,6 +229,16 @@ export function matchSubject(data: AppData, title: string): string | undefined {
   return sorted.find((s) => s.length > 0 && lower.includes(s.toLowerCase()));
 }
 
+/** Resolves the subject of a slot: the explicitly bound `mon` ("gắn môn") wins,
+ * then title matching. Returns undefined when nothing matches a known subject. */
+export function slotSubject(data: AppData, slot: Slot): string | undefined {
+  if (slot.mon) {
+    const bound = data.subjects.find((s) => s.toLowerCase() === slot.mon!.toLowerCase());
+    if (bound) return bound;
+  }
+  return matchSubject(data, slot.title);
+}
+
 /**
  * Creates "Ôn: {subject}" tasks dated today for the picked slots, once per
  * slot per day. Tags the subject when its name matches the slot title
@@ -252,7 +262,7 @@ export function addPrepTasks(
     );
     if (dupe) return;
     const mins = Math.min(240, Math.max(5, Math.round(minutes)));
-    const subject = matchSubject(data, slot.title);
+    const subject = slotSubject(data, slot);
     newTasks.push(
       makeTask(`Ôn: ${slot.title} (mai ${slot.start})`, "pomodoro", mins, today, {
         prepSlotId: slot.id,
@@ -385,8 +395,14 @@ export function addExamPrepTasks(
   if (dupe) return { data, added: 0 };
   const mins = Math.max(5, data.settings.pomodoroMinutes || 25);
   const count = Math.min(4, Math.max(1, Math.round(perDay)));
+  const subject = exam.mon
+    ? data.subjects.find((s) => s.toLowerCase() === exam.mon!.toLowerCase())
+    : undefined;
   const newTasks = Array.from({ length: count }, () =>
-    makeTask(`Ôn thi: ${exam.name}`, "pomodoro", mins, today, { examId: exam.id }),
+    makeTask(`Ôn thi: ${exam.name}`, "pomodoro", mins, today, {
+      examId: exam.id,
+      ...(subject ? { subject } : {}),
+    }),
   );
   return { data: { ...data, tasks: [...data.tasks, ...newTasks] }, added: newTasks.length };
 }

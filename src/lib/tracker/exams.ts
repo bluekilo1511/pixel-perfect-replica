@@ -4,6 +4,7 @@ export interface ExamEvent {
   id: string;
   name: string;
   date: string; // YYYY-MM-DD
+  mon?: string; // optional study subject this exam belongs to (from data.subjects)
   buoi?: string; // "Sáng" | "Chiều" | "" (optional session, Vietnamese school style)
   gioBatDau?: string; // "07:30" (optional start time)
   thoiGian?: string; // free text, e.g. "90 phút" (optional duration)
@@ -58,6 +59,7 @@ export function normalizeExams(raw: unknown): ExamEvent[] {
         id?: unknown;
         name?: unknown;
         date?: unknown;
+        mon?: unknown;
         buoi?: unknown;
         gioBatDau?: unknown;
         thoiGian?: unknown;
@@ -70,6 +72,7 @@ export function normalizeExams(raw: unknown): ExamEvent[] {
         name: String(r.name ?? "Kỳ thi"),
         date,
       };
+      const mon = capStr(r.mon, 24);
       const buoi = capStr(r.buoi, 8);
       const thoiGian = capStr(r.thoiGian, 20);
       const khoi = capStr(r.khoi, 20);
@@ -77,6 +80,7 @@ export function normalizeExams(raw: unknown): ExamEvent[] {
         typeof r.gioBatDau === "string" && TIME_RE.test(r.gioBatDau.trim())
           ? r.gioBatDau.trim()
           : "";
+      if (mon) out.mon = mon;
       if (buoi) out.buoi = buoi;
       if (time) out.gioBatDau = time;
       if (thoiGian) out.thoiGian = thoiGian;

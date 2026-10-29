@@ -142,6 +142,7 @@ export interface Slot {
   kind: TaskKind;
   minutes: number;
   teacher?: string; // "Ngăn" — teacher shown under the subject
+  mon?: string; // optional study subject bound to this slot (from data.subjects)
   session?: "morning" | "afternoon"; // buổi in the school grid
   tracked?: boolean; // false = display-only on the school grid: shown, but never auto-tasked
 }
@@ -449,6 +450,9 @@ function normalizeSlot(input: unknown): Slot {
     kind,
     minutes: num(s.minutes, KIND_META[kind].minutes),
     ...(typeof s.teacher === "string" && s.teacher.trim() ? { teacher: s.teacher.trim() } : {}),
+    ...(typeof s.mon === "string" && s.mon.trim()
+      ? { mon: s.mon.trim().slice(0, 24) }
+      : {}),
     ...(s.session === "morning" || s.session === "afternoon" ? { session: s.session } : {}),
     ...(s.tracked === false ? { tracked: false } : {}),
   };
@@ -1268,7 +1272,7 @@ export function addExam(
   data: AppData,
   name: string,
   date: string,
-  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">> = {},
+  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi" | "mon">> = {},
   now = new Date(),
 ): AppData {
   const clean = name.trim();
@@ -1290,7 +1294,7 @@ export function addExam(
 export function updateExam(
   data: AppData,
   examId: string,
-  patch: Partial<Pick<ExamEvent, "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi">>,
+  patch: Partial<Pick<ExamEvent, "name" | "date" | "buoi" | "gioBatDau" | "thoiGian" | "khoi" | "mon">>,
   now = new Date(),
 ): AppData {
   if (!data.exams.some((e) => e.id === examId)) return data;
@@ -1321,6 +1325,10 @@ export function updateExam(
         if (extras.khoi) out.khoi = extras.khoi;
         else delete out.khoi;
       }
+      if (patch.mon !== undefined) {
+        if (extras.mon) out.mon = extras.mon;
+        else delete out.mon;
+      }
       return out;
     }),
     updatedAt: now.toISOString(),
@@ -1329,13 +1337,15 @@ export function updateExam(
 
 /** Trims/validates the optional exam session fields; unknown fields are dropped. */
 function normalizeExamExtras(
-  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi">>,
+  extra: Partial<Pick<ExamEvent, "buoi" | "gioBatDau" | "thoiGian" | "khoi" | "mon">>,
 ): Partial<ExamEvent> {
   const out: Partial<ExamEvent> = {};
+  const mon = typeof extra.mon === "string" ? extra.mon.trim().slice(0, 24) : undefined;
   const buoi = typeof extra.buoi === "string" ? extra.buoi.trim().slice(0, 8) : undefined;
   const thoiGian =
     typeof extra.thoiGian === "string" ? extra.thoiGian.trim().slice(0, 20) : undefined;
   const khoi = typeof extra.khoi === "string" ? extra.khoi.trim().slice(0, 20) : undefined;
+  if (mon) out.mon = mon;
   if (buoi) out.buoi = buoi;
   if (typeof extra.gioBatDau === "string" && /^\d{1,2}:\d{2}$/.test(extra.gioBatDau.trim())) {
     out.gioBatDau = extra.gioBatDau.trim();
@@ -1605,6 +1615,13 @@ const toMin = (hm: string) => {
 const personalOf = (data: AppData, dayIndex: number): Slot[] =>
   data.personal?.days?.[dayIndex]?.slots ?? [];
 
+/** The subject explicitly bound to a slot ("gắn môn"), when it still matches a
+ * known subject. Stale bindings (subject renamed/removed) fall through to none. */
+const boundSlotSubject = (data: AppData, s: Slot): string | undefined => {
+  if (!s.mon) return undefined;
+  return data.subjects.find((x) => x.toLowerCase() === s.mon!.toLowerCase());
+};
+
 /** Pushes personal-schedule slots whose start time has arrived (for today's weekday) into today's tasks, once per day per slot.
  * School TKB periods are display-only: they feed "Học trước cho ngày mai" but never auto-create tasks. */
 export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; pushed: Slot[] } {
@@ -1621,6 +1638,9 @@ export function pushDueSlots(data: AppData, now = new Date()): { data: AppData; 
     makeTask(s.title, s.kind, s.minutes, today, {
       fromSlotId: s.id,
       timeRange: `${s.start} - ${s.end}`,
+      ...(boundSlotSubject(data, s)
+        ? { subject: boundSlotSubject(data, s) as string }
+        : {}),
     }),
   );
   const log = [
@@ -1799,6 +1819,9 @@ export function syncTodaySlots(data: AppData, now = new Date()): { data: AppData
     makeTask(s.title, s.kind, s.minutes, today, {
       fromSlotId: s.id,
       timeRange: `${s.start} - ${s.end}`,
+      ...(boundSlotSubject(data, s)
+        ? { subject: boundSlotSubject(data, s) as string }
+        : {}),
     }),
   );
   return {

@@ -19,6 +19,8 @@ import {
   parseDateVN,
   upcomingExams,
 } from "./exams";
+import type { ExamEvent } from "./exams";
+import { addExamPrepTasks, slotSubject } from "./tkb";
 
 describe("exam countdown", () => {
   it("counts whole days until the exam", () => {
@@ -195,5 +197,85 @@ describe("exam scores", () => {
     expect(list[0]!.score).toBe(10);
     expect(normalizeExamScores("junk")).toEqual([]);
     expect(normalizeExamScores([{ subject: "  ", score: 5 }])).toEqual([]);
+  });
+});
+
+describe("exam <-> subject link", () => {
+  const base = { id: "e1", name: "Giữa kỳ", date: "2026-11-20" };
+
+  it("keeps an optional subject (mon) through normalization", () => {
+    const list = normalizeExams([{ ...base, mon: "Tiếng Anh" }]);
+    expect(list[0]!.mon).toBe("Tiếng Anh");
+    expect(normalizeExams([{ ...base, mon: "   " }])[0]!.mon).toBeUndefined();
+  });
+
+  it("set via addExam, edited and cleared via updateExam", () => {
+    let d = defaultData();
+    d = addExam(d, "Giữa kỳ", "2026-11-20", { mon: "Toán" });
+    expect(d.exams[0]!.mon).toBe("Toán");
+    d = updateExam(d, d.exams[0]!.id, { mon: "Văn" });
+    expect(d.exams[0]!.mon).toBe("Văn");
+    d = updateExam(d, d.exams[0]!.id, { mon: "" });
+    expect(d.exams[0]!.mon).toBeUndefined();
+  });
+
+  it("prep tasks carry the linked exam subject", () => {
+    const today = "2026-11-18";
+    const exam: ExamEvent = { ...base, mon: "Tiếng Anh" };
+    const d = {
+      ...defaultData(),
+      subjects: ["Toán", "Tiếng Anh"],
+      settings: { ...defaultData().settings, pomodoroMinutes: 25 },
+    };
+    const r = addExamPrepTasks(d, exam, today);
+    expect(r.added).toBeGreaterThan(0);
+    const prep = r.data.tasks.filter((t) => t.examId === exam.id);
+    expect(prep.length).toBe(r.added);
+    expect(prep.every((t) => t.subject === "Tiếng Anh")).toBe(true);
+  });
+
+  it("prep tasks skip a stale subject binding", () => {
+    const today = "2026-11-18";
+    const exam: ExamEvent = { ...base, mon: "Đã bị xóa" };
+    const d = {
+      ...defaultData(),
+      subjects: ["Toán"],
+      settings: { ...defaultData().settings, pomodoroMinutes: 25 },
+    };
+    const r = addExamPrepTasks(d, exam, today);
+    expect(r.data.tasks.every((t) => t.subject === undefined)).toBe(true);
+  });
+});
+
+describe("slot <-> subject link", () => {
+  it("slotSubject prefers the explicit binding over the title", () => {
+    const d = { ...defaultData(), subjects: ["Hóa", "Toán"] };
+    const slot = {
+      id: "s1",
+      start: "08:00",
+      end: "08:45",
+      title: "KHTN",
+      kind: "custom",
+      minutes: 45,
+      mon: "Hóa",
+    };
+    expect(slotSubject(d, slot as never)).toBe("Hóa");
+    const unbound = { ...slot, mon: undefined, title: "KHTN (Toán)" };
+    expect(slotSubject(d, unbound as never)).toBe("Toán");
+  });
+
+  it("slotSubject falls back to title matching when the binding is stale", () => {
+    const d = { ...defaultData(), subjects: ["Toán"] };
+    const slot = {
+      id: "s1",
+      start: "08:00",
+      end: "08:45",
+      title: "Toán",
+      kind: "custom",
+      minutes: 45,
+      mon: "Đã xóa",
+    };
+    expect(slotSubject(d, slot as never)).toBe("Toán");
+    expect(slotSubject(d, { ...slot, mon: undefined } as never)).toBe("Toán");
   });
 });
