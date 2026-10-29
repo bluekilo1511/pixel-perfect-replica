@@ -21,20 +21,13 @@ describe("sessionPersist", () => {
   });
 
   it("drops state saved too long ago", () => {
-    saveSession(Date.now() + 60_000, null, false, 25, 0, Date.now() - 13 * 60 * 60 * 1000);
+    saveSession(Date.now() + 60_000, null, false, Date.now() - 13 * 60 * 60 * 1000);
     expect(loadSession().endAt).toBeNull();
   });
 
-  it("round-trips the session's planned minutes and break-in strikes", () => {
-    saveSession(Date.now() + 60_000, null, false, 50, 2);
-    const s = loadSession();
-    expect(s.minutes).toBe(50);
-    expect(s.strikes).toBe(2);
-  });
-
   it("clears when both timers are gone and survives garbage", () => {
-    saveSession(Date.now() + 60_000, Date.now() + 30_000, false, 25, 1, 1000);
-    saveSession(null, null, false, 25, 1, 1000);
+    saveSession(Date.now() + 60_000, Date.now() + 30_000, false, 1000);
+    saveSession(null, null, false, 1000);
     expect(localStorage.getItem("pp:pomodoro-session")).toBeNull();
     localStorage.setItem("pp:pomodoro-session", "{oops");
     expect(loadSession().endAt).toBeNull();
