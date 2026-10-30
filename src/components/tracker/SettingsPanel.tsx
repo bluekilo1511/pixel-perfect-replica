@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { AmbientControl } from "./AmbientControl";
 import { OriginButton } from "./OriginOverlay";
+import { cleanupData, dataHealth, removedTotal } from "@/lib/tracker/dataHealth";
 
 function Row({
   label,
@@ -521,7 +522,47 @@ export function SettingsPanel() {
         </div>
         <OriginButton />
       </section>
+
+      <section className="glass p-5 lg:col-span-2">
+        <h2 className="mb-1 text-lg font-semibold">🩺 Sức khỏe dữ liệu</h2>
+        <DataHealth />
+      </section>
     </div>
+  );
+}
+
+/** Read-only report of the save file's weight plus a conservative one-click cleanup. */
+function DataHealth() {
+  const { data, update } = useTracker();
+  const h = dataHealth(data);
+  return (
+    <>
+      <p className="mb-2 text-xs text-muted-foreground">
+        File nặng ~<b>{(h.bytes / 1024).toFixed(1)} KB</b> · {h.tasks} nhiệm vụ ({h.oldTasks} cũ) ·{" "}
+        {h.sessionLog} mục nhật ký phiên · {h.dailyStatsDays} ngày thống kê · {h.flashcards}{" "}
+        flashcard · {h.gradeEntries} cột điểm · {h.scratch} mảnh ghi chú
+      </p>
+      {h.warnings.length > 0 && (
+        <ul className="mb-2 space-y-1 text-xs text-amber-500">
+          {h.warnings.map((w, i) => (
+            <li key={i}>⚠️ {w}</li>
+          ))}
+        </ul>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        title="Xoá nhiệm vụ quá hạn, cắt nhật ký phiên và ngày thống kê cũ — không đụng điểm, flashcard hay ghi chú"
+        onClick={() => {
+          const r = cleanupData(data);
+          const n = removedTotal(r);
+          update(() => r.data);
+          toast.success(n ? `Đã dọn ${n} mục cũ 🧹` : "Dữ liệu đã gọn rồi, không cần dọn 👍");
+        }}
+      >
+        🧹 Dọn dẹp ngay
+      </Button>
+    </>
   );
 }
 

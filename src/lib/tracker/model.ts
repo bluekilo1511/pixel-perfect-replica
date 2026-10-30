@@ -83,6 +83,7 @@ import {
   type TaskTemplate,
 } from "./templates";
 import { normalizeFlashcards, type Flashcard } from "./flashcards";
+import { normalizeStudyMode, type StudyMode } from "./studyModes";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
 
@@ -116,6 +117,39 @@ export interface Task {
   emoji?: string; // custom icon (e.g. 🧘) shown instead of the kind emoji
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
+}
+
+/** A mid-focus "mảnh giấy" note jotted from the fullscreen timer (see scratch.ts). */
+export interface ScratchNote {
+  id: string;
+  text: string;
+  at: string; // ISO time the note was written
+  date: string; // YYYY-MM-DD, for grouping and cleanup
+}
+
+export const SCRATCH_MAX = 20;
+export const SCRATCH_LEN_MAX = 200;
+
+export function normalizeScratch(raw: unknown): ScratchNote[] {
+  if (!Array.isArray(raw)) return [];
+  const clean = raw.flatMap((x): ScratchNote[] => {
+    const r = x && typeof x === "object" ? (x as Record<string, unknown>) : {};
+    const text = typeof r.text === "string" ? r.text.trim().slice(0, SCRATCH_LEN_MAX) : "";
+    if (!text) return [];
+    return [
+      {
+        id:
+          typeof r.id === "string" && r.id ? r.id : `s_${Math.random().toString(36).slice(2, 10)}`,
+        text,
+        at: typeof r.at === "string" ? r.at : new Date().toISOString(),
+        date:
+          typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
+            ? r.date
+            : dateStr(new Date(r.at as string)),
+      },
+    ];
+  });
+  return clean.slice(-SCRATCH_MAX);
 }
 
 export type SessionKind = "pomodoro" | "warmup"; // warmup = the 5-minute anti-procrastination session
@@ -215,6 +249,7 @@ export interface AppSettings {
   admin: boolean; // admin test mode: trial data in memory, backup download locked
   dragonTheme: boolean; // dragon skin: shimmering dragon-scale borders on buttons + starry-sky background
   autoSpin: boolean; // auto-spin the free spin + tickets when the app opens (keeps 2 tickets for weekend MEGA)
+  studyMode: StudyMode; // "exam" hides quests/boss, "rest" adds the breathing widget — see studyModes.ts
 }
 
 export interface AppData {
@@ -246,6 +281,7 @@ export interface AppData {
   templates: TaskTemplate[];
   sessionLog: SessionEntry[];
   notes: NoteItem[];
+  scratch: ScratchNote[]; // mid-focus jotted notes (max 20), promoted into tasks or deleted
   flashcards: Flashcard[]; // study flashcards with SM-2-lite spaced repetition (see flashcards.ts)
   market: MarketState;
   subjects: string[]; // user-managed study subjects (max 12)
@@ -350,6 +386,7 @@ export function defaultSettings(): AppSettings {
     admin: false,
     dragonTheme: false,
     autoSpin: false,
+    studyMode: "normal",
   };
 }
 
@@ -382,6 +419,7 @@ export function defaultData(): AppData {
     templates: defaultTemplates(),
     sessionLog: [],
     notes: [],
+    scratch: [],
     flashcards: [],
     market: defaultMarket(),
     subjects: [],
@@ -673,6 +711,7 @@ export function migrate(raw: unknown): AppData {
         ? rawSettings.birthday
         : null,
     admin: rawSettings.admin === true,
+    studyMode: normalizeStudyMode(rawSettings.studyMode),
   };
   const backupRaw = obj(r.backup);
   const questsRaw = obj(r.quests);
@@ -744,6 +783,7 @@ export function migrate(raw: unknown): AppData {
     templates: normalizeTemplates(r.templates),
     sessionLog: normalizeSessionLog(r.sessionLog),
     notes: normalizeNotes(r.notes),
+    scratch: normalizeScratch(r.scratch),
     flashcards: normalizeFlashcards(r.flashcards),
     market: normalizeMarket(r.market),
     subjects: Array.isArray(r.subjects)

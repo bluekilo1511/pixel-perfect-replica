@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META } from "@/lib/tracker/model";
 import { ACCESSORIES, ACCESSORY_UI, MOOD_META, moodOf, SPECIES } from "@/lib/tracker/gamify";
 import { petEmoji } from "@/lib/tracker/extras";
+import { addScratch, promoteScratch, removeScratch } from "@/lib/tracker/scratch";
+import { dateStr } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { AmbientControl } from "./AmbientControl";
 
@@ -23,8 +26,15 @@ const STARS = Array.from({ length: 26 }, (_, i) => ({
 
 /** Fullscreen pinned countdown: big progress ring, the pet and ambient sound — everything else hidden. */
 export function TimerFullscreen() {
-  const { data, timer, pauseTimer, startTimer } = useTracker();
+  const { data, timer, pauseTimer, startTimer, update } = useTracker();
   const [open, setOpen] = useState(false);
+  const [padOpen, setPadOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const addNote = () => {
+    if (!note.trim()) return;
+    update((d) => addScratch(d, note));
+    setNote("");
+  };
   const [isFs, setIsFs] = useState(false);
   // Pausing clears the store timer, so remember which task was pinned to keep the overlay up.
   const [pinnedId, setPinnedId] = useState<string | null>(null);
@@ -222,6 +232,15 @@ export function TimerFullscreen() {
             >
               {running ? "⏸ Tạm dừng" : "▶ Tiếp tục"}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-pressed={padOpen}
+              title="Ghi nhanh suy nghĩ mà không rời khỏi phiên"
+              onClick={() => setPadOpen((v) => !v)}
+            >
+              📝 Ghi chú
+            </Button>
             <AmbientControl />
             <Button size="sm" variant="outline" onClick={toggleFs} aria-pressed={isFs}>
               {isFs ? "🗗 Thoát toàn màn hình" : "⛶ Toàn màn hình"}
@@ -230,6 +249,54 @@ export function TimerFullscreen() {
               Thu nhỏ (Esc)
             </Button>
           </div>
+
+          {padOpen && (
+            <div className="w-full max-w-[380px] rounded-xl border border-white/15 bg-white/5 p-3 text-left">
+              <div className="flex gap-2">
+                <input
+                  className="h-8 min-w-0 flex-1 rounded-md border border-white/20 bg-black/40 px-2 text-sm"
+                  placeholder="Ghi nhanh, đừng mất tập trung…"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addNote()}
+                  aria-label="Ghi chú nhanh trong phiên"
+                />
+                <Button size="sm" variant="outline" onClick={addNote}>
+                  Thêm
+                </Button>
+              </div>
+              {data.scratch.length > 0 && (
+                <ul className="mt-2 max-h-36 space-y-1 overflow-y-auto text-sm">
+                  {data.scratch.map((n) => (
+                    <li key={n.id} className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate" title={n.text}>
+                        {n.text}
+                      </span>
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs text-primary hover:underline"
+                        title="Thêm thành nhiệm vụ hôm nay"
+                        onClick={() => {
+                          update((d) => promoteScratch(d, n.id, dateStr()) ?? d);
+                          toast.success("Đã thêm vào nhiệm vụ hôm nay 📝");
+                        }}
+                      >
+                        → Việc
+                      </button>
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+                        aria-label="Xoá ghi chú"
+                        onClick={() => update((d) => removeScratch(d, n.id))}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

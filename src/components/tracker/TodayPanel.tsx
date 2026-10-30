@@ -11,6 +11,14 @@ import { WeeklyGoalCard } from "./WeeklyGoalCard";
 import { SubjectsCard } from "./SubjectsCard";
 import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import {
+  STUDY_MODES,
+  gamifyHidden,
+  modeMeta,
+  normalizeStudyMode,
+  type StudyMode,
+} from "@/lib/tracker/studyModes";
+import { clearScratch, promoteScratch, removeScratch } from "@/lib/tracker/scratch";
+import {
   addExam,
   dateStr,
   editTask,
@@ -85,6 +93,76 @@ function readTodaySection(): TodaySectionKey {
     /* storage unavailable */
   }
   return "today";
+}
+
+/** One switch retunes the app: exam mode hides the gamified cards, rest mode quiets them too. */
+function StudyModeBar({ mode, onChange }: { mode: StudyMode; onChange: (m: StudyMode) => void }) {
+  const meta = modeMeta(mode);
+  return (
+    <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Chế độ học">
+      {STUDY_MODES.map((m) => (
+        <button
+          key={m.key}
+          type="button"
+          role="radio"
+          aria-checked={mode === m.key}
+          title={m.desc}
+          onClick={() => onChange(m.key)}
+          className={
+            mode === m.key
+              ? "rounded-full px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground shadow"
+              : "rounded-full px-3 py-1.5 text-xs font-medium bg-secondary/60 text-foreground/70 hover:bg-secondary hover:text-foreground"
+          }
+        >
+          {m.emoji} {m.label}
+        </button>
+      ))}
+      <span className="text-xs text-muted-foreground">{meta.desc}</span>
+    </div>
+  );
+}
+
+/** Mid-focus jotted notes, promoted into today's tasks or deleted one by one. */
+function ScratchCard() {
+  const { data, update } = useTracker();
+  if (!data.scratch.length) return null;
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-primary/40 bg-muted/50 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-semibold">📝 Mảnh ghi chú trong phiên</p>
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => update((d) => clearScratch(d))}
+        >
+          Xoá tất cả
+        </button>
+      </div>
+      <ul className="space-y-1.5">
+        {data.scratch.map((n) => (
+          <li key={n.id} className="flex items-center gap-2 text-sm">
+            <span className="flex-1">{n.text}</span>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-primary hover:underline"
+              title="Thêm thành nhiệm vụ hôm nay"
+              onClick={() => update((d) => promoteScratch(d, n.id, dateStr()) ?? d)}
+            >
+              → Việc
+            </button>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+              aria-label="Xoá ghi chú"
+              onClick={() => update((d) => removeScratch(d, n.id))}
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function WaterCard() {
@@ -1089,6 +1167,7 @@ function WeekReviewCard() {
 export function TodayPanel() {
   const { data, update } = useTracker();
   const today = dateStr();
+  const mode = normalizeStudyMode(data.settings.studyMode);
   const tasks = data.tasks
     .filter((t) => t.date === today)
     .sort(
@@ -1126,6 +1205,11 @@ export function TodayPanel() {
           </button>
         ))}
       </div>
+
+      <StudyModeBar
+        mode={mode}
+        onChange={(m) => update((d) => ({ ...d, settings: { ...d.settings, studyMode: m } }))}
+      />
 
       {section === "today" && (
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-[320px_1fr]">
@@ -1170,6 +1254,7 @@ export function TodayPanel() {
               <PrepSuggestionBar />
               <AddTask />
               <TemplatesCard />
+              <ScratchCard />
               {(() => {
                 const open = tasks.filter((t) => !t.completed);
                 const completed = tasks.filter((t) => t.completed);
@@ -1201,8 +1286,12 @@ export function TodayPanel() {
                 );
               })()}
             </section>
-            <DailyQuestsCard />
-            <RaidBossCard />
+            {!gamifyHidden(mode) && (
+              <>
+                <DailyQuestsCard />
+                <RaidBossCard />
+              </>
+            )}
           </div>
         </div>
       )}
