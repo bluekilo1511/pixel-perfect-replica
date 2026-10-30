@@ -2,6 +2,7 @@ import { BreathWidget } from "@/components/tracker/BreathWidget";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
+import { recordInterruption } from "@/lib/tracker/model";
 import {
   ACCESSORIES,
   ACCESSORY_SLOT,
@@ -264,6 +265,7 @@ export function PetWidget() {
       if (!document.hidden || !endAtRef.current) return;
       strikesRef.current += 1;
       setStrikes(strikesRef.current);
+      update((d) => recordInterruption(d, null)); // feed the distraction chart
       fireFlashbang("breakin");
       if (strikesRef.current >= 3)
         toast.error("🚨 Phá đò 3 lần — phiên này sẽ không được tính thưởng!");
@@ -293,7 +295,12 @@ export function PetWidget() {
           toast.error("🚨 Phá đò 3 lần — phiên này không được tính, thử lại nhé!");
           say("Lần này tập trung thật nhé… 😤");
         } else {
-          const res = finishPomodoro(boss, plannedMin, wasWarmup ? "warmup" : "pomodoro");
+          const res = finishPomodoro(
+            boss,
+            plannedMin,
+            wasWarmup ? "warmup" : "pomodoro",
+            strikesRef.current,
+          );
           celebrate();
           fireFlashbang("done");
           if (wasWarmup) {

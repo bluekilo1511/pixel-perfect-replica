@@ -56,6 +56,7 @@ import {
   markWaterNudged,
   shouldNudgeWater,
 } from "./model";
+import { claimChallenge as claimChallengeRule, recordInterruption } from "./model";
 import { pushDueExtras } from "./tkb";
 import { bossCounterAttack, defeatBoss, type DailyBossState } from "./boss";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
@@ -115,12 +116,14 @@ interface Store {
     boss: boolean,
     minutes: number,
     kind?: "pomodoro" | "warmup",
+    interruptions?: number,
   ) => { bossDue: boolean };
   bossCancel: () => void;
   claimAchievement: (id: AchievementId) => boolean;
   dismissBackupReminder: () => void;
   claimQuest: (id: string) => boolean;
   claimRaid: () => boolean;
+  claimChallenge: () => boolean;
 }
 
 function announceAchievements(fresh: AchievementId[]) {
@@ -157,6 +160,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SaveStatus>("none");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [timer, setTimer] = useState<Timer | null>(null);
+  const runPauses = useRef(0); // pauses inside the current running session (see finishPomodoro)
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [evolution, setEvolution] = useState<{
     from: string;
@@ -305,6 +309,15 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const claimChallenge = () => {
+    const r = claimChallengeRule(dataRef.current);
+    if (!r.ok) return false;
+    setData(r.data);
+    ting();
+    toast.success("🌟 Thử thách hôm nay hoàn thành! +6 😺 +1 🦎");
+    return true;
+  };
+
   const finish = useCallback((id: string, fromTimer = false) => {
     const prev = dataRef.current;
     const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
@@ -378,12 +391,16 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const pauseTimer = () => {
     if (!timer) return;
     const remaining = Math.max(1, Math.ceil((timer.endAt - Date.now()) / 1000));
-    setData((d) => ({
-      ...d,
-      tasks: d.tasks.map((t) =>
-        t.id === timer.taskId ? { ...t, remainingSeconds: remaining } : t,
-      ),
-    }));
+    runPauses.current += 1;
+    setData((d) => {
+      const logged = recordInterruption(d, timer.taskId);
+      return {
+        ...logged,
+        tasks: logged.tasks.map((t) =>
+          t.id === timer.taskId ? { ...t, remainingSeconds: remaining } : t,
+        ),
+      };
+    });
     setTimer(null);
   };
 
@@ -391,6 +408,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const task = dataRef.current.tasks.find((t) => t.id === id);
     if (!task || task.completed || task.rewardClaimed || task.minutes <= 0) return;
     if (timer) pauseTimer();
+    runPauses.current = 0;
     const secs = task.remainingSeconds > 0 ? task.remainingSeconds : task.minutes * 60;
     setTimer({ taskId: id, endAt: Date.now() + secs * 1000, remaining: secs });
   };
@@ -521,11 +539,21 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   }, [ready, data.settings.autoSpin]);
 
   const restore = (raw: unknown) => {
+    const probe = raw as { app?: unknown } | null;
+    if (probe && probe.app === "tpp-share") {
+      toast.error("Đây là file chia sẻ chỉ để xem — không thể nạp làm dữ liệu của app.");
+      return;
+    }
     setData(ensureDailyPins(migrate(raw)));
     setReady(true);
   };
 
-  const finishPomodoro = (boss: boolean, minutes: number, kind?: "pomodoro" | "warmup") => {
+  const finishPomodoro = (
+    boss: boolean,
+    minutes: number,
+    kind?: "pomodoro" | "warmup",
+    interruptions?: number,
+  ) => {
     const cur = dataRef.current;
     const today = dateStr(new Date());
     // One daily-boss reward per day: tasks may already have defeated it.
@@ -534,11 +562,14 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       ? defeatBoss(cur.game)
       : { ...cur.game, catCoins: cur.game.catCoins + POMODORO_REWARD };
     const dailyBoss: DailyBossState = boss ? { date: today, defeated: true } : cur.dailyBoss;
+    const pauses = interruptions ?? runPauses.current;
+    runPauses.current = 0;
     const r = completePomodoroSession(
       { ...cur, game, petState: bumpPet(cur.petState, 0, 10), dailyBoss },
       minutes,
       undefined,
       kind,
+      pauses,
     );
     if (shouldNudgeWater(r.data)) {
       setData(markWaterNudged(r.data));
@@ -624,6 +655,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         dismissBackupReminder,
         claimQuest,
         claimRaid,
+        claimChallenge,
       }}
     >
       {children}

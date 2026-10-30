@@ -85,7 +85,7 @@ export interface QuestsState {
 }
 export const defaultQuests = (): QuestsState => ({ date: null, claimed: [] });
 
-function hashStr(s: string): number {
+export function hashStr(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -93,7 +93,7 @@ function hashStr(s: string): number {
   }
   return h >>> 0;
 }
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed;
   return () => {
     a |= 0;

@@ -1,4 +1,10 @@
 import {
+  defaultChallenge,
+  challengeFor,
+  challengeProgress,
+  type ChallengeState,
+} from "./challenges";
+import {
   checkStreak,
   defaultInventory,
   defaultPet,
@@ -114,6 +120,7 @@ export interface Task {
   mood?: number; // 1..4 feeling after finishing a timed task (1 = tuyệt vời)
   subject?: string; // study subject tag (from data.subjects) used by the per-subject chart
   remindAt?: string; // "HH:MM" — same-day reminder time; the app pings when it passes
+  interruptions?: number; // pauses / tab-escapes during this task's running timer
   emoji?: string; // custom icon (e.g. 🧘) shown instead of the kind emoji
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
@@ -158,6 +165,7 @@ export interface SessionEntry {
   at: string; // ISO time the session finished
   minutes: number;
   kind: SessionKind;
+  interruptions?: number; // pause/tab-escape count for this session (unbroken challenge)
   mood?: number; // mirrored from the related task when the user picks a mood
   subject?: string; // study subject tag for the per-subject chart
 }
@@ -298,6 +306,8 @@ export interface AppData {
   specialDays: SpecialDay[]; // holidays & birthdays, reminder only (see specialDays.ts)
   shootingStar: ShootingStarState; // nav-sky shooting star catches today (see shootingStar.ts)
   ownerName?: string; // display name in the header, editable
+  challenge: ChallengeState; // daily random challenge claim state (see challenges.ts)
+  interruptionLog: string[]; // ISO timestamps of pauses & break-ins, for the distraction chart
   [extra: string]: unknown;
 }
 
@@ -411,6 +421,8 @@ export function defaultData(): AppData {
     quests: defaultQuests(),
     raid: defaultRaid(),
     dailyBoss: defaultDailyBoss(),
+    challenge: defaultChallenge(),
+    interruptionLog: [],
     exams: defaultExams(),
     examScores: [],
     gradeBook: [],
@@ -778,6 +790,17 @@ export function migrate(raw: unknown): AppData {
       date: typeof dailyBossRaw.date === "string" ? dailyBossRaw.date : null,
       defeated: dailyBossRaw.defeated === true,
     },
+    challenge: {
+      date: typeof obj(r.challenge).date === "string" ? (obj(r.challenge).date as string) : null,
+      claimed: obj(r.challenge).claimed === true,
+    },
+    interruptionLog: Array.isArray(r.interruptionLog)
+      ? r.interruptionLog
+          .filter(
+            (x: unknown) => typeof x === "string" && !Number.isNaN(new Date(x as string).getTime()),
+          )
+          .slice(-1000)
+      : [],
     exams: normalizeExams(r.exams),
     examScores: normalizeExamScores(r.examScores),
     templates: normalizeTemplates(r.templates),
@@ -900,12 +923,14 @@ function normalizeSessionLog(raw: unknown): SessionEntry[] {
         typeof s["subject"] === "string" && s["subject"].trim()
           ? s["subject"].trim().slice(0, 24)
           : undefined;
+      const interruptions = Math.max(0, Math.round(num(s["interruptions"], 0)));
       return {
         at: s["at"] as string,
         minutes: num(s["minutes"], 0),
         kind: s["kind"] === "warmup" ? ("warmup" as const) : ("pomodoro" as const),
         ...(mood >= 1 ? { mood } : {}),
         ...(subject ? { subject } : {}),
+        ...(interruptions > 0 ? { interruptions } : {}),
       };
     })
     .slice(-400);
@@ -1203,6 +1228,7 @@ export function completePomodoroSession(
   minutes: number,
   now = new Date(),
   kind: SessionKind = "pomodoro",
+  interruptions = 0,
 ): { data: AppData; fresh: AchievementId[] } {
   const today = dateStr(now);
   const achievements = bumpLifetime(data.achievements, {
@@ -1219,9 +1245,15 @@ export function completePomodoroSession(
       rewardClaimed: true,
       remainingSeconds: 0,
       completedAt: now.toISOString(),
+      ...(interruptions > 0 ? { interruptions } : {}),
     },
   );
-  const sessionLog = [...data.sessionLog, { at: now.toISOString(), minutes, kind }].slice(-400);
+  const sessionLog = [
+    ...data.sessionLog,
+    ...(interruptions > 0
+      ? [{ at: now.toISOString(), minutes, kind, interruptions }]
+      : [{ at: now.toISOString(), minutes, kind }]),
+  ].slice(-400);
   const d = {
     ...data,
     achievements,
@@ -1981,5 +2013,43 @@ export function setTaskSubject(
       }
       return { ...t, subject: tag };
     }),
+  };
+}
+
+/** Records one pause/tab-escape: a timestamp for the distraction chart, and the
+ * running task's counter (used by daily challenge "unbroken" via sessionLog). */
+export function recordInterruption(
+  data: AppData,
+  taskId: string | null,
+  now = new Date(),
+): AppData {
+  const log = [...data.interruptionLog, now.toISOString()].slice(-1000);
+  if (!taskId) return { ...data, interruptionLog: log };
+  return {
+    ...data,
+    interruptionLog: log,
+    tasks: data.tasks.map((t) =>
+      t.id === taskId ? { ...t, interruptions: (t.interruptions ?? 0) + 1 } : t,
+    ),
+  };
+}
+
+/** Claims today's random challenge once: only when its condition is met. */
+export function claimChallenge(data: AppData, now = new Date()): { ok: boolean; data: AppData } {
+  const today = dateStr(now);
+  const def = challengeFor(today);
+  if (data.challenge.date === today && data.challenge.claimed) return { ok: false, data };
+  if (!challengeProgress(data, def, today).done) return { ok: false, data };
+  return {
+    ok: true,
+    data: {
+      ...data,
+      challenge: { date: today, claimed: true },
+      game: {
+        ...data.game,
+        catCoins: data.game.catCoins + def.reward.catCoins,
+        lizardGems: data.game.lizardGems + def.reward.lizardGems,
+      },
+    },
   };
 }

@@ -9,7 +9,7 @@ import { ExtraScheduleCard } from "./ExtraScheduleCard";
 import { NotesCard } from "./NotesCard";
 import { WeeklyGoalCard } from "./WeeklyGoalCard";
 import { SubjectsCard } from "./SubjectsCard";
-import { DailyQuestsCard, RaidBossCard } from "./QuestRaid";
+import { DailyChallengeCard, DailyQuestsCard, RaidBossCard } from "./QuestRaid";
 import {
   STUDY_MODES,
   gamifyHidden,
@@ -1289,6 +1289,7 @@ export function TodayPanel() {
             {!gamifyHidden(mode) && (
               <>
                 <DailyQuestsCard />
+                <DailyChallengeCard />
                 <RaidBossCard />
               </>
             )}

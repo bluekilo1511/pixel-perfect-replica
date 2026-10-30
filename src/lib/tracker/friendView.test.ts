@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defaultData, makeTask } from "./model";
 import { emptyDay } from "./extras";
-import { summarizeFriend } from "./friendView";
+import { exportShare, summarizeFriend } from "./friendView";
 
 describe("summarizeFriend", () => {
   it("rejects non-objects", () => {
@@ -48,6 +48,44 @@ describe("summarizeFriend", () => {
 
   it("tolerates old files without app marker but with tasks", () => {
     const r = summarizeFriend({ tasks: [], version: 2 });
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe("share files", () => {
+  it("exports only study stats (no grades, journal, notes or coins)", () => {
+    const d = defaultData();
+    d.ownerName = "Tuấn";
+    d.game.catCoins = 999;
+    d.dailyStats["2026-10-30"] = { tasks: 3, focusMin: 75, water: 2, treats: 1, pomodoros: 2 };
+    const payload = exportShare(d, new Date(2026, 9, 30, 20, 0));
+    expect(payload.app).toBe("tpp-share");
+    expect(payload.name).toBe("Tuấn");
+    expect(payload.last7).toHaveLength(7);
+    expect(payload.last7[6]).toEqual({ date: "2026-10-30", focusMin: 75, tasks: 3 });
+    const json = JSON.stringify(payload);
+    expect(json).not.toContain("gradeBook");
+    expect(json).not.toContain("journal");
+    expect(json).not.toContain("catCoins");
+  });
+
+  it("summarizeFriend reads a share payload", () => {
+    const d = defaultData();
+    d.ownerName = "Lan";
+    d.dailyStats["2026-10-30"] = { tasks: 2, focusMin: 50, water: 0, treats: 0, pomodoros: 2 };
+    const r = summarizeFriend(exportShare(d, new Date(2026, 9, 30, 20, 0)));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.name).toBe("Lan");
+      expect(r.last7?.[6]?.focusMin).toBe(50);
+      expect(r.catCoins).toBe(0);
+    }
+  });
+
+  it("summarizeFriend still accepts old backup files", () => {
+    const d = defaultData();
+    d.tasks.push(makeTask("Học", "pomodoro", 25, "2026-10-30", { completed: true }));
+    const r = summarizeFriend(JSON.parse(JSON.stringify(d)));
     expect(r.ok).toBe(true);
   });
 });

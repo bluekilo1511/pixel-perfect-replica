@@ -6,6 +6,7 @@ import { TodayPanel } from "@/components/tracker/TodayPanel";
 import { WeeklyReportCard } from "@/components/tracker/WeeklyReport";
 import { HeatmapCard } from "@/components/tracker/HeatmapCard";
 import { SubjectChartCard } from "@/components/tracker/SubjectChartCard";
+import { InterruptionChartCard } from "@/components/tracker/InterruptionChartCard";
 import { GradeBookCard } from "@/components/tracker/GradeBookCard";
 import { FocusJournalCard } from "@/components/tracker/FocusJournal";
 import { FlashcardsCard } from "@/components/tracker/FlashcardsCard";
@@ -20,6 +21,7 @@ import { WeatherLayer } from "@/components/tracker/WeatherLayer";
 import { LevelUpOverlay, Welcome } from "@/components/tracker/Overlays";
 import { EvolutionFx } from "@/components/tracker/EvolutionFx";
 import { KeyboardShortcuts } from "@/components/tracker/KeyboardShortcuts";
+import { CommandPalette } from "@/components/tracker/CommandPalette";
 import { TabsContent } from "@/components/ui/tabs";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
 import { BackupReminder } from "@/components/tracker/BackupReminder";
@@ -108,6 +110,7 @@ function AppInner() {
             <HeatmapCard />
             <GradeBookCard />
             <SubjectChartCard />
+            <InterruptionChartCard />
             <FocusJournalCard />
             <FlashcardsCard />
             <MonthlyReportCard />
@@ -137,6 +140,7 @@ function AppInner() {
       <TimerFullscreen />
       <EvolutionFx />
       <KeyboardShortcuts />
+      <CommandPalette />
       <Flashbang />
       <TabTitleHud />
       <OriginOverlay />

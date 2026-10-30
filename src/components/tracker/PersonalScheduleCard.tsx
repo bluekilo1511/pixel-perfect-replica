@@ -1,6 +1,8 @@
 import { Fragment, useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META, uid, type Slot, type TaskKind } from "@/lib/tracker/model";
+import { buildIcs } from "@/lib/tracker/ics";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +52,17 @@ export function PersonalScheduleCard() {
   const [editing, setEditing] = useState<Editing>(null);
   const todayIdx = new Date().getDay();
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
+  const exportIcs = () => {
+    const ics = buildIcs(data.personal, data.extraSchedule);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "lich-rihan.ics";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast.success("📥 Đã tải lich-rihan.ics — import vào Google Calendar để nhận thông báo!");
+  };
 
   const save = (e: NonNullable<Editing>) => {
     update((d) => ({
@@ -108,6 +121,9 @@ export function PersonalScheduleCard() {
             danh sách việc cần làm. Mục có 👁 chỉ hiển thị.
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={exportIcs} aria-label="Xuất lịch ra file .ics">
+          📥 Xuất .ics
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">

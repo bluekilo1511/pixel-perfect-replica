@@ -1,6 +1,7 @@
 import { useTracker } from "@/lib/tracker/store";
 import { dateStr } from "@/lib/tracker/model";
 import { dailyQuests, questProgress, RAID_HP, raidStatus } from "@/lib/tracker/quests";
+import { challengeFor, challengeProgress } from "@/lib/tracker/challenges";
 import { weatherEffect, weatherFromData } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 
@@ -112,6 +113,57 @@ export function RaidBossCard() {
             ? "Đã nhận thưởng tuần này"
             : "Chưa hạ được boss"}
       </Button>
+    </section>
+  );
+}
+
+// ---- Daily random challenge ----
+export function DailyChallengeCard() {
+  const { data, claimChallenge } = useTracker();
+  const today = dateStr();
+  const def = challengeFor(today);
+  const claimed = data.challenge.date === today && data.challenge.claimed;
+  const prog = challengeProgress(data, def, today);
+
+  return (
+    <section className="glass p-5">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">🌟 Thử thách hôm nay</h2>
+        <span className="text-sm text-muted-foreground">
+          +{def.reward.catCoins} 😺 {def.reward.lizardGems > 0 && `+${def.reward.lizardGems} 🦎`}
+        </span>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Một thử thách ngẫu nhiên mỗi ngày — ngày mai sẽ đổi thử thách khác.
+      </p>
+      <div
+        className={`rounded-xl border border-border p-3 ${claimed ? "border-success bg-success/10" : "bg-muted"}`}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-2xl" aria-hidden>
+            {def.emoji}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{def.name}</p>
+            <p className="text-xs text-muted-foreground">{def.desc}</p>
+          </div>
+          {claimed ? (
+            <span className="rounded-full bg-success px-2.5 py-1 text-xs font-semibold text-primary-foreground">
+              ✓ Đã nhận
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              variant={prog.done ? "default" : "outline"}
+              disabled={!prog.done}
+              onClick={claimChallenge}
+            >
+              Nhận
+            </Button>
+          )}
+        </div>
+        {!claimed && <p className="mt-2 text-xs text-muted-foreground">{prog.detail}</p>}
+      </div>
     </section>
   );
 }
