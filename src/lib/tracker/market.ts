@@ -1,5 +1,5 @@
 import { DECORATIONS, daysBetween, shiftDate, type DecorId, type PetState } from "./gamify";
-import { grantPetXp, tierOf, type Materials } from "./extras";
+import { grantPetXp, petTitle, tierOf, type Materials } from "./extras";
 
 /**
  * Chợ Hư Không — a weekly shop that rotates its stock every Monday.
@@ -194,7 +194,13 @@ export interface MarketState {
 export const defaultMarket = (): MarketState => ({ lastWeek: null, bought: {} });
 
 export type MarketBuyResult<T> =
-  | { ok: true; data: T; message: string }
+  | {
+      ok: true;
+      data: T;
+      message: string;
+      /** True when the pet crossed a tier boundary (title/form changed). */
+      petEvolved?: boolean;
+    }
   | {
       ok: false;
       reason: "not-in-stock" | "already-bought" | "not-enough-coins" | "locked" | "owned";
@@ -290,11 +296,16 @@ export function buyMarket<T extends MarketData>(
     };
   }
   if (id === "honey") {
-    const { pet, levelsGained } = grantPetXp(data.petState, 60);
+    const r = grantPetXp(data.petState, 60);
     return {
       ok: true,
-      data: { ...base, petState: pet },
-      message: levelsGained > 0 ? "🍯 Thú cưng +60 💫 và tăng cấp!" : "🍯 Thú cưng +60 💫!",
+      data: { ...base, petState: r.pet },
+      message: r.evolved
+        ? `🍯 Thú cưng +60 💫 và tiến hóa thành ${petTitle(r.pet)}!`
+        : r.levelsGained > 0
+          ? "🍯 Thú cưng +60 💫 và tăng cấp!"
+          : "🍯 Thú cưng +60 💫!",
+      petEvolved: r.evolved,
     };
   }
   if (id === "tome") {

@@ -8,12 +8,13 @@ import {
   weekStart,
   type MarketItemId,
 } from "@/lib/tracker/market";
-import { petEmoji, tierOf } from "@/lib/tracker/extras";
+import { petEmoji, petTitle, tierOf } from "@/lib/tracker/extras";
+import { levelUpFx } from "@/lib/tracker/effects";
 import { Button } from "@/components/ui/button";
 
 /** Chợ Hư Không — weekly rotating shop paid in cat coins. */
 export function MarketCard() {
-  const { data, update } = useTracker();
+  const { data, update, showEvolution } = useTracker();
   const now = new Date();
   const stock = marketStock(now);
   const week = weekStart(now);
@@ -81,6 +82,14 @@ export function MarketCard() {
                     }
                     update(() => r.data);
                     toast.success(r.message);
+                    if (r.petEvolved) {
+                      levelUpFx();
+                      showEvolution({
+                        from: petEmoji(data.petState),
+                        to: petEmoji(r.data.petState),
+                        title: petTitle(r.data.petState),
+                      });
+                    }
                   }}
                 >
                   {discounted ? (

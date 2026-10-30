@@ -1,12 +1,14 @@
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { CONVENIENCE_ITEMS, buyConvenience, type ConvenienceId } from "@/lib/tracker/convenience";
+import { petEmoji, petTitle } from "@/lib/tracker/extras";
+import type { PetState } from "@/lib/tracker/gamify";
 import { levelUpFx, ting } from "@/lib/tracker/effects";
 import { Button } from "@/components/ui/button";
 
 /** Tiệm Tiện Ích — everyday coin shop: unlimited consumables, no weekly cap. */
 export function ConvenienceCard() {
-  const { data, update } = useTracker();
+  const { data, update, showEvolution } = useTracker();
 
   const buy = (id: ConvenienceId) => {
     const r = buyConvenience(data, id);
@@ -18,6 +20,14 @@ export function ConvenienceCard() {
     ting();
     toast.success(r.message);
     if (r.levelsGained > 0) levelUpFx();
+    if (r.petEvolved) {
+      levelUpFx();
+      showEvolution({
+        from: petEmoji(data.petState as PetState),
+        to: petEmoji(r.data.petState as PetState),
+        title: petTitle(r.data.petState as PetState),
+      });
+    }
   };
 
   return (

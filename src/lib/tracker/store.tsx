@@ -111,6 +111,7 @@ interface Store {
   spin: (mode?: SpinMode) => string | null;
   dismissLevelUp: () => void;
   dismissEvolution: () => void;
+  showEvolution: (evo: { from: string; to: string; title: string }) => void;
   restore: (raw: unknown) => void;
   finishPomodoro: (
     boss: boolean,
@@ -648,6 +649,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         spin,
         dismissLevelUp: () => setLevelUp(null),
         dismissEvolution: () => setEvolution(null),
+        showEvolution: (evo) => setEvolution(evo),
         restore,
         finishPomodoro,
         bossCancel,

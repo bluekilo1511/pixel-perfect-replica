@@ -70,6 +70,27 @@ describe("convenience", () => {
     expect(r.data.petState.petXp).toBe(10);
     expect(r.petLevelsGained).toBe(1);
   });
+
+  it("honeyMini crossing a tier boundary reports the evolution", () => {
+    const d = base();
+    d.petState.petLevel = 2;
+    d.petState.petXp = 195; // +30 crosses both the level-3 line and the tier-1 line
+    const r = buyConvenience(d, "honeyMini");
+    if (!r.ok) throw new Error("buy failed");
+    expect(r.data.petState.petLevel).toBe(3);
+    expect(r.petEvolved).toBe(true);
+    expect(r.message).toContain("tiến hóa");
+  });
+
+  it("honeyMini reports no evolution for plain level-ups", () => {
+    const d = base();
+    d.petState.petLevel = 4;
+    d.petState.petXp = 380; // +30 → level 5, still tier 1
+    const r = buyConvenience(d, "honeyMini");
+    if (!r.ok) throw new Error("buy failed");
+    expect(r.data.petState.petLevel).toBe(5);
+    expect(r.petEvolved).toBe(false);
+  });
 });
 
 describe("feast quest credit", () => {

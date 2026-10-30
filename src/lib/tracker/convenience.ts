@@ -2,7 +2,7 @@
 // Unlike Chợ Hư Không (weekly rotation, 1 buy/item/week) these are always in stock.
 // Pure logic: the caller owns the data object, this only reshapes it.
 import { bumpPet, type Inventory, type PetState } from "./gamify";
-import { grantPetXp } from "./extras";
+import { grantPetXp, petTitle } from "./extras";
 import { addXp, dateStr, type GameState } from "./model";
 
 export type ConvenienceId = "charm" | "feast" | "carousel" | "stardust" | "honeyMini";
@@ -68,6 +68,8 @@ export type ConvenienceBuyResult<T extends ConvenienceData> =
       message: string;
       levelsGained: number;
       petLevelsGained: number;
+      /** True when the pet crossed a tier boundary (title/form changed). */
+      petEvolved: boolean;
     }
   | { ok: false; reason: "unknown" | "not-enough-coins" };
 
@@ -95,6 +97,7 @@ export function buyConvenience<T extends ConvenienceData>(
         message: "🛡️ +1 🧊 bảo hộ streak!",
         levelsGained: 0,
         petLevelsGained: 0,
+        petEvolved: false,
       };
     case "feast": {
       // A shop feast is still feeding the pet — it counts toward the daily quest.
@@ -111,6 +114,7 @@ export function buyConvenience<T extends ConvenienceData>(
         message: "🍜 Thú cưng no căng bụng!",
         levelsGained: 0,
         petLevelsGained: 0,
+        petEvolved: false,
       };
     }
     case "carousel":
@@ -120,6 +124,7 @@ export function buyConvenience<T extends ConvenienceData>(
         message: "🎠 Thú cưng vui hết nấc!",
         levelsGained: 0,
         petLevelsGained: 0,
+        petEvolved: false,
       };
     case "stardust": {
       const { game, levelsGained } = addXp(base.game as GameState, 40);
@@ -129,16 +134,23 @@ export function buyConvenience<T extends ConvenienceData>(
         message: "✨ +40 ⭐ kinh nghiệm!",
         levelsGained,
         petLevelsGained: 0,
+        petEvolved: false,
       };
     }
     case "honeyMini": {
       const r = grantPetXp(base.petState as PetState, 30);
+      const title = r.evolved ? petTitle(r.pet) : null;
       return {
         ok: true,
         data: { ...base, petState: r.pet },
-        message: "🍯 Thú cưng +30 💫 kinh nghiệm!",
+        message: title
+          ? `🍯 Thú cưng +30 💫 và tiến hóa thành ${title}!`
+          : r.levelsGained > 0
+            ? "🍯 Thú cưng +30 💫 và tăng cấp!"
+            : "🍯 Thú cưng +30 💫 kinh nghiệm!",
         levelsGained: 0,
         petLevelsGained: r.levelsGained,
+        petEvolved: r.evolved,
       };
     }
   }

@@ -163,6 +163,18 @@ describe("buyMarket", () => {
     expect(r.data.petState.petXp).toBeGreaterThanOrEqual(before + 60);
   });
 
+  it("honey reports an evolution when the pet crosses a tier boundary", () => {
+    const d = makeData();
+    d.petState.petLevel = 2;
+    d.petState.petXp = 190; // +60 crosses level 3 and the tier-1 line
+    const r = buyMarket(d, "honey", weekWith("honey"));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.petState.petLevel).toBe(3);
+    expect(r.petEvolved).toBe(true);
+    expect(r.message).toContain("tiến hóa");
+  });
+
   it("mystery box adds 1-3 materials of one kind", () => {
     const r = buyMarket(makeData(), "box", weekWith("box"), () => 0.99);
     expect(r.ok).toBe(true);
