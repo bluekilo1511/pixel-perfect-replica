@@ -1,13 +1,5 @@
 import { useRef, useState, type ReactNode, useEffect } from "react";
-import {
-  CalendarDays,
-  Check,
-  ChartColumn,
-  PawPrint,
-  Sparkles,
-  Newspaper,
-  Settings,
-} from "lucide-react";
+import { CalendarDays, Check, ChartColumn, PawPrint, Newspaper, Settings } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTracker } from "@/lib/tracker/store";
 import { zodiacById, zodiacForBirthday } from "@/lib/tracker/zodiac";
@@ -17,7 +9,6 @@ const items = [
   { value: "stats", label: "Thống kê", icon: ChartColumn },
   { value: "week", label: "Thời khóa biểu", icon: CalendarDays },
   { value: "shop", label: "Pet Shop", icon: PawPrint },
-  { value: "wheel", label: "Vòng quay", icon: Sparkles },
   { value: "chronicle", label: "Nhật báo tuần", icon: Newspaper },
   { value: "settings", label: "Cài đặt", icon: Settings },
 ] as const;
@@ -86,12 +77,33 @@ export function ConstellationTabs({ children }: { children: ReactNode }) {
             })}
           </svg>
           <TabsList className="zodiac-star-list">
-            {zodiac.stars.map((star) => {
+            {zodiac.stars.map((star, i) => {
               const item = items.find((i) => i.value === star.tab)!;
               const Icon = item.icon;
+              const isFirst = zodiac.stars.findIndex((s) => s.tab === star.tab) === i;
+              if (!isFirst) {
+                // Extra stars sharing a tab render as decorative twinkles so the
+                // constellation keeps its shape without duplicate tab triggers.
+                return (
+                  <span
+                    key={`star-ghost-${i}`}
+                    className="zodiac-star zodiac-star-ghost"
+                    aria-hidden
+                    style={{
+                      left: `${star.x}%`,
+                      top: `${star.y}%`,
+                      ["--node-r" as string]: `${star.r}px`,
+                    }}
+                  >
+                    <span className="star-node">
+                      <Icon size={15} strokeWidth={1.8} aria-hidden />
+                    </span>
+                  </span>
+                );
+              }
               return (
                 <TabsTrigger
-                  key={item.value}
+                  key={`${star.tab}-${i}`}
                   value={item.value}
                   data-tab={item.value}
                   className="zodiac-star"

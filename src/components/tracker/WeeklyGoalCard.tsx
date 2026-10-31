@@ -23,7 +23,7 @@ export function WeeklyGoalCard() {
   return (
     <section className="glass p-5" aria-label="Mục tiêu tập trung tuần">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">🎯 Mục tiêu tuần</h2>
+        <h2 className="text-sm font-semibold">🎯 Mục tiêu phút focus</h2>
         <Button
           size="sm"
           variant="ghost"

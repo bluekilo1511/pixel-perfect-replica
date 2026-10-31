@@ -9,13 +9,12 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-const TAB_ORDER = ["today", "stats", "week", "shop", "wheel", "chronicle", "settings"] as const;
+const TAB_ORDER = ["today", "stats", "week", "shop", "chronicle", "settings"] as const;
 const TAB_LABEL: Record<(typeof TAB_ORDER)[number], { name: string; emoji: string }> = {
   today: { name: "Hôm nay", emoji: "📋" },
   stats: { name: "Thống kê", emoji: "📊" },
   week: { name: "Tuần", emoji: "🗓️" },
   shop: { name: "Cửa hàng", emoji: "🛍️" },
-  wheel: { name: "Vòng quay", emoji: "🎡" },
   chronicle: { name: "Biên niên", emoji: "📖" },
   settings: { name: "Cài đặt", emoji: "⚙️" },
 };

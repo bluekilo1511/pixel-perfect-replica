@@ -1,6 +1,6 @@
 // Zodiac navigation sky: 12 constellations, each mapping the 7 app tabs onto
 // the stars of a real constellation shape. Pure data + lookup helpers.
-export type NavTabKey = "today" | "stats" | "week" | "shop" | "wheel" | "chronicle" | "settings";
+export type NavTabKey = "today" | "stats" | "week" | "shop" | "chronicle" | "settings";
 
 export interface ZodiacStar {
   x: number; // % from left
@@ -27,7 +27,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 38, y: 46, r: 7, tab: "stats" },
       { x: 56, y: 52, r: 7, tab: "week" },
       { x: 74, y: 42, r: 7, tab: "shop" },
-      { x: 86, y: 60, r: 6, tab: "wheel" },
+      { x: 86, y: 60, r: 6, tab: "shop" },
       { x: 68, y: 72, r: 6, tab: "chronicle" },
       { x: 40, y: 76, r: 6, tab: "settings" },
     ],
@@ -49,7 +49,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 36, y: 62, r: 7, tab: "stats" },
       { x: 26, y: 46, r: 7, tab: "week" },
       { x: 18, y: 26, r: 6, tab: "shop" },
-      { x: 64, y: 62, r: 7, tab: "wheel" },
+      { x: 64, y: 62, r: 7, tab: "shop" },
       { x: 74, y: 44, r: 7, tab: "chronicle" },
       { x: 84, y: 24, r: 6, tab: "settings" },
     ],
@@ -71,7 +71,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 30, y: 54, r: 7, tab: "stats" },
       { x: 32, y: 30, r: 6, tab: "week" },
       { x: 34, y: 14, r: 6, tab: "shop" },
-      { x: 68, y: 80, r: 9, tab: "wheel" }, // Castor twin
+      { x: 68, y: 80, r: 9, tab: "shop" }, // Castor twin
       { x: 70, y: 56, r: 7, tab: "chronicle" },
       { x: 68, y: 32, r: 6, tab: "settings" },
     ],
@@ -93,7 +93,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 34, y: 26, r: 7, tab: "stats" },
       { x: 22, y: 16, r: 6, tab: "week" },
       { x: 66, y: 26, r: 7, tab: "shop" },
-      { x: 78, y: 16, r: 6, tab: "wheel" },
+      { x: 78, y: 16, r: 6, tab: "shop" },
       { x: 42, y: 70, r: 7, tab: "chronicle" },
       { x: 60, y: 74, r: 6, tab: "settings" },
     ],
@@ -115,7 +115,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 48, y: 60, r: 7, tab: "stats" },
       { x: 34, y: 66, r: 7, tab: "week" },
       { x: 84, y: 34, r: 7, tab: "shop" },
-      { x: 74, y: 20, r: 6, tab: "wheel" },
+      { x: 74, y: 20, r: 6, tab: "shop" },
       { x: 58, y: 16, r: 6, tab: "chronicle" },
       { x: 44, y: 26, r: 6, tab: "settings" },
     ],
@@ -137,7 +137,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 56, y: 40, r: 7, tab: "stats" },
       { x: 40, y: 34, r: 7, tab: "week" },
       { x: 24, y: 22, r: 6, tab: "shop" },
-      { x: 30, y: 52, r: 6, tab: "wheel" },
+      { x: 30, y: 52, r: 6, tab: "shop" },
       { x: 46, y: 68, r: 7, tab: "chronicle" },
       { x: 66, y: 62, r: 6, tab: "settings" },
     ],
@@ -159,7 +159,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 34, y: 58, r: 7, tab: "stats" },
       { x: 66, y: 58, r: 7, tab: "week" },
       { x: 24, y: 74, r: 7, tab: "shop" },
-      { x: 76, y: 74, r: 7, tab: "wheel" },
+      { x: 76, y: 74, r: 7, tab: "shop" },
       { x: 50, y: 22, r: 6, tab: "chronicle" },
       { x: 50, y: 84, r: 6, tab: "settings" },
     ],
@@ -182,7 +182,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 26, y: 22, r: 7, tab: "stats" },
       { x: 16, y: 34, r: 7, tab: "week" },
       { x: 56, y: 46, r: 8, tab: "shop" },
-      { x: 68, y: 62, r: 7, tab: "wheel" },
+      { x: 68, y: 62, r: 7, tab: "shop" },
       { x: 80, y: 76, r: 7, tab: "chronicle" },
       { x: 88, y: 58, r: 6, tab: "settings" }, // tail hook tip
     ],
@@ -204,7 +204,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 38, y: 40, r: 7, tab: "stats" },
       { x: 28, y: 62, r: 7, tab: "week" },
       { x: 66, y: 34, r: 7, tab: "shop" },
-      { x: 80, y: 48, r: 7, tab: "wheel" },
+      { x: 80, y: 48, r: 7, tab: "shop" },
       { x: 44, y: 76, r: 6, tab: "chronicle" },
       { x: 66, y: 72, r: 6, tab: "settings" },
     ],
@@ -226,7 +226,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 40, y: 62, r: 7, tab: "stats" },
       { x: 60, y: 66, r: 7, tab: "week" },
       { x: 80, y: 52, r: 7, tab: "shop" },
-      { x: 86, y: 32, r: 6, tab: "wheel" },
+      { x: 86, y: 32, r: 6, tab: "shop" },
       { x: 62, y: 30, r: 6, tab: "chronicle" },
       { x: 38, y: 28, r: 6, tab: "settings" },
     ],
@@ -249,7 +249,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 58, y: 36, r: 7, tab: "stats" },
       { x: 82, y: 40, r: 7, tab: "week" },
       { x: 50, y: 54, r: 7, tab: "shop" },
-      { x: 40, y: 66, r: 7, tab: "wheel" },
+      { x: 40, y: 66, r: 7, tab: "shop" },
       { x: 30, y: 78, r: 6, tab: "chronicle" },
       { x: 18, y: 84, r: 6, tab: "settings" }, // poured water stream
     ],
@@ -271,7 +271,7 @@ export const ZODIAC_LIST: Zodiac[] = [
       { x: 34, y: 18, r: 6, tab: "stats" },
       { x: 40, y: 34, r: 6, tab: "week" },
       { x: 76, y: 70, r: 9, tab: "shop" }, // other fish
-      { x: 86, y: 58, r: 6, tab: "wheel" },
+      { x: 86, y: 58, r: 6, tab: "shop" },
       { x: 50, y: 50, r: 6, tab: "chronicle" },
       { x: 62, y: 60, r: 6, tab: "settings" },
     ],

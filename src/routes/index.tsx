@@ -105,17 +105,7 @@ function AppInner() {
           <TodayPanel />
         </TabsContent>
         <TabsContent value="stats" className="mt-4 sm:mt-5">
-          <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
-            <WeeklyReportCard />
-            <HeatmapCard />
-            <GradeBookCard />
-            <SubjectChartCard />
-            <InterruptionChartCard />
-            <FocusJournalCard />
-            <FlashcardsCard />
-            <MonthlyReportCard />
-            <FriendViewCard />
-          </div>
+          <StatsPanel />
         </TabsContent>
         <TabsContent value="week" className="mt-4 sm:mt-5">
           <Timetable />
@@ -125,12 +115,18 @@ function AppInner() {
         </TabsContent>
         <TabsContent value="shop" className="mt-4 sm:mt-5">
           <PetShop />
+          <div className="mt-4 sm:mt-5">
+            <Wheel />
+          </div>
         </TabsContent>
         <TabsContent value="wheel" className="mt-4 sm:mt-5">
           <Wheel />
         </TabsContent>
         <TabsContent value="chronicle" className="mt-4 sm:mt-5">
-          <Chronicle />
+          <WeeklyReportCard />
+          <div className="mt-4 sm:mt-5">
+            <Chronicle />
+          </div>
         </TabsContent>
         <TabsContent value="settings" className="mt-4 sm:mt-5">
           <SettingsPanel />
@@ -145,6 +141,79 @@ function AppInner() {
       <TabTitleHud />
       <OriginOverlay />
     </main>
+  );
+}
+
+const STATS_SECTIONS = [
+  { key: "overview", label: "📊 Tổng quan" },
+  { key: "study", label: "📚 Học tập" },
+  { key: "journal", label: "🕘 Nhật ký" },
+] as const;
+type StatsSectionKey = (typeof STATS_SECTIONS)[number]["key"];
+function readStatsSection(): StatsSectionKey {
+  try {
+    const v = localStorage.getItem("ppr.statsSection");
+    if (v && STATS_SECTIONS.some((s) => s.key === v)) return v as StatsSectionKey;
+  } catch {
+    /* storage unavailable */
+  }
+  return "overview";
+}
+function StatsPanel() {
+  const [section, setSection] = useState<StatsSectionKey>(readStatsSection);
+  const pick = (key: StatsSectionKey) => {
+    setSection(key);
+    try {
+      localStorage.setItem("ppr.statsSection", key);
+    } catch {
+      /* storage unavailable */
+    }
+  };
+  return (
+    <div className="space-y-4">
+      <div
+        className="flex gap-2 overflow-x-auto pb-1"
+        role="tablist"
+        aria-label="Thống kê các nhóm"
+      >
+        {STATS_SECTIONS.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            role="tab"
+            aria-selected={section === s.key}
+            onClick={() => pick(s.key)}
+            className={
+              section === s.key
+                ? "shrink-0 rounded-full px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground shadow"
+                : "shrink-0 rounded-full px-4 py-2 text-sm font-medium bg-secondary/60 text-foreground/75 hover:bg-secondary hover:text-foreground"
+            }
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {section === "overview" && (
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+          <HeatmapCard />
+          <InterruptionChartCard />
+          <MonthlyReportCard />
+        </div>
+      )}
+      {section === "study" && (
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+          <GradeBookCard />
+          <SubjectChartCard />
+          <FlashcardsCard />
+        </div>
+      )}
+      {section === "journal" && (
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+          <FocusJournalCard />
+          <FriendViewCard />
+        </div>
+      )}
+    </div>
   );
 }
 

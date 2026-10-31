@@ -1711,3 +1711,9 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
 .fx-lite .focus-ring-spin {
   animation: none;
 }
+
+.zodiac-star-ghost {
+  pointer-events: none;
+  opacity: 0.55;
+  color: var(--muted-foreground);
+}

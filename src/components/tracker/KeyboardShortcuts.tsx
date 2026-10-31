@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTracker } from "@/lib/tracker/store";
 
-const TAB_ORDER = ["today", "stats", "week", "shop", "wheel", "chronicle", "settings"];
+const TAB_ORDER = ["today", "stats", "week", "shop", "chronicle", "settings"];
 
 function isTyping(el: EventTarget | null): boolean {
   const t = el as HTMLElement | null;
@@ -17,7 +17,7 @@ function isTyping(el: EventTarget | null): boolean {
 
 /**
  * Global shortcuts: Space = pause/resume Pomodoro, N = new task,
- * 1–7 = jump between tabs. Ignored while typing in a field.
+ * 1–6 = jump between tabs. Ignored while typing in a field.
  */
 export function KeyboardShortcuts() {
   const { timer, pauseTimer, startTimer, data } = useTracker();
@@ -42,7 +42,7 @@ export function KeyboardShortcuts() {
           input.scrollIntoView({ block: "center", behavior: "smooth" });
           input.focus();
         }
-      } else if (/^[1-7]$/.test(e.key)) {
+      } else if (/^[1-6]$/.test(e.key)) {
         const value = TAB_ORDER[Number(e.key) - 1];
         if (value) window.dispatchEvent(new CustomEvent("ppr:goto-tab", { detail: value }));
       }
