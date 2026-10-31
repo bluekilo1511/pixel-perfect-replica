@@ -390,7 +390,7 @@ export function PetWidget() {
   return (
     <section className="glass glass-glow p-5" data-pet-interactions>
       <JournalModal open={journalOpen} onClose={() => setJournalOpen(false)} />
-      <div className="grid gap-5 md:grid-cols-[auto_1fr_auto] md:items-center">
+      <div className="grid gap-5 xl:grid-cols-[auto_1fr_auto] xl:items-center">
         <div className="mx-auto w-fit">
           <Button
             type="button"
@@ -694,64 +694,66 @@ export function PetWidget() {
               </p>
             </div>
           )}
-        </div>
-
-        <div className="rounded-2xl border border-border/60 bg-card/50 p-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-lg px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => setPetLogOpen((v) => !v)}
-          >
-            <span>📖 Nhật ký của {petTitle(pet)}</span>
-            <span className="flex items-center gap-2">
-              <span
-                role="button"
-                tabIndex={0}
-                title="Pet nhìn lại tuần này (thứ Hai → hôm qua) và chấm một điểm"
-                className="rounded-full bg-secondary px-2 py-0.5 text-[10px] normal-case tracking-normal hover:bg-secondary/70"
-                onClick={(ev) => {
-                  ev.stopPropagation();
-                  const entry = petWeeklyReview(data);
-                  if (!entry) {
-                    toast("Tuần mới bắt đầu, chưa có gì để chấm 🙂");
-                    return;
-                  }
-                  update((d) => ({ ...d, petLog: [entry, ...d.petLog].slice(0, PET_LOG_MAX) }));
-                  setPetLogOpen(true);
-                  toast("🐾 Pet vừa chấm xong tuần của bạn!");
-                }}
-                onKeyDown={(ev) => {
-                  if (ev.key === "Enter" || ev.key === " ") {
-                    ev.preventDefault();
-                    (
-                      ev.currentTarget.parentElement?.previousElementSibling as HTMLElement
-                    )?.click();
-                  }
-                }}
-              >
-                🐾 Chấm tuần
+          <div className="rounded-2xl border border-border/60 bg-card/50 p-3">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-lg px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setPetLogOpen((v) => !v)}
+            >
+              <span>📖 Nhật ký của {petTitle(pet)}</span>
+              <span className="flex items-center gap-2">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  title="Pet nhìn lại tuần này (thứ Hai → hôm qua) và chấm một điểm"
+                  className="rounded-full bg-secondary px-2 py-0.5 text-[10px] normal-case tracking-normal hover:bg-secondary/70"
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    const entry = petWeeklyReview(data);
+                    if (!entry) {
+                      toast("Tuần mới bắt đầu, chưa có gì để chấm 🙂");
+                      return;
+                    }
+                    update((d) => ({ ...d, petLog: [entry, ...d.petLog].slice(0, PET_LOG_MAX) }));
+                    setPetLogOpen(true);
+                    toast("🐾 Pet vừa chấm xong tuần của bạn!");
+                  }}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter" || ev.key === " ") {
+                      ev.preventDefault();
+                      (
+                        ev.currentTarget.parentElement?.previousElementSibling as HTMLElement
+                      )?.click();
+                    }
+                  }}
+                >
+                  🐾 Chấm tuần
+                </span>
+                {petLogOpen ? "▾" : "▸"}
               </span>
-              {petLogOpen ? "▾" : "▸"}
-            </span>
-          </button>
-          {petLogOpen && (
-            <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto text-left">
-              {data.petLog.length === 0 && (
-                <li className="text-xs text-muted-foreground">
-                  Chưa có gì — pet sẽ tự ghi lại khi lên cấp, hạ boss, đi thám hiểm, được cho ăn…
-                </li>
-              )}
-              {data.petLog.map((e) => (
-                <li key={e.id} className="flex items-start gap-1.5 text-xs">
-                  <span aria-hidden>{petLogEmoji(e.kind)}</span>
-                  <span className="min-w-0 flex-1">{e.text}</span>
-                  <span className="shrink-0 text-[10px] text-muted-foreground">
-                    {new Date(e.at).toLocaleDateString("vi-VN", { month: "short", day: "numeric" })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+            </button>
+            {petLogOpen && (
+              <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto text-left">
+                {data.petLog.length === 0 && (
+                  <li className="text-xs text-muted-foreground">
+                    Chưa có gì — pet sẽ tự ghi lại khi lên cấp, hạ boss, đi thám hiểm, được cho ăn…
+                  </li>
+                )}
+                {data.petLog.map((e) => (
+                  <li key={e.id} className="flex items-start gap-1.5 text-xs">
+                    <span aria-hidden>{petLogEmoji(e.kind)}</span>
+                    <span className="min-w-0 flex-1">{e.text}</span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                      {new Date(e.at).toLocaleDateString("vi-VN", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <div className="rounded-2xl bg-secondary p-4 text-center">
