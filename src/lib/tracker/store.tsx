@@ -60,6 +60,7 @@ import {
 import { claimChallenge as claimChallengeRule, recordInterruption } from "./model";
 import { pushDueExtras } from "./tkb";
 import { bossCounterAttack, defeatBoss, type DailyBossState } from "./boss";
+import { withWeeklyReview } from "@/lib/tracker/petLog";
 import { logPetEvent, withPetLog } from "./petLog";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import {
@@ -526,6 +527,16 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     const iv = setInterval(tick, 10 * 60 * 1000);
     return () => clearInterval(iv);
   }, [ready]);
+
+  // 📋 Weekly review: mỗi Chủ nhật mở app, pet chấm tuần vừa qua vào nhật ký.
+  useEffect(() => {
+    if (!ready) return;
+    const now = new Date();
+    if (now.getDay() !== 0) return;
+    const today = dateStr(now);
+    if (dataRef.current.lastPetReview === today) return;
+    update((d) => ({ ...withWeeklyReview(d, now), lastPetReview: today }));
+  }, [ready, update]);
 
   // ⚡ Auto-spin: quay giùm mình khi mở app (tuỳ chọn trong vòng quay).
   // Miễn phí trước, cuối tuần ưu tiên MEGA; ngày thường giữ 2 lượt cho MEGA.

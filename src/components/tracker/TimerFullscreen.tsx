@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META } from "@/lib/tracker/model";
-import { ACCESSORIES, ACCESSORY_UI, MOOD_META, moodOf, SPECIES } from "@/lib/tracker/gamify";
+import { ACCESSORIES, ACCESSORY_UI, moodOf, SPECIES } from "@/lib/tracker/gamify";
 import { petEmoji } from "@/lib/tracker/extras";
+import { timerPetState } from "@/lib/tracker/timerPet";
 import { addScratch, promoteScratch, removeScratch } from "@/lib/tracker/scratch";
 import { dateStr } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ export function TimerFullscreen() {
   const R = 128;
   const C = 2 * Math.PI * R;
   const pet = data.petState;
+  const petR = timerPetState(pct, running);
   const mood = moodOf(pet);
   const calm = data.settings.batterySaver === true;
   const meta = KIND_META[task.kind];
@@ -201,7 +203,9 @@ export function TimerFullscreen() {
           </div>
 
           <span
-            className={`relative block text-5xl leading-none ${running ? "animate-pet-idle" : "animate-pet-dance"}`}
+            className={`relative block text-5xl leading-none ${
+              petR.anim === "dance" ? "animate-pet-dance" : "animate-pet-idle"
+            }`}
           >
             {pet.accessories.back && (
               <span className={`absolute ${ACCESSORY_UI.back[pet.species]}`} aria-hidden>
@@ -218,7 +222,7 @@ export function TimerFullscreen() {
             )}
           </span>
           <span className="text-sm text-muted-foreground">
-            {MOOD_META[mood].face} {SPECIES[pet.species].name} đếm giờ cùng bạn…
+            {petR.face} {SPECIES[pet.species].name} {petR.say}
           </span>
 
           <div className="flex flex-wrap items-center justify-center gap-3">

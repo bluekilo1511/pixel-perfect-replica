@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { defaultPet, type Species } from "./gamify";
-import { appendPetLog, normalizePetLog, petLogEmoji, withPetLog, type PetLogEntry } from "./petLog";
+import {
+  appendPetLog,
+  normalizePetLog,
+  petLogEmoji,
+  petWeeklyReview,
+  withPetLog,
+  withWeeklyReview,
+  type PetLogEntry,
+} from "./petLog";
 import { petTitle, tierOf } from "./extras";
 import { defaultData, type AppData } from "./model";
 
@@ -87,5 +95,51 @@ describe("logPetEvent", () => {
     expect(log).toHaveLength(2);
     expect(tierOf(3)).toBe(1);
     expect(tierOf(6)).toBe(2);
+  });
+});
+
+describe("petWeeklyReview", () => {
+  const day = (d: AppData, iso: string, stats: { tasks: number; focusMin: number }): AppData => {
+    d.dailyStats[iso] = { water: 0, treats: 0, pomodoros: 0, ...stats };
+    return d;
+  };
+  // 2026-10-31 is a Saturday: Monday..Friday = 5 reviewed days, window Mon..Fri…
+  // Actually Mon 26th..Fri 30th (yesterday), so 5 days graded.
+  const satMorning = new Date("2026-10-31T09:00:00");
+  const d26 = (n: number) => `2026-10-${String(26 + n).padStart(2, "0")}`;
+
+  it("returns null before there is a past day to grade (Monday)", () => {
+    const d = dataWithPet(4);
+    expect(petWeeklyReview(d, new Date("2026-11-02T09:00:00"))).toBeNull();
+  });
+
+  it("grades a hard-working week 10/10", () => {
+    let d = dataWithPet(4);
+    for (let i = 0; i < 5; i++) d = day(d, d26(i), { tasks: 5, focusMin: 100 });
+    const e = petWeeklyReview(d, satMorning)!;
+    expect(e.kind).toBe("review");
+    expect(e.text).toContain("chấm 10/10");
+    expect(e.text).toContain("25 nhiệm vụ");
+  });
+
+  it("grumbles about an empty week", () => {
+    const e = petWeeklyReview(dataWithPet(4), satMorning)!;
+    expect(e.text).toContain("Bỏ 5 ngày");
+  });
+
+  it("gives a gentle 7.5 for a decent week", () => {
+    let d = dataWithPet(4);
+    for (let i = 0; i < 2; i++) d = day(d, d26(i), { tasks: 4, focusMin: 30 });
+    const e = petWeeklyReview(d, satMorning)!;
+    expect(e.text).toContain("7.5");
+  });
+
+  it("withWeeklyReview prepends the entry to the journal", () => {
+    const d = withWeeklyReview(dataWithPet(4), satMorning);
+    expect(d.petLog[0]!.kind).toBe("review");
+  });
+
+  it("emoji map covers the review kind", () => {
+    expect(petLogEmoji("review")).toBe("📋");
   });
 });

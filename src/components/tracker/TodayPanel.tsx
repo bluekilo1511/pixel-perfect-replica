@@ -3,6 +3,7 @@ import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { PetWidget } from "./PetWidget";
 import { SpecialDaysCard } from "./SpecialDaysCard";
+import { MorningBriefingCard } from "./MorningBriefingCard";
 import { NextSlotCard } from "./NextSlotCard";
 import { TomorrowPrepCard } from "./TomorrowPrepCard";
 import { ExtraScheduleCard } from "./ExtraScheduleCard";
@@ -1218,6 +1219,7 @@ export function TodayPanel() {
             <NotesCard />
           </div>
           <div className="space-y-5">
+            <MorningBriefingCard />
             <PetWidget />
             <section className="glass p-5">
               <div className="mb-4 flex items-center justify-between">

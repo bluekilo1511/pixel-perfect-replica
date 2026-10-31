@@ -6,7 +6,8 @@ import type { AppData } from "./model";
 export const PET_LOG_MAX = 60;
 export const PET_LOG_TEXT_MAX = 120;
 
-export type PetLogKind = "level" | "evolution" | "boss" | "raid" | "expedition" | "feed" | "hatch";
+export type PetLogKind =
+  "level" | "evolution" | "boss" | "raid" | "expedition" | "feed" | "hatch" | "review";
 
 const KINDS: readonly PetLogKind[] = [
   "level",
@@ -16,6 +17,7 @@ const KINDS: readonly PetLogKind[] = [
   "expedition",
   "feed",
   "hatch",
+  "review",
 ];
 
 export interface PetLogEntry {
@@ -37,6 +39,7 @@ export const petLogEmoji = (kind: PetLogKind): string =>
     expedition: "🧭",
     feed: "🍖",
     hatch: "🎉",
+    review: "📋",
   })[kind];
 
 /** Accepts old/new JSON and keeps at most PET_LOG_MAX entries, newest first. */
@@ -93,4 +96,78 @@ export function withPetLog(prev: AppData, next: AppData): AppData {
       ? ["evolution", `${petEmoji(pet)} ${petTitle(pet)} đã tiến hóa — dạng mới thật oai!`]
       : ["level", `${petTitle(pet)} đã lên cấp ${lvl1} 💫`];
   return { ...next, petLog: appendPetLog(next.petLog, entry[0], entry[1]) };
+}
+
+// ---- 🐾 Weekly review: the pet grades the week so far in its journal ----
+
+/** Local YYYY-MM-DD for a Date (same rule as model.dateStr, kept local to avoid a cycle). */
+const isoOf = (d: Date): string => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+const addDaysIso = (iso: string, n: number): string => {
+  const y = Number(iso.slice(0, 4));
+  const m = Number(iso.slice(5, 7));
+  const day = Number(iso.slice(8, 10));
+  const d = new Date(Date.UTC(y, m - 1, day));
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/** Monday of the week containing `date` (weeks start Monday, like the raid). */
+export const weekMonday = (date: string): string => {
+  const y = Number(date.slice(0, 4));
+  const m = Number(date.slice(5, 7));
+  const day = Number(date.slice(8, 10));
+  const dow = new Date(Date.UTC(y, m - 1, day)).getUTCDay(); // 0 = Sunday
+  return addDaysIso(date, dow === 0 ? -6 : 1 - dow);
+};
+
+/**
+ * The pet looks back over Monday..yesterday of the current week and writes one
+ * honest line into its journal. Returns null before there is anything to grade
+ * (e.g. a Monday morning) so nothing is logged twice for an empty week.
+ */
+export function petWeeklyReview(data: AppData, now = new Date()): PetLogEntry | null {
+  const today = isoOf(now);
+  const monday = weekMonday(today);
+  const yesterday = addDaysIso(today, -1);
+  if (monday > yesterday) return null; // the week just started
+
+  let tasks = 0;
+  let focusMin = 0;
+  let emptyDays = 0;
+  let days = 0;
+  for (let d = monday; d <= yesterday; d = addDaysIso(d, 1)) {
+    const s = data.dailyStats[d];
+    days += 1;
+    if (!s || (s.tasks === 0 && s.focusMin === 0)) {
+      emptyDays += 1;
+      continue;
+    }
+    tasks += s.tasks;
+    focusMin += s.focusMin;
+  }
+  if (days === 0) return null;
+
+  const pet = data.petState;
+  let text: string;
+  if (tasks >= 20 || focusMin >= 420) {
+    text = `Tuần này ${tasks} nhiệm vụ / ${focusMin}p tập trung — ${petEmoji(pet)} chấm 10/10, chủ nhân là cỗ máy học tập!`;
+  } else if (emptyDays >= 5) {
+    text = `Bỏ ${emptyDays} ngày trống trơn… ${petEmoji(pet)} nằm chờ chủ nhân cả tuần 😤 tuần sau chăm hơn nha!`;
+  } else if (tasks >= 8 || focusMin >= 120) {
+    text = `Tuần này ${tasks} nhiệm vụ / ${focusMin}p. Không tệ, ${petEmoji(pet)} chấm 7.5 — giỏi lắm!`;
+  } else {
+    text = `Tuần này ${tasks} nhiệm vụ / ${focusMin}p tập trung. ${petEmoji(pet)} tin tuần sau sẽ bùng nổ hơn! 🐾`;
+  }
+  return { id: newId(), kind: "review", text, at: now.toISOString() };
+}
+
+/** Prepends the weekly review entry (if any) to the pet journal. Pure. */
+export function withWeeklyReview(data: AppData, now = new Date()): AppData {
+  const entry = petWeeklyReview(data, now);
+  if (!entry) return data;
+  return { ...data, petLog: [entry, ...data.petLog].slice(0, PET_LOG_MAX) };
 }

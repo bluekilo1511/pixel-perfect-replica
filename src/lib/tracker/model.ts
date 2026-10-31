@@ -302,6 +302,7 @@ export interface AppData {
   gradeTargets: Record<string, number>; // per-subject target grade (see grades.ts)
   journal: JournalEntry[]; // hidden personal diary, opened from the wall bookshelf
   petLog: PetLogEntry[]; // pet journal: level-ups, evolutions, bosses, expeditions…
+  lastPetReview?: string | null; // YYYY-MM-DD of the last automatic Sunday review
   weeklyGoal: WeeklyGoalState;
   extraSchedule: ExtraScheduleItem[]; // quick one-off reminders (see tkb.ts)
   extraLog: string[]; // "YYYY-MM-DD:extraId" already pushed to the task list
@@ -442,6 +443,7 @@ export function defaultData(): AppData {
     weekGoals: [],
     journal: [],
     petLog: [],
+    lastPetReview: null,
     weeklyGoal: { minutes: 300, celebratedWeek: null },
     extraSchedule: [],
     extraLog: [],
@@ -837,6 +839,7 @@ export function migrate(raw: unknown): AppData {
     weekGoals: normalizeWeekGoals(r.weekGoals),
     journal: normalizeJournal(r.journal),
     petLog: normalizePetLog(r.petLog),
+    ...(typeof r.lastPetReview === "string" ? { lastPetReview: r.lastPetReview } : {}),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
       ? { ownerName: r.ownerName.trim().slice(0, 30) }
       : {}),
@@ -895,9 +898,24 @@ export function normalizeMarket(raw: unknown): MarketState {
       if (typeof v === "string") bought[k as keyof MarketState["bought"]] = v;
     }
   }
+  const haggle: MarketState["haggle"] = {};
+  if (r.haggle && typeof r.haggle === "object") {
+    for (const [k, v] of Object.entries(r.haggle as Record<string, unknown>)) {
+      if (!v || typeof v !== "object") continue;
+      const h = v as Record<string, unknown>;
+      if (typeof h.week !== "string") continue;
+      const win = typeof h.win === "number" && h.win >= 0 && h.win <= 2 ? Math.floor(h.win) : 0;
+      const picked =
+        typeof h.picked === "number" && h.picked >= 0 && h.picked <= 2
+          ? Math.floor(h.picked)
+          : null;
+      haggle[k] = { week: h.week, win, picked };
+    }
+  }
   return {
     lastWeek: typeof r.lastWeek === "string" ? r.lastWeek : null,
     bought,
+    haggle,
   };
 }
 

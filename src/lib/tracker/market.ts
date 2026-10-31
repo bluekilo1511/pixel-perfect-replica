@@ -186,12 +186,70 @@ export function weekStart(d: Date): string {
   return shiftDate(date, -back);
 }
 
+/** One haggling minigame: 3 crates, one hides the 20% discount. One try per item per week. */
+export interface MarketHaggle {
+  week: string; // weekStart the deal belongs to
+  win: number; // lucky crate index 0..2 (the shopkeeper's secret)
+  picked: number | null; // crate the user opened; null until the minigame is played
+}
+
 export interface MarketState {
   lastWeek: string | null;
   bought: Partial<Record<MarketItemId, string>>; // itemId -> weekStart it was bought in
+  haggle: Record<string, MarketHaggle>; // itemId -> this week's deal state
 }
 
-export const defaultMarket = (): MarketState => ({ lastWeek: null, bought: {} });
+export const defaultMarket = (): MarketState => ({ lastWeek: null, bought: {}, haggle: {} });
+
+/** Winning the haggle cuts 20% off the final price. */
+export const HAGGLE_DISCOUNT = 0.8;
+
+/** Opens the haggling minigame for one item this week (no-op if already dealt). */
+export function startHaggle<T extends MarketData>(
+  data: T,
+  id: MarketItemId,
+  now: Date,
+  random: () => number = Math.random,
+): T {
+  const week = weekStart(now);
+  const cur = data.market.haggle[id];
+  if (cur && cur.week === week) return data; // one deal per item per week
+  return {
+    ...data,
+    market: {
+      ...data.market,
+      haggle: {
+        ...data.market.haggle,
+        [id]: { week, win: Math.floor(random() * 3), picked: null },
+      },
+    },
+  };
+}
+
+/** Opens crate `pick` (0..2); the first open this week is final. Pure. */
+export function resolveHaggle<T extends MarketData>(data: T, id: MarketItemId, pick: number): T {
+  const cur = data.market.haggle[id];
+  if (!cur || cur.picked !== null || pick < 0 || pick > 2) return data;
+  return {
+    ...data,
+    market: {
+      ...data.market,
+      haggle: { ...data.market.haggle, [id]: { ...cur, picked: pick } },
+    },
+  };
+}
+
+/** True when this week's haggle for `id` was played and won. */
+export function haggleWon(data: MarketData, id: MarketItemId, week: string): boolean {
+  const h = data.market.haggle[id];
+  return !!h && h.week === week && h.picked !== null && h.picked === h.win;
+}
+
+/** Final price: VIP tier cut, then a won haggle on top (never below 1 coin). */
+export function marketPriceWithHaggle(item: MarketItem, petState: PetState, won: boolean): number {
+  const base = marketPrice(item, petState);
+  return won ? Math.max(1, Math.floor(base * HAGGLE_DISCOUNT)) : base;
+}
 
 export type MarketBuyResult<T> =
   | {
@@ -248,7 +306,8 @@ export function buyMarket<T extends MarketData>(
   const minLevel = MARKET_ITEMS[id].minLevel;
   if (minLevel != null && data.game.level < minLevel) return { ok: false, reason: "locked" };
   const item = MARKET_ITEMS[id];
-  const price = marketPrice(item, data.petState);
+  const wonHaggle = haggleWon(data, id, week);
+  const price = marketPriceWithHaggle(item, data.petState, wonHaggle);
   if (data.game.catCoins < price) return { ok: false, reason: "not-enough-coins" };
 
   const base: T = {

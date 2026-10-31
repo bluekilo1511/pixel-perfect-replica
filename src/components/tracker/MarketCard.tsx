@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import {
   buyMarket,
+  haggleWon,
   MARKET_ITEMS,
   marketPrice,
+  marketPriceWithHaggle,
   marketStock,
+  resolveHaggle,
+  startHaggle,
   weekStart,
   type MarketItemId,
 } from "@/lib/tracker/market";
@@ -18,6 +23,7 @@ export function MarketCard() {
   const now = new Date();
   const stock = marketStock(now);
   const week = weekStart(now);
+  const [openHaggle, setOpenHaggle] = useState<MarketItemId | null>(null);
 
   return (
     <section className="glass p-5">
@@ -41,8 +47,12 @@ export function MarketCard() {
           const ownedDecor =
             (id === "galaxy" || id === "starClock" || id === "moonLamp" || id === "phoenix") &&
             data.petState.decorOwned.includes(id);
-          const price = marketPrice(m, data.petState);
-          const discounted = price < m.price;
+          const won = haggleWon(data, id, week);
+          const price = marketPriceWithHaggle(m, data.petState, won);
+          const tierPrice = marketPrice(m, data.petState);
+          const deal = data.market.haggle[id];
+          const dealt = !!deal && deal.week === week;
+          const haggleOpen = openHaggle === id;
           return (
             <li
               key={id}
@@ -63,44 +73,100 @@ export function MarketCard() {
                 <Button size="sm" variant="outline" disabled>
                   🔒 Cần Lv {m.minLevel}
                 </Button>
+              ) : haggleOpen && !dealt ? (
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">
+                    Chọn 1 rương — 1 trong 3 giấu ưu đãi 🤝
+                  </p>
+                  <div className="flex justify-center gap-1">
+                    {[0, 1, 2].map((crate) => (
+                      <Button
+                        key={crate}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2"
+                        onClick={() => {
+                          const d1 = startHaggle(data, id, now);
+                          const d2 = resolveHaggle(d1, id, crate);
+                          update(() => d2);
+                          const h = d2.market.haggle[id];
+                          const wonNow = !!h && h.picked === h.win;
+                          toast[wonNow ? "success" : "info"](
+                            wonNow
+                              ? "🤝 Đàm phán thần thánh! Giảm 20% món này tuần này"
+                              : "😤 Ông chủ lắc đầu… không giảm được gì",
+                          );
+                        }}
+                      >
+                        🎁
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const r = buyMarket(data, id, new Date());
-                    if (!r.ok) {
-                      toast.error(
-                        r.reason === "not-enough-coins"
-                          ? "Chưa đủ 😺 — làm nhiệm vụ thêm nào!"
-                          : r.reason === "owned"
-                            ? "Bạn đang sở hữu món decor này rồi ✨"
-                            : r.reason === "locked"
-                              ? `🔒 Cần Lv ${m.minLevel} mới mua được món này`
-                              : "Hiện không mua được món này",
-                      );
-                      return;
-                    }
-                    update(() => r.data);
-                    toast.success(r.message);
-                    if (r.petEvolved) {
-                      levelUpFx();
-                      showEvolution({
-                        from: petEmoji(data.petState),
-                        to: petEmoji(r.data.petState),
-                        title: petTitle(r.data.petState),
-                      });
-                    }
-                  }}
-                >
-                  {discounted ? (
-                    <span title="🐾 Ưu đãi thú cưng tier 2: giảm 10%">
-                      <s className="mr-1 opacity-60">{m.price}</s>
-                      {price} 😺
-                    </span>
-                  ) : (
-                    `${m.price} 😺`
+                <div className="space-y-1">
+                  {dealt && (
+                    <p
+                      className="text-[10px] text-muted-foreground"
+                      title="Mỗi món chỉ trả giá 1 lần/tuần"
+                    >
+                      {won ? "🤝 Đã trả giá: -20%" : "🤝 Đã trả giá: thất bại"}
+                    </p>
                   )}
-                </Button>
+                  {!dealt && (
+                    <button
+                      type="button"
+                      className="mx-auto block text-[10px] text-primary hover:underline"
+                      title="Thử trả giá: 1/3 rương giấu ưu đãi giảm 20%"
+                      onClick={() => setOpenHaggle(id)}
+                    >
+                      🤝 Trả giá?
+                    </button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const r = buyMarket(data, id, new Date());
+                      if (!r.ok) {
+                        toast.error(
+                          r.reason === "not-enough-coins"
+                            ? "Chưa đủ 😺 — làm nhiệm vụ thêm nào!"
+                            : r.reason === "owned"
+                              ? "Bạn đang sở hữu món decor này rồi ✨"
+                              : r.reason === "locked"
+                                ? `🔒 Cần Lv ${m.minLevel} mới mua được món này`
+                                : "Hiện không mua được món này",
+                        );
+                        return;
+                      }
+                      update(() => r.data);
+                      toast.success(r.message);
+                      if (r.petEvolved) {
+                        levelUpFx();
+                        showEvolution({
+                          from: petEmoji(data.petState),
+                          to: petEmoji(r.data.petState),
+                          title: petTitle(r.data.petState),
+                        });
+                      }
+                    }}
+                  >
+                    {price < m.price ? (
+                      <span
+                        title={
+                          won
+                            ? "🤝 Giá sau khi trả giá thành công (-20%)"
+                            : "🐾 Ưu đãi thú cưng tier 2: giảm 10%"
+                        }
+                      >
+                        <s className="mr-1 opacity-60">{m.price}</s>
+                        {price} 😺
+                      </span>
+                    ) : (
+                      `${m.price} 😺`
+                    )}
+                  </Button>
+                </div>
               )}
             </li>
           );

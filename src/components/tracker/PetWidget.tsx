@@ -25,7 +25,7 @@ import { JournalModal } from "./JournalModal";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { loadSession, saveSession } from "@/lib/tracker/sessionPersist";
 import { celebrate } from "@/lib/tracker/effects";
-import { logPetEvent, petLogEmoji } from "@/lib/tracker/petLog";
+import { logPetEvent, petLogEmoji, petWeeklyReview, PET_LOG_MAX } from "@/lib/tracker/petLog";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -703,7 +703,36 @@ export function PetWidget() {
             onClick={() => setPetLogOpen((v) => !v)}
           >
             <span>📖 Nhật ký của {petTitle(pet)}</span>
-            <span>{petLogOpen ? "▾" : "▸"}</span>
+            <span className="flex items-center gap-2">
+              <span
+                role="button"
+                tabIndex={0}
+                title="Pet nhìn lại tuần này (thứ Hai → hôm qua) và chấm một điểm"
+                className="rounded-full bg-secondary px-2 py-0.5 text-[10px] normal-case tracking-normal hover:bg-secondary/70"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  const entry = petWeeklyReview(data);
+                  if (!entry) {
+                    toast("Tuần mới bắt đầu, chưa có gì để chấm 🙂");
+                    return;
+                  }
+                  update((d) => ({ ...d, petLog: [entry, ...d.petLog].slice(0, PET_LOG_MAX) }));
+                  setPetLogOpen(true);
+                  toast("🐾 Pet vừa chấm xong tuần của bạn!");
+                }}
+                onKeyDown={(ev) => {
+                  if (ev.key === "Enter" || ev.key === " ") {
+                    ev.preventDefault();
+                    (
+                      ev.currentTarget.parentElement?.previousElementSibling as HTMLElement
+                    )?.click();
+                  }
+                }}
+              >
+                🐾 Chấm tuần
+              </span>
+              {petLogOpen ? "▾" : "▸"}
+            </span>
           </button>
           {petLogOpen && (
             <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto text-left">

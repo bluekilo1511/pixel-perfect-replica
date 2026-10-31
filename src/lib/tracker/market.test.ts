@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buyMarket,
   defaultMarket,
+  haggleWon,
+  marketPriceWithHaggle,
+  resolveHaggle,
+  startHaggle,
   MARKET_ITEMS,
   marketPrice,
   marketStock,
@@ -302,5 +306,63 @@ describe("owned decor guard", () => {
       expect(again.ok).toBe(false);
       if (!again.ok) expect(again.reason).toBe("owned");
     }
+  });
+});
+
+// ---- 🤝 Trả giá (haggling) ----
+describe("haggling", () => {
+  const deal = () =>
+    ({
+      market: defaultMarket(),
+      petState: defaultPet(),
+      game: { catCoins: 999, level: 10 },
+      inventory: { freezes: 0, materials: emptyMaterials() },
+    }) as unknown as MarketData;
+
+  it("startHaggle opens one deal per item per week and never re-rolls", () => {
+    const d = startHaggle(deal(), "honey", base, () => 0.9); // win index 2
+    const h = d.market.haggle.honey!;
+    expect(h.week).toBe(weekStart(base));
+    expect(h.win).toBe(2);
+    expect(h.picked).toBeNull();
+    // same week: unchanged; next week: fresh deal
+    expect(startHaggle(d, "honey", base)).toBe(d);
+    const d2 = startHaggle(d, "honey", nextMonday, () => 0);
+    expect(d2.market.haggle.honey!.week).toBe(weekStart(nextMonday));
+  });
+
+  it("resolveHaggle records the first pick and ignores later ones", () => {
+    let d = startHaggle(deal(), "honey", base, () => 0); // win index 0
+    d = resolveHaggle(d, "honey", 0);
+    expect(d.market.haggle.honey!.picked).toBe(0);
+    const d2 = resolveHaggle(d, "honey", 1);
+    expect(d2).toBe(d); // one try only
+  });
+
+  it("a won haggle cuts 20% off the purchase price", () => {
+    let d = startHaggle(deal(), "shield", base, () => 0); // win 0
+    d = resolveHaggle(d, "shield", 0);
+    const item = MARKET_ITEMS.shield; // 20 coins
+    expect(haggleWon(d, "shield", weekStart(base))).toBe(true);
+    expect(marketPriceWithHaggle(item, d.petState, true)).toBe(16); // floor(20*0.8)
+    const r = buyMarket(d, "shield", base);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.data.game.catCoins).toBe(999 - 16);
+  });
+
+  it("a lost haggle keeps the full price", () => {
+    let d = startHaggle(deal(), "shield", base, () => 0); // win 0
+    d = resolveHaggle(d, "shield", 2);
+    const r = buyMarket(d, "shield", base);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.data.game.catCoins).toBe(999 - MARKET_ITEMS.shield.price);
+  });
+
+  it("the discount stacks with nothing else and never breaks the coin floor", () => {
+    const d = startHaggle(deal(), "shield", base, () => 0.5); // win 1
+    const resolved = resolveHaggle(d, "shield", 1);
+    const item = MARKET_ITEMS.shield; // 20 coins
+    expect(marketPriceWithHaggle(item, resolved.petState, true)).toBe(16);
+    expect(marketPriceWithHaggle(item, resolved.petState, false)).toBe(20);
   });
 });
