@@ -31,6 +31,7 @@ import { dateStr } from "@/lib/tracker/model";
 import { MarketCard } from "./MarketCard";
 import { ConvenienceCard } from "./ConvenienceCard";
 import { celebrate } from "@/lib/tracker/effects";
+import { logPetEvent } from "@/lib/tracker/petLog";
 
 export function PetShop() {
   const { data, update } = useTracker();
@@ -58,15 +59,21 @@ export function PetShop() {
   const applyItem = (id: string) => {
     const it = CONSUMABLES[id]!;
     if (!inv.items[id]) return;
-    update((d) => ({
-      ...d,
-      dailyStats: bumpStats(d.dailyStats, dateStr(), { treats: 1 }),
-      petState: bumpPet(d.petState, it.hunger, it.happiness),
-      inventory: {
-        ...d.inventory,
-        items: { ...d.inventory.items, [id]: (d.inventory.items[id] ?? 1) - 1 },
-      },
-    }));
+    update((d) =>
+      logPetEvent(
+        {
+          ...d,
+          dailyStats: bumpStats(d.dailyStats, dateStr(), { treats: 1 }),
+          petState: bumpPet(d.petState, it.hunger, it.happiness),
+          inventory: {
+            ...d.inventory,
+            items: { ...d.inventory.items, [id]: (d.inventory.items[id] ?? 1) - 1 },
+          },
+        },
+        "feed",
+        `🍖 ${petEmoji(d.petState)} được cho ăn ${it.emoji} — bụng no, vui vẻ hơn!`,
+      ),
+    );
     ting();
     toast(`${petEmoji(pet)} Măm măm! Cảm ơn ${it.emoji}`);
   };
@@ -226,14 +233,19 @@ export function PetShop() {
                     onClick={() =>
                       gem(
                         m.price,
-                        (d) => ({
-                          ...d,
-                          petState: {
-                            ...d.petState,
-                            ownedSpecies: [...d.petState.ownedSpecies, sp],
-                            species: sp,
-                          },
-                        }),
+                        (d) =>
+                          logPetEvent(
+                            {
+                              ...d,
+                              petState: {
+                                ...d.petState,
+                                ownedSpecies: [...d.petState.ownedSpecies, sp],
+                                species: sp,
+                              },
+                            },
+                            "hatch",
+                            `🎉 Chào mừng thành viên mới: ${m.emoji} ${m.name} gia nhập!`,
+                          ),
                         `Đã mở khóa ${m.emoji} ${m.name}!`,
                       )
                     }

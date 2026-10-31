@@ -25,6 +25,7 @@ import { JournalModal } from "./JournalModal";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { loadSession, saveSession } from "@/lib/tracker/sessionPersist";
 import { celebrate } from "@/lib/tracker/effects";
+import { logPetEvent, petLogEmoji } from "@/lib/tracker/petLog";
 import { dateStr, POMODORO_PRESETS } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,7 +121,12 @@ export function PetWidget() {
       if (next === d.expedition) return d;
       ting();
       toast.success("🧭 Pet lên đường thám hiểm! 30 phút nữa sẽ trở về.");
-      return { ...d, expedition: next };
+      // The pet writes its own departure into the journal.
+      return logPetEvent(
+        { ...d, expedition: next },
+        "expedition",
+        `🧭 ${petTitle(pet)} lên đường thám hiểm — hẹn trở lại sau 30 phút!`,
+      );
     });
   };
   const pet = data.petState;
@@ -199,6 +205,7 @@ export function PetWidget() {
       ? Math.max(0, Math.ceil((restored.endAt - Date.now()) / 1000))
       : pomodoroMinutes * 60,
   );
+  const [petLogOpen, setPetLogOpen] = useState(false);
   const [bossActive, setBossActive] = useState(false);
   const [zen, setZen] = useState(false);
   const [warmup, setWarmup] = useState(restored.warmup); // 5-minute anti-procrastination session
@@ -686,6 +693,35 @@ export function PetWidget() {
                   : ` (còn cần ${Math.ceil(bossTaskHp / DAILY_BOSS_TASK_DAMAGE)} nhiệm vụ)`}
               </p>
             </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-card/50 p-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between rounded-lg px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => setPetLogOpen((v) => !v)}
+          >
+            <span>📖 Nhật ký của {petTitle(pet)}</span>
+            <span>{petLogOpen ? "▾" : "▸"}</span>
+          </button>
+          {petLogOpen && (
+            <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto text-left">
+              {data.petLog.length === 0 && (
+                <li className="text-xs text-muted-foreground">
+                  Chưa có gì — pet sẽ tự ghi lại khi lên cấp, hạ boss, đi thám hiểm, được cho ăn…
+                </li>
+              )}
+              {data.petLog.map((e) => (
+                <li key={e.id} className="flex items-start gap-1.5 text-xs">
+                  <span aria-hidden>{petLogEmoji(e.kind)}</span>
+                  <span className="min-w-0 flex-1">{e.text}</span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {new Date(e.at).toLocaleDateString("vi-VN", { month: "short", day: "numeric" })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 

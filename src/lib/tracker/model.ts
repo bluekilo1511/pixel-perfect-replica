@@ -70,6 +70,7 @@ import {
   type ExamScore,
 } from "./exams";
 import { normalizeJournal } from "./journal";
+import { appendPetLog, normalizePetLog, type PetLogEntry } from "./petLog";
 import {
   normalizeGradeEntries,
   normalizeGradeExtras,
@@ -300,6 +301,7 @@ export interface AppData {
   gradeExtras: GradeExtra[]; // "điểm dư" side notes until promoted into a column
   gradeTargets: Record<string, number>; // per-subject target grade (see grades.ts)
   journal: JournalEntry[]; // hidden personal diary, opened from the wall bookshelf
+  petLog: PetLogEntry[]; // pet journal: level-ups, evolutions, bosses, expeditions…
   weeklyGoal: WeeklyGoalState;
   extraSchedule: ExtraScheduleItem[]; // quick one-off reminders (see tkb.ts)
   extraLog: string[]; // "YYYY-MM-DD:extraId" already pushed to the task list
@@ -439,6 +441,7 @@ export function defaultData(): AppData {
     subjectNotes: {},
     weekGoals: [],
     journal: [],
+    petLog: [],
     weeklyGoal: { minutes: 300, celebratedWeek: null },
     extraSchedule: [],
     extraLog: [],
@@ -833,6 +836,7 @@ export function migrate(raw: unknown): AppData {
     gradeTargets: normalizeGradeTargets(r.gradeTargets),
     weekGoals: normalizeWeekGoals(r.weekGoals),
     journal: normalizeJournal(r.journal),
+    petLog: normalizePetLog(r.petLog),
     ...(typeof r.ownerName === "string" && r.ownerName.trim()
       ? { ownerName: r.ownerName.trim().slice(0, 30) }
       : {}),
@@ -1082,8 +1086,14 @@ export function completeTask(
     tasks: 1,
     ...pomodoroPatch,
   });
+  // The pet journals the daily boss when it falls (level-ups/evolutions are
+  // derived from the petState diff in the store, so they are not logged here).
+  const petLog = bossDefeated
+    ? appendPetLog(data.petLog, "boss", "⚔️ Bạn đã hạ Boss ngày! Thú cưng rất tự hào ⭐", now)
+    : data.petLog;
   const base: AppData = {
     ...data,
+    petLog,
     streak: recordCompletion(data.streak, today),
     petState: pet.pet,
     achievements,

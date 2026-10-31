@@ -8,6 +8,7 @@ import {
   gradeBand,
   gradeTarget,
   guessSemester,
+  gradeWhatIf,
   guessTypeFromTitle,
   groupAverage,
   normalizeGradeEntries,
@@ -307,5 +308,63 @@ describe("per-subject grade targets", () => {
 
   it("rounds stored targets to 0.1", () => {
     expect(setGradeTarget({}, "Toán", 8.55)).toEqual({ Toán: 8.6 });
+  });
+});
+
+describe("grade what-if", () => {
+  const txOnly = () =>
+    build([
+      { subject: "Toán", semester: 1, type: "tx", score: 7, title: "", date: "2026-01-10" },
+      { subject: "Toán", semester: 1, type: "tx", score: 7, title: "", date: "2026-01-20" },
+    ])!;
+  const withGk = () =>
+    build([
+      { subject: "Toán", semester: 1, type: "tx", score: 7, title: "", date: "2026-01-10" },
+      { subject: "Toán", semester: 1, type: "gk", score: 8, title: "", date: "2026-01-12" },
+    ])!;
+  const withCk = () =>
+    build([
+      { subject: "Toán", semester: 1, type: "tx", score: 7, title: "", date: "2026-01-10" },
+      { subject: "Toán", semester: 1, type: "ck", score: 9, title: "", date: "2026-01-20" },
+    ])!;
+  const full = () =>
+    build([
+      { subject: "Toán", semester: 1, type: "tx", score: 9, title: "", date: "2026-01-10" },
+      { subject: "Toán", semester: 1, type: "gk", score: 9, title: "", date: "2026-01-12" },
+    ])!;
+
+  it("projects (TX + CK) / 2 while GK is missing and not simulated", () => {
+    const r = gradeWhatIf(txOnly(), "Toán", 1, { ck: 9 });
+    expect(r.missing).toEqual(["gk", "ck"]);
+    expect(r.current).toBeNull();
+    expect(r.projected).toBe(8); // avgTX 7 → (7 + 9) / 2
+  });
+
+  it("uses the mean of three groups when GK exists", () => {
+    const r = gradeWhatIf(withGk(), "Toán", 1, { ck: 9 });
+    expect(r.missing).toEqual(["ck"]);
+    expect(r.current).toBeNull();
+    expect(r.projected).toBe(8); // (7 + 8 + 9) / 3
+  });
+
+  it("can simulate both missing columns at once", () => {
+    const r = gradeWhatIf(txOnly(), "Toán", 1, { gk: 7, ck: 8 });
+    expect(r.missing).toEqual(["gk", "ck"]);
+    expect(r.projected).toBe(7.3); // (7 + 7 + 8) / 3
+  });
+
+  it("keeps confirmed scores when a column is not simulated", () => {
+    const r = gradeWhatIf(withCk(), "Toán", 1, {});
+    expect(r.current).toBe(8); // (7 + 9) / 2
+    expect(r.projected).toBe(8);
+    expect(r.missing).toEqual(["gk"]);
+  });
+
+  it("clamps simulated scores to 0-10 and returns null without TX", () => {
+    expect(gradeWhatIf(full(), "Toán", 1, { ck: 25 }).projected).toBe(9.3); // ck clamped to 10 → (9+9+10)/3
+    const none = gradeWhatIf([], "Toán", 1, { ck: 5 });
+    expect(none.current).toBeNull();
+    expect(none.projected).toBeNull();
+    expect(none.missing).toEqual(["tx", "gk", "ck"]);
   });
 });

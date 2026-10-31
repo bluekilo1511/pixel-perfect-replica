@@ -13,6 +13,7 @@ import {
   gradeAdvice,
   gradeTarget,
   gradeBand,
+  gradeWhatIf,
   guessSemester,
   removeGradeEntry,
   removeGradeExtra,
@@ -52,6 +53,8 @@ export function GradeBookCard() {
   const [newSubject, setNewSubject] = useState("");
   const [extraLabel, setExtraLabel] = useState("");
   const [extraScore, setExtraScore] = useState("");
+  const [simGk, setSimGk] = useState("");
+  const [simCk, setSimCk] = useState("");
 
   const entries = active ? semesterEntries(data.gradeBook, active, semester) : [];
   const tx = entries.filter((e) => e.type === "tx");
@@ -64,6 +67,12 @@ export function GradeBookCard() {
   const targetNum = active ? gradeTarget(data.gradeTargets, active) : 8;
   const advice = active ? gradeAdvice(data.gradeBook, active, semester, targetNum) : null;
   const legacyCount = data.examScores.length;
+  const whatIf = active
+    ? gradeWhatIf(data.gradeBook, active, semester, {
+        gk: simGk.trim() === "" ? undefined : Number(simGk),
+        ck: simCk.trim() === "" ? undefined : Number(simCk),
+      })
+    : null;
 
   const addSubjectChip = () => {
     const name = newSubject.trim().slice(0, 24);
@@ -410,6 +419,63 @@ export function GradeBookCard() {
               />
             </span>
             {adviceLine && <p className="w-full text-sm text-foreground/90">{adviceLine}</p>}
+          </div>
+
+          <div className="mb-4 rounded-xl border border-border bg-card p-3">
+            <p className="mb-2 text-sm font-semibold">
+              🔮 Nếu mà…{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                — nhập điểm GK/CK dự kiến để xem môn này sẽ rơi vào khoảng nào
+              </span>
+            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex items-center gap-1">
+                GK dự kiến
+                <Input
+                  type="number"
+                  step="0.25"
+                  min={0}
+                  max={10}
+                  value={simGk}
+                  placeholder="—"
+                  aria-label="Điểm giữa kỳ giả định"
+                  className="h-7 w-16 text-xs tabular-nums"
+                  onChange={(e) => setSimGk(e.target.value)}
+                />
+              </label>
+              <label className="flex items-center gap-1">
+                CK dự kiến
+                <Input
+                  type="number"
+                  step="0.25"
+                  min={0}
+                  max={10}
+                  value={simCk}
+                  placeholder="—"
+                  aria-label="Điểm cuối kỳ giả định"
+                  className="h-7 w-16 text-xs tabular-nums"
+                  onChange={(e) => setSimCk(e.target.value)}
+                />
+              </label>
+              {active && whatIf && (
+                <span className="text-sm">
+                  {whatIf.projected !== null ? (
+                    <>
+                      → <span className="font-display text-base">{whatIf.projected}</span>
+                      {whatIf.projected >= targetNum
+                        ? " 🎯 đạt mục tiêu"
+                        : ` (còn ${Math.round((targetNum - whatIf.projected) * 10) / 10} nữa tới mục tiêu ${targetNum})`}
+                    </>
+                  ) : (
+                    <>
+                      {whatIf.missing.includes("tx")
+                        ? "Cần ít nhất 1 cột TX và 1 CK để dự đoán."
+                        : "Nhập CK dự kiến để dự đoán."}
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-3">

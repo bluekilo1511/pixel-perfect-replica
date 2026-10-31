@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import { toast } from "sonner";
 import {
@@ -59,6 +60,7 @@ import {
 import { claimChallenge as claimChallengeRule, recordInterruption } from "./model";
 import { pushDueExtras } from "./tkb";
 import { bossCounterAttack, defeatBoss, type DailyBossState } from "./boss";
+import { logPetEvent, withPetLog } from "./petLog";
 import { bumpPet, POMODORO_REWARD } from "./gamify";
 import {
   celebrate,
@@ -155,7 +157,20 @@ export const useTracker = () => {
 };
 
 export function TrackerProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(defaultData);
+  const [dataState, setDataState] = useState<AppData>(defaultData);
+  /**
+   * Every data mutation flows through here, so pet level-ups and evolutions
+   * are journalled automatically no matter which feature granted the XP
+   * (tasks, treats, potions, the market…).
+   */
+  const setData = useCallback((action: SetStateAction<AppData>) => {
+    setDataState((d) => {
+      const next =
+        typeof action === "function" ? (action as (prev: AppData) => AppData)(d) : action;
+      return withPetLog(d, next);
+    });
+  }, []);
+  const data = dataState;
   const [ready, setReady] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>("none");
@@ -194,7 +209,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     );
   }, [data, ready]);
 
-  const update = useCallback((fn: (d: AppData) => AppData) => setData((d) => fn(d)), []);
+  const update = useCallback((fn: (d: AppData) => AppData) => setData((d) => fn(d)), [setData]);
 
   // Keep the effect-sound switch, style and volume in sync with the saved setting.
   useEffect(() => {
@@ -303,7 +318,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const claimRaid = () => {
     const r = claimRaidRule(dataRef.current);
     if (!r.ok) return false;
-    setData(r.data);
+    setData(logPetEvent(r.data, "raid", "🐲 Hạ gục Boss tuần! Phần thưởng lớn đã về tay."));
     celebrate();
     toast.success("⚔️ Hạ Boss tuần! +40 😺 +8 🦎", { duration: 6000 });
     r.drops.forEach(announceDrop);
@@ -319,57 +334,60 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const finish = useCallback((id: string, fromTimer = false) => {
-    const prev = dataRef.current;
-    const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
-    const prevFormEmoji = petEmoji(dataRef.current.petState);
-    const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
-    if (!r.rewarded) return; // anti-spam
-    setData(r.data);
-    void saveSnapshot(r.data);
-    setTimer((t) => (t?.taskId === id ? null : t));
-    celebrate();
-    // A timed task finished by the clock (not the manual ✔ button) starts the
-    // same auto-break a pet Pomodoro gets — PetWidget listens for this event.
-    if (fromTimer && r.data.settings.autoBreak && r.data.settings.breakMinutes > 0) {
-      window.dispatchEvent(new CustomEvent("pp-auto-break"));
-    }
-    // Targeted undo: put back just this task record. Restoring the whole old
-    // snapshot would also roll back everything done since (other tasks, salary,
-    // spins…). Rewards stay granted — no accidental data loss.
-    const prevTask = prev.tasks.find((t) => t.id === id) ?? null;
-    toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
-      action: {
-        label: "Hoàn tác",
-        onClick: () => {
-          if (!prevTask) return;
-          setData((d) => ({
-            ...d,
-            tasks: d.tasks.some((t) => t.id === id)
-              ? d.tasks.map((t) => (t.id === id ? prevTask : t))
-              : [...d.tasks, prevTask],
-          }));
-          toast("↩️ Đã trả lại nhiệm vụ (phần thưởng giữ nguyên)");
+  const finish = useCallback(
+    (id: string, fromTimer = false) => {
+      const prev = dataRef.current;
+      const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
+      const prevFormEmoji = petEmoji(dataRef.current.petState);
+      const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
+      if (!r.rewarded) return; // anti-spam
+      setData(r.data);
+      void saveSnapshot(r.data);
+      setTimer((t) => (t?.taskId === id ? null : t));
+      celebrate();
+      // A timed task finished by the clock (not the manual ✔ button) starts the
+      // same auto-break a pet Pomodoro gets — PetWidget listens for this event.
+      if (fromTimer && r.data.settings.autoBreak && r.data.settings.breakMinutes > 0) {
+        window.dispatchEvent(new CustomEvent("pp-auto-break"));
+      }
+      // Targeted undo: put back just this task record. Restoring the whole old
+      // snapshot would also roll back everything done since (other tasks, salary,
+      // spins…). Rewards stay granted — no accidental data loss.
+      const prevTask = prev.tasks.find((t) => t.id === id) ?? null;
+      toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
+        action: {
+          label: "Hoàn tác",
+          onClick: () => {
+            if (!prevTask) return;
+            setData((d) => ({
+              ...d,
+              tasks: d.tasks.some((t) => t.id === id)
+                ? d.tasks.map((t) => (t.id === id ? prevTask : t))
+                : [...d.tasks, prevTask],
+            }));
+            toast("↩️ Đã trả lại nhiệm vụ (phần thưởng giữ nguyên)");
+          },
         },
-      },
-    });
-    onLevels(r.levelsGained, r.data.game.level);
-    announceDrop(r.drop);
-    announceAchievements(r.fresh);
-    if (r.petEvolved) {
-      levelUpFx();
-      evolutionFx();
-      setEvolution({
-        from: prevFormEmoji,
-        to: petEmoji(r.data.petState),
-        title: petTitle(r.data.petState),
       });
-      toast.success(
-        `${TIER_BADGE[tierOf(r.data.petState.petLevel)]} Thú cưng tiến hóa thành ${petTitle(r.data.petState)}!`,
-        { className: "glass-toast", duration: 6000 },
-      );
-    } else if (r.petLevels > 0) toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
-  }, []);
+      onLevels(r.levelsGained, r.data.game.level);
+      announceDrop(r.drop);
+      announceAchievements(r.fresh);
+      if (r.petEvolved) {
+        levelUpFx();
+        evolutionFx();
+        setEvolution({
+          from: prevFormEmoji,
+          to: petEmoji(r.data.petState),
+          title: petTitle(r.data.petState),
+        });
+        toast.success(
+          `${TIER_BADGE[tierOf(r.data.petState.petLevel)]} Thú cưng tiến hóa thành ${petTitle(r.data.petState)}!`,
+          { className: "glass-toast", duration: 6000 },
+        );
+      } else if (r.petLevels > 0) toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
+    },
+    [setData],
+  );
 
   // Timer tick based on wall clock → reaches 00:00 reliably even if tab was throttled.
   useEffect(() => {
@@ -473,7 +491,11 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         expedition.drops.forEach((drop) => {
           next = addMaterial(next, drop);
         });
-        d1 = next;
+        d1 = logPetEvent(
+          next,
+          "expedition",
+          `🧭 ${petTitle(next.petState)} thám hiểm về với ${expedition.drops.length} chiến lợi phẩm!`,
+        );
         ting();
         toast.success(`🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`);
         expedition.drops.forEach(announceDrop);
@@ -491,7 +513,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     check();
     const iv = setInterval(check, 20000);
     return () => clearInterval(iv);
-  }, [ready]);
+  }, [ready, setData]);
 
   // Time Capsule: silent snapshot every 12h.
   useEffect(() => {

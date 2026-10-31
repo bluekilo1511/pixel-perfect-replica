@@ -304,6 +304,46 @@ export function gradeAdvice(
   return null;
 }
 
+/**
+ * "Điều gì sẽ xảy ra nếu…?" — projects the semester grade when the missing
+ * GK and/or CK columns end up at the simulated scores. Formula follows
+ * subjectGrade: without a (real or simulated) GK the grade is (TX + CK) / 2,
+ * otherwise the mean of the three groups. Simulated scores are clamped 0–10.
+ */
+export interface GradeWhatIf {
+  current: number | null;
+  projected: number | null;
+  missing: ("tx" | "gk" | "ck")[];
+}
+
+export function gradeWhatIf(
+  entries: GradeEntry[],
+  subject: string,
+  semester: Semester,
+  simulation: { [K in GradeType]?: number | undefined },
+): GradeWhatIf {
+  const list = semesterEntries(entries, subject, semester);
+  const tx = groupAverage(list, "tx");
+  const gk = groupAverage(list, "gk");
+  const ck = groupAverage(list, "ck");
+  const missing: ("tx" | "gk" | "ck")[] = [];
+  if (tx === null) missing.push("tx");
+  if (gk === null) missing.push("gk");
+  if (ck === null) missing.push("ck");
+  const clamp = (v: number): number => Math.min(10, Math.max(0, v));
+  const simGk = simulation.gk !== undefined ? clamp(simulation.gk) : undefined;
+  const simCk = simulation.ck !== undefined ? clamp(simulation.ck) : undefined;
+  const gk2 = simGk !== undefined ? simGk : gk;
+  const ck2 = simCk !== undefined ? simCk : ck;
+  const current = subjectGrade(entries, subject, semester);
+  if (tx === null || ck2 === null) return { current, projected: null, missing };
+  // The formula follows subjectGrade: without a (real or simulated) GK the
+  // subject grade is (TX + CK) / 2, otherwise the mean of the three groups.
+  const projected =
+    gk2 === null ? round1((tx + ck2) / 2) : round1((tx + (gk2 as number) + ck2) / 3);
+  return { current, projected, missing };
+}
+
 /** Guesses the column type from a legacy score label ("giữa kỳ" → gk, "cuối kỳ" → ck, else tx). */
 export function guessTypeFromTitle(title: string): GradeType {
   const t = title.toLowerCase();
