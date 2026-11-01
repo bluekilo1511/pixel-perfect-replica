@@ -9,7 +9,6 @@ import { SubjectChartCard } from "@/components/tracker/SubjectChartCard";
 import { InterruptionChartCard } from "@/components/tracker/InterruptionChartCard";
 import { GradeBookCard } from "@/components/tracker/GradeBookCard";
 import { FocusJournalCard } from "@/components/tracker/FocusJournal";
-import { FlashcardsCard } from "@/components/tracker/FlashcardsCard";
 import { MonthlyReportCard } from "@/components/tracker/MonthlyReport";
 import { FriendViewCard } from "@/components/tracker/FriendView";
 import { Timetable } from "@/components/tracker/Timetable";
@@ -36,6 +35,7 @@ import { Flashbang } from "@/components/tracker/Flashbang";
 import { OriginOverlay } from "@/components/tracker/OriginOverlay";
 import { TimerFullscreen } from "@/components/tracker/TimerFullscreen";
 import { SettingsPanel } from "@/components/tracker/SettingsPanel";
+import { StudyTab } from "@/components/tracker/StudyTab";
 import { skyBand } from "@/lib/tracker/skyTime";
 
 export const Route = createFileRoute("/")({
@@ -107,6 +107,9 @@ function AppInner() {
         <TabsContent value="stats" className="mt-4 sm:mt-5">
           <StatsPanel />
         </TabsContent>
+        <TabsContent value="study" className="mt-4 sm:mt-5">
+          <StudyTab />
+        </TabsContent>
         <TabsContent value="week" className="mt-4 sm:mt-5">
           <Timetable />
           <div className="mt-4 sm:mt-5">
@@ -118,9 +121,6 @@ function AppInner() {
           <div className="mt-4 sm:mt-5">
             <Wheel />
           </div>
-        </TabsContent>
-        <TabsContent value="wheel" className="mt-4 sm:mt-5">
-          <Wheel />
         </TabsContent>
         <TabsContent value="chronicle" className="mt-4 sm:mt-5">
           <WeeklyReportCard />
@@ -204,7 +204,6 @@ function StatsPanel() {
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
           <GradeBookCard />
           <SubjectChartCard />
-          <FlashcardsCard />
         </div>
       )}
       {section === "journal" && (

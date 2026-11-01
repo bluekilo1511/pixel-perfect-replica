@@ -10,6 +10,7 @@ export interface Flashcard {
   interval: number; // days until the next review
   reps: number; // consecutive successful reviews
   lapses: number; // times answered "again"
+  wrong: string[]; // up to 3 wrong choices, turns the card into a quiz question (see study.ts)
   due: string; // YYYY-MM-DD
   createdAt: string;
 }
@@ -17,7 +18,7 @@ export interface Flashcard {
 /** 0 = forgot, 1 = hard, 2 = good, 3 = easy. */
 export type Rating = 0 | 1 | 2 | 3;
 
-export const FLASHCARDS_MAX = 200;
+export const FLASHCARDS_MAX = 500;
 export const QUESTION_MAX = 200;
 export const ANSWER_MAX = 400;
 export const SUBJECT_MAX = 24;
@@ -49,6 +50,7 @@ export function newFlashcard(
     interval: 0,
     reps: 0,
     lapses: 0,
+    wrong: [],
     due: today,
     createdAt: new Date().toISOString(),
   };
@@ -156,6 +158,12 @@ export function normalizeFlashcards(raw: unknown): Flashcard[] {
       interval: Math.min(MAX_INTERVAL, Math.max(0, Math.round(Number(o.interval) || 0))),
       reps: Math.max(0, Math.round(Number(o.reps) || 0)),
       lapses: Math.max(0, Math.round(Number(o.lapses) || 0)),
+      wrong: Array.isArray(o.wrong)
+        ? (o.wrong as unknown[])
+            .filter((w): w is string => typeof w === "string" && w.trim().length > 0)
+            .map((w) => w.trim().slice(0, 80))
+            .slice(0, 3)
+        : [],
       due,
       createdAt: typeof o.createdAt === "string" ? o.createdAt : new Date().toISOString(),
     });

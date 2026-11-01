@@ -90,6 +90,13 @@ import {
   type TaskTemplate,
 } from "./templates";
 import { normalizeFlashcards, type Flashcard } from "./flashcards";
+import {
+  defaultStudyRewards,
+  normalizeStudyHistory,
+  normalizeStudyRewards,
+  type StudyResult,
+  type StudyRewardState,
+} from "./study";
 import { normalizeStudyMode, type StudyMode } from "./studyModes";
 
 // Pure data model + logic for Task Tracker Pro (no browser APIs here, so it is testable).
@@ -292,6 +299,8 @@ export interface AppData {
   notes: NoteItem[];
   scratch: ScratchNote[]; // mid-focus jotted notes (max 20), promoted into tasks or deleted
   flashcards: Flashcard[]; // study flashcards with SM-2-lite spaced repetition (see flashcards.ts)
+  studyRewards: StudyRewardState; // rewarded game rounds today (+5 xu, max 3/day, see study.ts)
+  studyHistory: StudyResult[]; // recent study-game results (see study.ts)
   market: MarketState;
   subjects: string[]; // user-managed study subjects (max 12)
   subjectCombos: Record<string, string[]>; // combo subjects -> 2-3 member subjects (see combos.ts)
@@ -436,6 +445,8 @@ export function defaultData(): AppData {
     notes: [],
     scratch: [],
     flashcards: [],
+    studyRewards: defaultStudyRewards(),
+    studyHistory: [],
     market: defaultMarket(),
     subjects: [],
     subjectCombos: {},
@@ -813,6 +824,8 @@ export function migrate(raw: unknown): AppData {
     notes: normalizeNotes(r.notes),
     scratch: normalizeScratch(r.scratch),
     flashcards: normalizeFlashcards(r.flashcards),
+    studyRewards: normalizeStudyRewards(r.studyRewards),
+    studyHistory: normalizeStudyHistory(r.studyHistory),
     market: normalizeMarket(r.market),
     subjects: Array.isArray(r.subjects)
       ? [

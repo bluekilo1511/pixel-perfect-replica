@@ -1,5 +1,13 @@
 import { useRef, useState, type ReactNode, useEffect } from "react";
-import { CalendarDays, Check, ChartColumn, PawPrint, Newspaper, Settings } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChartColumn,
+  GraduationCap,
+  PawPrint,
+  Newspaper,
+  Settings,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTracker } from "@/lib/tracker/store";
 import { zodiacById, zodiacForBirthday } from "@/lib/tracker/zodiac";
@@ -7,6 +15,7 @@ import { zodiacById, zodiacForBirthday } from "@/lib/tracker/zodiac";
 const items = [
   { value: "today", label: "Hôm nay", icon: Check },
   { value: "stats", label: "Thống kê", icon: ChartColumn },
+  { value: "study", label: "Học tập", icon: GraduationCap },
   { value: "week", label: "Thời khóa biểu", icon: CalendarDays },
   { value: "shop", label: "Pet Shop", icon: PawPrint },
   { value: "chronicle", label: "Nhật báo tuần", icon: Newspaper },

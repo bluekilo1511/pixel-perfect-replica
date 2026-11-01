@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_ZODIAC_ID, ZODIAC_LIST, isValidZodiacId, zodiacById } from "./zodiac";
 import { applyAdminBoost, isAdminBoostKind, migrate } from "./model";
 
-const TABS = ["today", "stats", "week", "shop", "chronicle", "settings"];
+const TABS = ["today", "stats", "study", "week", "shop", "chronicle", "settings"];
 
 describe("zodiac constellations", () => {
   it("has exactly 12 unique signs", () => {
@@ -16,7 +16,6 @@ describe("zodiac constellations", () => {
       expect(z.range).toMatch(/\d+\/\d+/);
       expect(z.stars).toHaveLength(7);
       const tabs = z.stars.map((s) => s.tab);
-      // Pet Shop has two stars since the Wheel tab merged into it.
       expect(new Set(tabs)).toEqual(new Set(TABS));
       for (const s of z.stars) {
         expect(s.x).toBeGreaterThanOrEqual(0);

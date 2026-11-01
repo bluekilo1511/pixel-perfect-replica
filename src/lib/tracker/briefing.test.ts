@@ -15,6 +15,7 @@ const fc = (id: string, due: string): Flashcard => ({
   interval: 0,
   reps: 0,
   lapses: 0,
+  wrong: [],
   due,
   createdAt: monday,
 });
