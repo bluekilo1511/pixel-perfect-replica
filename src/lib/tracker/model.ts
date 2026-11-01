@@ -90,6 +90,7 @@ import {
   type TaskTemplate,
 } from "./templates";
 import { normalizeFlashcards, type Flashcard } from "./flashcards";
+import { normalizeMindmaps, type Mindmap } from "./mindmap";
 import {
   defaultStudyRewards,
   normalizeStudyHistory,
@@ -301,6 +302,7 @@ export interface AppData {
   flashcards: Flashcard[]; // study flashcards with SM-2-lite spaced repetition (see flashcards.ts)
   studyRewards: StudyRewardState; // rewarded game rounds today (+5 xu, max 3/day, see study.ts)
   studyHistory: StudyResult[]; // recent study-game results (see study.ts)
+  mindmaps: Mindmap[]; // hand-drawn concept maps in the study tab (see mindmap.ts)
   market: MarketState;
   subjects: string[]; // user-managed study subjects (max 12)
   subjectCombos: Record<string, string[]>; // combo subjects -> 2-3 member subjects (see combos.ts)
@@ -447,6 +449,7 @@ export function defaultData(): AppData {
     flashcards: [],
     studyRewards: defaultStudyRewards(),
     studyHistory: [],
+    mindmaps: [],
     market: defaultMarket(),
     subjects: [],
     subjectCombos: {},
@@ -826,6 +829,7 @@ export function migrate(raw: unknown): AppData {
     flashcards: normalizeFlashcards(r.flashcards),
     studyRewards: normalizeStudyRewards(r.studyRewards),
     studyHistory: normalizeStudyHistory(r.studyHistory),
+    mindmaps: normalizeMindmaps(r.mindmaps),
     market: normalizeMarket(r.market),
     subjects: Array.isArray(r.subjects)
       ? [
