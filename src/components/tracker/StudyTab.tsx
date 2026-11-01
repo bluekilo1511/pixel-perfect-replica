@@ -1487,12 +1487,12 @@ export function StudyTab() {
                   {curMap.nodes.map((n) => {
                     const pos = nodePos(n);
                     const isSel = selNode === n.id;
-                    const shapeCls =
-                      n.shape === "ellipse"
-                        ? "rounded-full"
-                        : n.shape === "diamond"
-                          ? "rounded-md"
-                          : "rounded-lg";
+                    const pad =
+                      n.shape === "diamond"
+                        ? "px-7 py-3"
+                        : n.shape === "ellipse"
+                          ? "px-5 py-2"
+                          : "px-3 py-1.5";
                     return (
                       <button
                         key={n.id}
@@ -1500,17 +1500,47 @@ export function StudyTab() {
                         onPointerDown={(e) => onNodePointerDown(e, n)}
                         onPointerMove={onNodePointerMove}
                         onPointerUp={onNodePointerUp}
-                        className={`absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 touch-none select-none border px-2.5 py-1.5 text-xs font-medium leading-snug shadow-sm ${shapeCls} ${
+                        className={`absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 touch-none select-none text-xs font-medium leading-snug text-foreground ${pad} ${
                           isSel ? "ring-2 ring-primary" : ""
                         }`}
-                        style={{
-                          left: pos.x,
-                          top: pos.y,
-                          background: `${n.color}2e`,
-                          borderColor: n.color,
-                        }}
+                        style={{ left: pos.x, top: pos.y }}
                       >
-                        {n.text || "…"}
+                        <svg
+                          className="absolute inset-0 h-full w-full overflow-visible"
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                          aria-hidden="true"
+                        >
+                          {n.shape === "ellipse" ? (
+                            <ellipse
+                              cx="50"
+                              cy="50"
+                              rx="48.5"
+                              ry="48.5"
+                              fill={`${n.color}2e`}
+                              stroke={n.color}
+                              strokeWidth="2"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          ) : n.shape === "diamond" ? (
+                            <polygon
+                              points="50,2 98,50 50,98 2,50"
+                              fill={`${n.color}2e`}
+                              stroke={n.color}
+                              strokeWidth="2"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          ) : (
+                            <path
+                              d="M10,1 H90 Q99,1 99,10 V90 Q99,99 90,99 H10 Q1,99 1,90 V10 Q1,1 10,1 Z"
+                              fill={`${n.color}2e`}
+                              stroke={n.color}
+                              strokeWidth="2"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          )}
+                        </svg>
+                        <span className="relative">{n.text || "…"}</span>
                       </button>
                     );
                   })}
