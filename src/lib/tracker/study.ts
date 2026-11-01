@@ -20,7 +20,7 @@ export const TRUE_FALSE_LEN = 10;
 export const WRONG_CHOICES_MAX = 3;
 export const WRONG_MAX = 80; // per wrong-choice text
 
-export type StudyGame = "quiz" | "match" | "tf";
+export type StudyGame = "quiz" | "match" | "tf" | "blank" | "flashcards" | "mindpuzzle";
 export type StudyRoundKind = StudyGame | "review";
 
 export interface StudyResult {
@@ -281,6 +281,61 @@ export function buildMatchRound(
     }));
 }
 
+// ---- Fill-in-the-blank game: punch 1-2 random words out of an answer ----
+
+export interface BlankQuestion {
+  cardId: string;
+  subject: string;
+  question: string;
+  parts: string[]; // answer split by whitespace
+  blanks: Array<{ index: number; answer: string }>; // punched word positions
+}
+
+const BLANK_WORDS_MIN = 2;
+const BLANK_WORDS_MAX = 12;
+
+/** Loose match for typed blanks: case/space/punctuation insensitive. */
+export function blankMatches(expected: string, input: string): boolean {
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[.,;:!?"'()[\]]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .join(" ");
+  return norm(expected) === norm(input) && norm(expected).length > 0;
+}
+
+export function buildBlankRound(
+  pool: Flashcard[],
+  count: number,
+  rng: Rng = Math.random,
+): BlankQuestion[] {
+  const eligible = pool.filter((c) => {
+    const words = c.answer.trim().split(/\s+/).filter(Boolean);
+    return words.length >= BLANK_WORDS_MIN && words.length <= BLANK_WORDS_MAX;
+  });
+  return shuffle(eligible, rng)
+    .slice(0, count)
+    .map((c) => {
+      const words = c.answer.trim().split(/\s+/);
+      const blankCount = words.length >= 4 ? 2 : 1;
+      const idxs = shuffle(
+        words.map((_, i) => i),
+        rng,
+      ).slice(0, blankCount);
+      return {
+        cardId: c.id,
+        subject: c.subject || "Chung",
+        question: c.question,
+        parts: words,
+        blanks: idxs
+          .map((index) => ({ index, answer: words[index]! }))
+          .sort((a, b) => a.index - b.index),
+      };
+    });
+}
+
 /** Grant one rewarded round: +5 coins, at most 3 rewarded rounds per day. Pure. */
 export function grantStudyReward(
   state: StudyRewardState | undefined,
@@ -327,7 +382,15 @@ export function normalizeStudyHistory(raw: unknown): StudyResult[] {
   for (const r of raw.slice(0, STUDY_HISTORY_MAX)) {
     if (!r || typeof r !== "object") continue;
     const o = r as Record<string, unknown>;
-    const game = o.game === "quiz" || o.game === "match" || o.game === "tf" ? o.game : null;
+    const game =
+      o.game === "quiz" ||
+      o.game === "match" ||
+      o.game === "tf" ||
+      o.game === "blank" ||
+      o.game === "flashcards" ||
+      o.game === "mindpuzzle"
+        ? o.game
+        : null;
     if (!game) continue;
     const date = typeof o.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : "";
     if (!date) continue;
