@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type PointerEvent as RPointerEvent } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { dateStr } from "@/lib/tracker/model";
 import {
@@ -13,8 +13,26 @@ import {
   type Rating,
 } from "@/lib/tracker/flashcards";
 import {
+  addChildNode,
+  buildMindPuzzle,
+  deleteMindNode,
+  MINDMAPS_MAX,
+  MIND_NODES_MAX,
+  MIND_COLORS,
+  MIND_TEXT_MAX,
+  moveMindNode,
+  newMindmap,
+  updateMindNode,
+  type Mindmap,
+  type MindNode,
+  type MindPuzzle,
+} from "@/lib/tracker/mindmap";
+import {
+  blankMatches,
+  buildBlankRound,
   buildMatchRound,
   buildQuizRound,
+  type BlankQuestion,
   buildTrueFalseRound,
   deleteCard,
   deleteDeck,
@@ -50,9 +68,12 @@ const GAME_META: Record<StudyGame, { emoji: string; label: string }> = {
   quiz: { emoji: "🧠", label: "Trắc nghiệm" },
   match: { emoji: "🧩", label: "Ghép cặp" },
   tf: { emoji: "⚡", label: "Đúng/Sai" },
+  blank: { emoji: "🕳️", label: "Điền từ" },
+  flashcards: { emoji: "🃏", label: "Flashcards" },
+  mindpuzzle: { emoji: "🗺️", label: "Lược đồ khuyết" },
 };
 
-type View = "learn" | "games" | "history";
+type View = "learn" | "games" | "history" | "maps";
 
 function readStored<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
@@ -126,6 +147,31 @@ export function StudyTab() {
     tick: number;
   } | null>(null);
   const [startedAt, setStartedAt] = useState(0);
+  const [fcGame, setFcGame] = useState(false); // flashcards round running inside 🎮 Trò chơi
+  const [blank, setBlank] = useState<{
+    qs: BlankQuestion[];
+    i: number;
+    inputs: string[];
+    checked: boolean[] | null; // per-blank correctness once checked
+    correct: number;
+  } | null>(null);
+  const [mp, setMp] = useState<{
+    puzzle: MindPuzzle;
+    filled: Record<string, string>; // holeId -> filled candidate text
+    triedWrong: Set<string>; // hole ids with at least one wrong attempt
+    picked: string | null; // currently selected candidate text
+  } | null>(null);
+
+  // Mind-map editor state.
+  const [mapId, setMapId] = useState<string>(""); // "" = list view
+  const [selNode, setSelNode] = useState<string | null>(null);
+  const [drag, setDrag] = useState<{
+    id: string;
+    dx: number;
+    dy: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const decks = useMemo(() => dueBySubject(cards, today), [cards, today]);
@@ -182,11 +228,17 @@ export function StudyTab() {
       setQi(qi + 1);
       setRevealed(false);
     } else {
-      toast.success(
-        `🃏 Xong lượt ôn! ${session.good + (rating > 0 ? 1 : 0)} nhớ, ${session.again + (rating === 0 ? 1 : 0)} cần ôn lại`,
-      );
+      const good = session.good + (rating > 0 ? 1 : 0);
+      const again = session.again + (rating === 0 ? 1 : 0);
       setQueue(null);
       setRevealed(false);
+      if (fcGame) {
+        setFcGame(false);
+        setGame(null);
+        finishRound("flashcards", good, session.done + 1);
+      } else {
+        toast.success(`🃏 Xong lượt ôn! ${good} nhớ, ${again} cần ôn lại`);
+      }
     }
   };
 
@@ -287,6 +339,46 @@ export function StudyTab() {
     }
     setGame(g);
     setStartedAt(Date.now());
+    if (g === "blank") {
+      const qs = buildBlankRound(gamePool, 6);
+      if (!qs.length) {
+        toast.error("Cần thẻ có đáp án từ 2 từ trở lên — thêm thẻ ở mục Bài học nhé!");
+        setGame(null);
+        return;
+      }
+      setBlank({ qs, i: 0, inputs: qs[0]!.blanks.map(() => ""), checked: null, correct: 0 });
+      return;
+    }
+    if (g === "flashcards") {
+      let pool = dueCards(gamePool, today);
+      if (!pool.length) pool = [...gamePool].sort(() => Math.random() - 0.5).slice(0, 10);
+      if (!pool.length) {
+        toast.error("Chưa có thẻ nào — soạn bộ ở mục Bài học nhé!");
+        setGame(null);
+        return;
+      }
+      setQueue(pool.map((c) => c.id));
+      setQi(0);
+      setRevealed(false);
+      setSession({ good: 0, again: 0, done: 0 });
+      setFcGame(true);
+      return;
+    }
+    if (g === "mindpuzzle") {
+      if (gamePool.length < 6) {
+        toast.error("Cần ít nhất 6 thẻ để dựng lược đồ có đủ đáp án nhiễu — thêm thẻ nhé!");
+        setGame(null);
+        return;
+      }
+      const puzzle = buildMindPuzzle(gamePool);
+      if (!puzzle) {
+        toast.error("Cần ít nhất 6 thẻ để dựng lược đồ có đủ đáp án nhiễu — thêm thẻ nhé!");
+        setGame(null);
+        return;
+      }
+      setMp({ puzzle, filled: {}, triedWrong: new Set(), picked: null });
+      return;
+    }
     if (g === "quiz") {
       const qs = buildQuizRound(gamePool, QUIZ_LEN);
       if (!qs.length) {
@@ -400,6 +492,118 @@ export function StudyTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchDone]);
 
+  // Blank helpers
+  const blankCurrent = blank ? blank.qs[blank.i]! : null;
+  const setBlankInput = (bi: number, v: string) => {
+    if (!blank) return;
+    setBlank({ ...blank, inputs: blank.inputs.map((x, i) => (i === bi ? v : x)) });
+  };
+  const checkBlank = () => {
+    if (!blank || blank.checked) return;
+    const q = blank.qs[blank.i]!;
+    const checked = q.blanks.map((bl, i) => blankMatches(bl.answer, blank.inputs[i] ?? ""));
+    setBlank({ ...blank, checked, correct: blank.correct + (checked.every(Boolean) ? 1 : 0) });
+  };
+  const nextBlank = () => {
+    if (!blank) return;
+    if (blank.i + 1 < blank.qs.length) {
+      const nq = blank.qs[blank.i + 1]!;
+      setBlank({ ...blank, i: blank.i + 1, inputs: nq.blanks.map(() => ""), checked: null });
+    } else {
+      finishRound("blank", blank.correct, blank.qs.length);
+      setBlank(null);
+      setGame(null);
+    }
+  };
+
+  // Mind-puzzle helpers
+  const pickCandidate = (text: string) => {
+    if (!mp) return;
+    setMp({ ...mp, picked: mp.picked === text ? null : text });
+  };
+  const fillHole = (holeId: string) => {
+    if (!mp || !mp.picked) return;
+    const hole = mp.puzzle.nodes.find((n) => n.id === holeId);
+    if (!hole || mp.filled[holeId]) return;
+    if (hole.holeOf === mp.picked) {
+      const filled = { ...mp.filled, [holeId]: mp.picked };
+      const allDone = mp.puzzle.holes.every((h) => filled[h]);
+      setMp({ ...mp, filled, picked: null });
+      if (allDone) {
+        const clean = mp.puzzle.holes.filter((h) => !mp.triedWrong.has(h)).length;
+        finishRound("mindpuzzle", clean, mp.puzzle.holes.length);
+        setMp(null);
+        setGame(null);
+      }
+    } else {
+      setMp({ ...mp, triedWrong: new Set(mp.triedWrong).add(holeId), picked: null });
+    }
+  };
+
+  // Mind-map editor helpers
+  const maps = data.mindmaps;
+  const curMap: Mindmap | null = maps.find((m) => m.id === mapId) ?? null;
+  const patchMap = (fn: (m: Mindmap) => Mindmap) =>
+    update((d) => ({ ...d, mindmaps: d.mindmaps.map((m) => (m.id === mapId ? fn(m) : m)) }));
+  const createMap = () => {
+    if (maps.length >= MINDMAPS_MAX) {
+      toast.error(`Tối đa ${MINDMAPS_MAX} sơ đồ — xoá bớt nhé!`);
+      return;
+    }
+    const m = newMindmap(`Sơ đồ ${maps.length + 1}`);
+    update((d) => ({ ...d, mindmaps: [...d.mindmaps, m] }));
+    setMapId(m.id);
+    setSelNode(null);
+  };
+  const removeMap = (id: string) => {
+    if (!window.confirm("Xoá sơ đồ này? Không hoàn tác được.")) return;
+    update((d) => ({ ...d, mindmaps: d.mindmaps.filter((m) => m.id !== id) }));
+    if (id === mapId) {
+      setMapId("");
+      setSelNode(null);
+    }
+  };
+  const addChildHere = () => {
+    if (!curMap || !selNode) return;
+    const next = addChildNode(curMap, selNode);
+    if (!next) {
+      toast.error(
+        curMap.nodes.length >= MIND_NODES_MAX
+          ? `Tối đa ${MIND_NODES_MAX} ô — xoá bớt nhé!`
+          : "Không thêm được ô con.",
+      );
+      return;
+    }
+    patchMap(() => next);
+    setSelNode(next.nodes[next.nodes.length - 1]!.id);
+  };
+  const removeSelNode = () => {
+    if (!curMap || !selNode) return;
+    const node = curMap.nodes.find((x) => x.id === selNode);
+    if (!node) return;
+    if (!node.parentId) {
+      removeMap(curMap.id);
+      return;
+    }
+    patchMap((m) => deleteMindNode(m, selNode));
+    setSelNode(null);
+  };
+  const nodePos = (n: MindNode): { x: number; y: number } =>
+    drag && drag.id === n.id ? { x: drag.x, y: drag.y } : { x: n.x, y: n.y };
+  const onNodePointerDown = (e: RPointerEvent<HTMLButtonElement>, n: MindNode) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setSelNode(n.id);
+    setDrag({ id: n.id, dx: e.clientX - n.x, dy: e.clientY - n.y, x: n.x, y: n.y });
+  };
+  const onNodePointerMove = (e: RPointerEvent<HTMLButtonElement>) => {
+    setDrag((d) => (d ? { ...d, x: e.clientX - d.dx, y: e.clientY - d.dy } : d));
+  };
+  const onNodePointerUp = () => {
+    if (drag) patchMap((m) => moveMindNode(m, drag.id, drag.x, drag.y));
+    setDrag(null);
+  };
+
   const accuracy = useMemo(() => subjectAccuracy(data.studyHistory), [data.studyHistory]);
   const current: Flashcard | null = queue ? (byId.get(queue[qi]!) ?? null) : null;
 
@@ -425,6 +629,7 @@ export function StudyTab() {
           [
             ["learn", "📚 Bài học"],
             ["games", "🎮 Trò chơi"],
+            ["maps", "🗺️ Sơ đồ"],
             ["history", "🏆 Lịch sử"],
           ] as const
         ).map(([key, label]) => (
@@ -729,6 +934,9 @@ export function StudyTab() {
                   setQuiz(null);
                   setTf(null);
                   setMatch(null);
+                  setBlank(null);
+                  setMp(null);
+                  setFcGame(false);
                 }}
                 className={
                   game === g
@@ -783,6 +991,181 @@ export function StudyTab() {
               <Button onClick={() => startGame(game ?? "quiz")} disabled={!gamePool.length}>
                 ▶️ Bắt đầu {GAME_META[game ?? "quiz"].label}
               </Button>
+            </div>
+          )}
+
+          {game === "blank" && blank && blankCurrent && (
+            <div className="rounded-xl border border-primary/25 bg-secondary/40 p-4">
+              <p className="mb-1 text-xs text-muted-foreground">
+                🕳️ Câu {blank.i + 1}/{blank.qs.length} · ✅ {blank.correct}
+              </p>
+              <p className="mb-3 text-base font-medium">{blankCurrent.question}</p>
+              <p className="mb-3 text-sm leading-relaxed">
+                {blankCurrent.parts.map((w, wi) => {
+                  const bi = blankCurrent.blanks.findIndex((b) => b.index === wi);
+                  if (bi === -1) return <span key={wi}>{w} </span>;
+                  if (!blank.checked)
+                    return (
+                      <span
+                        key={wi}
+                        className="mx-1 inline-block rounded bg-primary/20 px-2 text-primary"
+                      >
+                        {"_".repeat(Math.max(4, w.length))}
+                      </span>
+                    );
+                  return (
+                    <span
+                      key={wi}
+                      className={`mx-1 inline-block rounded px-2 ${
+                        blank.checked[bi]
+                          ? "bg-emerald-600/70 text-white"
+                          : "bg-destructive/80 text-white"
+                      }`}
+                    >
+                      {blank.inputs[bi] || "—"}
+                    </span>
+                  );
+                })}
+              </p>
+              {!blank.checked ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {blankCurrent.blanks.map((_, bi) => (
+                    <Input
+                      key={bi}
+                      value={blank.inputs[bi] ?? ""}
+                      onChange={(e) => setBlankInput(bi, e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && checkBlank()}
+                      placeholder={`Từ ${bi + 1}`}
+                      maxLength={40}
+                      aria-label={`Điền chỗ trống ${bi + 1}`}
+                      className="h-9 w-44 text-sm"
+                      autoFocus={bi === 0}
+                    />
+                  ))}
+                  <Button size="sm" onClick={checkBlank}>
+                    ✔️ Kiểm tra
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  {blank.checked.some((c) => !c) && (
+                    <span className="text-xs text-muted-foreground">
+                      Đáp án đúng: {blankCurrent.parts.join(" ")}
+                    </span>
+                  )}
+                  <Button size="sm" onClick={nextBlank}>
+                    {blank.i + 1 < blank.qs.length ? "➡️ Câu tiếp" : "🏁 Tổng kết"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {game === "flashcards" && fcGame && queue && current && (
+            <div className="rounded-xl border border-primary/25 bg-secondary/40 p-4">
+              <p className="mb-2 text-xs text-muted-foreground">
+                🃏 {current.subject || "Chung"} · thẻ {qi + 1}/{queue.length} · ✅ {session.good} 😵{" "}
+                {session.again} · đánh giá như ôn thường, thẻ nhớ giãn dần
+              </p>
+              <p className="mb-3 text-base font-medium">{current.question}</p>
+              {revealed ? (
+                <>
+                  <div className="mb-3 rounded-lg bg-background/70 p-3 text-sm whitespace-pre-wrap">
+                    {current.answer}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {RATINGS.map((r) => (
+                      <Button
+                        key={r.rating}
+                        size="sm"
+                        variant="outline"
+                        className={r.className}
+                        onClick={() => rate(r.rating)}
+                      >
+                        {r.label}
+                      </Button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <Button className="w-full" onClick={() => setRevealed(true)}>
+                  👀 Lộn thẻ
+                </Button>
+              )}
+              <button
+                className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setQueue(null);
+                  setFcGame(false);
+                  setGame(null);
+                }}
+              >
+                Dừng lượt này
+              </button>
+            </div>
+          )}
+
+          {game === "mindpuzzle" && mp && (
+            <div className="rounded-xl border border-primary/25 bg-secondary/40 p-4">
+              <p className="mb-2 text-xs text-muted-foreground">
+                🗺️ Bấm một thẻ phía dưới rồi bấm vào ô trống trên sơ đồ để điền. Còn{" "}
+                {mp.puzzle.holes.length - Object.keys(mp.filled).length} ô trống.
+              </p>
+              <div className="mb-3 space-y-2">
+                {[0, 1, 2].map((lvl) => (
+                  <div
+                    key={lvl}
+                    className={`flex flex-wrap gap-2 ${lvl > 0 ? "ml-5 border-l-2 border-border/60 pl-4" : ""}`}
+                  >
+                    {mp.puzzle.nodes
+                      .filter((n) => n.level === lvl)
+                      .map((n) => {
+                        const isHole = mp.puzzle.holes.includes(n.id);
+                        const filled = mp.filled[n.id];
+                        const wrong = isHole && !filled && mp.triedWrong.has(n.id);
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            disabled={!isHole || !!filled || !mp.picked}
+                            onClick={() => fillHole(n.id)}
+                            className={`max-w-[260px] truncate rounded-lg border px-2.5 py-1.5 text-xs ${
+                              filled
+                                ? "border-emerald-500/60 bg-emerald-600/20"
+                                : wrong
+                                  ? "border-destructive/60 bg-destructive/15"
+                                  : isHole
+                                    ? "border-dashed border-primary/50 bg-primary/10"
+                                    : "border-border/60 bg-secondary/30"
+                            } ${mp.picked && isHole && !filled ? "cursor-pointer hover:border-primary" : ""}`}
+                            title={filled ?? n.text ?? "Ô trống — chọn thẻ đúng để điền"}
+                          >
+                            {lvl === 0 ? "🎯 " : lvl === 1 ? "❓ " : "💡 "}
+                            {filled ?? n.text ?? "❓"}
+                          </button>
+                        );
+                      })}
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {mp.puzzle.candidates
+                  .filter((c) => !Object.values(mp.filled).includes(c.text))
+                  .map((c) => (
+                    <button
+                      key={c.text}
+                      type="button"
+                      onClick={() => pickCandidate(c.text)}
+                      className={
+                        mp.picked === c.text
+                          ? "max-w-[260px] truncate rounded-full bg-primary px-3 py-1.5 text-xs text-primary-foreground"
+                          : "max-w-[260px] truncate rounded-full bg-secondary/70 px-3 py-1.5 text-xs hover:bg-secondary"
+                      }
+                    >
+                      {c.text}
+                    </button>
+                  ))}
+              </div>
             </div>
           )}
 
@@ -912,6 +1295,236 @@ export function StudyTab() {
         </>
       )}
 
+      {view === "maps" && (
+        <>
+          {!curMap ? (
+            <>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Vẽ sơ đồ tư duy của bạn: thêm nhánh, kéo ô, chọn hình và màu. {maps.length}/
+                  {MINDMAPS_MAX} sơ đồ.
+                </p>
+                <Button size="sm" onClick={createMap}>
+                  ➕ Sơ đồ mới
+                </Button>
+              </div>
+              {maps.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Chưa có sơ đồ nào — bấm ➕ Sơ đồ mới để bắt đầu.
+                </p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {maps.map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-xl border border-border/60 bg-secondary/20 p-3"
+                    >
+                      <p className="mb-1 truncate text-sm font-semibold">{m.title}</p>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        {m.nodes.length} ô · sửa {new Date(m.updatedAt).toLocaleDateString("vi-VN")}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setMapId(m.id);
+                            setSelNode(null);
+                          }}
+                        >
+                          ✏️ Mở
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => removeMap(m.id)}
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setMapId("")}>
+                  ← Danh sách
+                </Button>
+                <Input
+                  value={curMap.title}
+                  onChange={(e) => patchMap((m) => ({ ...m, title: e.target.value.slice(0, 40) }))}
+                  maxLength={40}
+                  aria-label="Tên sơ đồ"
+                  className="h-9 w-48 text-sm"
+                />
+                <Button size="sm" onClick={addChildHere} disabled={!selNode}>
+                  ➕ Nhánh con
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={removeSelNode}
+                  disabled={!selNode}
+                >
+                  🗑️ Xoá ô
+                </Button>
+              </div>
+              <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 p-2">
+                <span className="text-xs text-muted-foreground">
+                  Ô đang chọn:{" "}
+                  <strong>
+                    {selNode
+                      ? curMap.nodes.find((n) => n.id === selNode)?.text || "(trống)"
+                      : "chưa chọn"}
+                  </strong>
+                </span>
+                <Input
+                  value={
+                    selNode
+                      ? (drafts[selNode]?.q ??
+                        curMap.nodes.find((n) => n.id === selNode)?.text ??
+                        "")
+                      : ""
+                  }
+                  onChange={(e) =>
+                    selNode &&
+                    setDrafts((m) => ({
+                      ...m,
+                      [selNode]: { q: e.target.value, a: m[selNode]?.a ?? "" },
+                    }))
+                  }
+                  onBlur={() => {
+                    if (selNode && drafts[selNode]) {
+                      patchMap((m) => updateMindNode(m, selNode, { text: drafts[selNode]!.q }));
+                      setDrafts((m) => {
+                        const next = { ...m };
+                        delete next[selNode];
+                        return next;
+                      });
+                    }
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                  disabled={!selNode}
+                  placeholder="Nội dung ô đang chọn"
+                  maxLength={MIND_TEXT_MAX}
+                  aria-label="Nội dung ô"
+                  className="h-9 w-56 text-sm"
+                />
+                <span className="text-xs text-muted-foreground">Hình:</span>
+                {(
+                  [
+                    ["rect", "▭"],
+                    ["ellipse", "◯"],
+                    ["diamond", "◇"],
+                  ] as const
+                ).map(([shape, icon]) => (
+                  <button
+                    key={shape}
+                    type="button"
+                    disabled={!selNode}
+                    onClick={() =>
+                      selNode && patchMap((m) => updateMindNode(m, selNode, { shape }))
+                    }
+                    className={`rounded px-2 py-1 text-sm ${
+                      selNode && curMap.nodes.find((n) => n.id === selNode)?.shape === shape
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary/60 hover:bg-secondary"
+                    } disabled:opacity-40`}
+                    aria-label={`Hình ${shape}`}
+                  >
+                    {icon}
+                  </button>
+                ))}
+                <span className="text-xs text-muted-foreground">Màu:</span>
+                {MIND_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    disabled={!selNode}
+                    onClick={() =>
+                      selNode && patchMap((m) => updateMindNode(m, selNode, { color: c }))
+                    }
+                    className={`h-6 w-6 rounded-full border-2 ${
+                      selNode && curMap.nodes.find((n) => n.id === selNode)?.color === c
+                        ? "border-foreground"
+                        : "border-transparent"
+                    } disabled:opacity-40`}
+                    style={{ background: c }}
+                    aria-label={`Màu ${c}`}
+                  />
+                ))}
+              </div>
+              <div
+                className="overflow-auto rounded-xl border border-border/60 bg-background/40"
+                style={{ maxHeight: 560 }}
+              >
+                <div className="relative" style={{ width: 900, height: 900 }}>
+                  <svg className="absolute inset-0" width={900} height={900}>
+                    {curMap.nodes.map((n) => {
+                      if (!n.parentId) return null;
+                      const par = curMap.nodes.find((x) => x.id === n.parentId);
+                      if (!par) return null;
+                      const a = nodePos(par);
+                      const b = nodePos(n);
+                      return (
+                        <line
+                          key={n.id}
+                          x1={a.x}
+                          y1={a.y}
+                          x2={b.x}
+                          y2={b.y}
+                          stroke={n.color}
+                          strokeWidth={2}
+                        />
+                      );
+                    })}
+                  </svg>
+                  {curMap.nodes.map((n) => {
+                    const pos = nodePos(n);
+                    const isSel = selNode === n.id;
+                    const shapeCls =
+                      n.shape === "ellipse"
+                        ? "rounded-full"
+                        : n.shape === "diamond"
+                          ? "rounded-md"
+                          : "rounded-lg";
+                    return (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onPointerDown={(e) => onNodePointerDown(e, n)}
+                        onPointerMove={onNodePointerMove}
+                        onPointerUp={onNodePointerUp}
+                        className={`absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 touch-none select-none border px-2.5 py-1.5 text-xs font-medium leading-snug shadow-sm ${shapeCls} ${
+                          isSel ? "ring-2 ring-primary" : ""
+                        }`}
+                        style={{
+                          left: pos.x,
+                          top: pos.y,
+                          background: `${n.color}2e`,
+                          borderColor: n.color,
+                        }}
+                      >
+                        {n.text || "…"}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Kéo ô để sắp xếp lại · bấm ô để chọn rồi thêm nhánh con, đổi nội dung/hình/màu ·
+                nhánh con tự mọc sang hai bên.
+              </p>
+            </>
+          )}
+        </>
+      )}
+
       {view === "history" && (
         <div className="space-y-3">
           {accuracy.length > 0 && (
@@ -962,4 +1575,3 @@ export function StudyTab() {
     </section>
   );
 }
-
