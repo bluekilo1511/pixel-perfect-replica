@@ -725,7 +725,7 @@ export function StudyTab() {
                 key={g}
                 type="button"
                 onClick={() => {
-                  setGame(null);
+                  setGame(g);
                   setQuiz(null);
                   setTf(null);
                   setMatch(null);
