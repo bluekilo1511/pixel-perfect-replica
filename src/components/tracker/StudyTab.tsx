@@ -771,7 +771,7 @@ export function StudyTab() {
               ))}
           </div>
 
-          {!game && (
+          {(!game || (!quiz && !tf && !match)) && (
             <div className="rounded-xl border border-primary/20 bg-secondary/30 p-4 text-sm">
               <p className="mb-2 text-muted-foreground">
                 {gameSubject === ""
@@ -962,3 +962,4 @@ export function StudyTab() {
     </section>
   );
 }
+
