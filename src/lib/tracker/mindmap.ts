@@ -10,8 +10,10 @@ export const MINDMAPS_MAX = 10;
 export const MIND_NODES_MAX = 80;
 export const MIND_TEXT_MAX = 60;
 export const MINDMAP_TITLE_MAX = 40;
-export const MIND_CANVAS_W = 900;
-export const MIND_CANVAS_H = 900;
+export const MIND_CANVAS_W = 1600;
+export const MIND_CANVAS_H = 1200;
+/** New roots spawn here so a fresh map hugs its content instead of a wide canvas. */
+export const MIND_SPAWN_X = 300;
 
 /** Minimum canvas size so a tiny map is still comfortably usable. */
 export const MIND_MIN_CANVAS_W = 560;
@@ -94,7 +96,7 @@ export function newMindmap(title: string): Mindmap {
   return {
     id: newMindId(),
     title: title.trim().slice(0, MINDMAP_TITLE_MAX) || "Sơ đồ mới",
-    nodes: [newMindNode(title || "Chủ đề", null, MIND_CANVAS_W / 2, 70)],
+    nodes: [newMindNode(title || "Chủ đề", null, MIND_SPAWN_X, 70)],
     updatedAt: new Date().toISOString(),
   };
 }
