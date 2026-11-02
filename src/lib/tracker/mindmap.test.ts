@@ -3,6 +3,7 @@ import { newFlashcard, type Flashcard } from "./flashcards";
 import {
   addChildNode,
   buildMindPuzzle,
+  connectorEnds,
   deleteMindNode,
   MIND_CANVAS_H,
   MIND_CANVAS_W,
@@ -188,5 +189,37 @@ describe("fill-in-the-blank game", () => {
       { ...base, game: "nonsense" },
     ]);
     expect(out.map((r) => r.game)).toEqual(["blank", "flashcards", "mindpuzzle"]);
+  });
+});
+
+describe("connectorEnds", () => {
+  const A = { ax: 100, ay: 100, aw: 60, ah: 20 };
+  const B = { bx: 220, by: 100, bw: 60, bh: 20 };
+  it("trims a rect-to-rect line to the node edges", () => {
+    const r = connectorEnds(A.ax, A.ay, A.aw, A.ah, "rect", B.bx, B.by, B.bw, B.bh, "rect");
+    expect(r.x1).toBeCloseTo(130); // right edge of A
+    expect(r.x2).toBeCloseTo(190); // left edge of B
+    expect(r.y1).toBeCloseTo(100);
+    expect(r.y2).toBeCloseTo(100);
+  });
+  it("trims an ellipse line", () => {
+    const r = connectorEnds(A.ax, A.ay, 40, 20, "ellipse", B.bx, B.by, 40, 20, "ellipse");
+    expect(r.x1).toBeCloseTo(120);
+    expect(r.x2).toBeCloseTo(200);
+  });
+  it("trims a diamond line", () => {
+    const r = connectorEnds(A.ax, A.ay, 40, 20, "diamond", B.bx, B.by, 40, 20, "diamond");
+    expect(r.x1).toBeCloseTo(120);
+    expect(r.x2).toBeCloseTo(200);
+  });
+  it("handles vertical direction on a rect", () => {
+    const r = connectorEnds(100, 100, 60, 20, "rect", 100, 300, 60, 20, "rect");
+    expect(r.y1).toBeCloseTo(110);
+    expect(r.y2).toBeCloseTo(290);
+  });
+  it("returns centers when nodes overlap", () => {
+    const r = connectorEnds(100, 100, 60, 20, "rect", 101, 100, 60, 20, "rect");
+    expect(r.x1).toBe(100);
+    expect(r.x2).toBe(101);
   });
 });
