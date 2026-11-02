@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useState, type PointerEvent as RPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as RPointerEvent,
+} from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { dateStr } from "@/lib/tracker/model";
 import {
@@ -15,8 +23,11 @@ import {
 import {
   addChildNode,
   buildMindPuzzle,
+  connectorEnds,
   deleteMindNode,
   MINDMAPS_MAX,
+  MIND_CANVAS_H,
+  MIND_CANVAS_W,
   MIND_NODES_MAX,
   MIND_COLORS,
   MIND_TEXT_MAX,
@@ -172,6 +183,7 @@ export function StudyTab() {
     x: number;
     y: number;
   } | null>(null);
+  const dragRef = useRef<{ id: string; dx: number; dy: number; x: number; y: number } | null>(null);
 
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const decks = useMemo(() => dueBySubject(cards, today), [cards, today]);
@@ -543,8 +555,11 @@ export function StudyTab() {
   // Mind-map editor helpers
   const maps = data.mindmaps;
   const curMap: Mindmap | null = maps.find((m) => m.id === mapId) ?? null;
-  const patchMap = (fn: (m: Mindmap) => Mindmap) =>
-    update((d) => ({ ...d, mindmaps: d.mindmaps.map((m) => (m.id === mapId ? fn(m) : m)) }));
+  const patchMap = useCallback(
+    (fn: (m: Mindmap) => Mindmap) =>
+      update((d) => ({ ...d, mindmaps: d.mindmaps.map((m) => (m.id === mapId ? fn(m) : m)) })),
+    [update, mapId],
+  );
   const createMap = () => {
     if (maps.length >= MINDMAPS_MAX) {
       toast.error(`Tối đa ${MINDMAPS_MAX} sơ đồ — xoá bớt nhé!`);
@@ -590,18 +605,59 @@ export function StudyTab() {
   };
   const nodePos = (n: MindNode): { x: number; y: number } =>
     drag && drag.id === n.id ? { x: drag.x, y: drag.y } : { x: n.x, y: n.y };
+  const nodeEls = useRef(new Map<string, HTMLButtonElement>());
+  const [nodeSizes, setNodeSizes] = useState<Record<string, { w: number; h: number }>>({});
+  const sizeKeys = useMemo(
+    () => (curMap ? curMap.nodes.map((n) => `${n.id}:${n.text.length}:${n.shape}`).join("|") : ""),
+    [curMap],
+  );
+  useLayoutEffect(() => {
+    setNodeSizes((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [id, el] of nodeEls.current) {
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+        if (!prev[id] || prev[id]!.w !== w || prev[id]!.h !== h) {
+          next[id] = { w, h };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [sizeKeys]);
+  // Track the pointer on window so a drag keeps working even when the cursor
+  // leaves the canvas, the browser window, or a scroll edge interrupts it.
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const x = Math.min(MIND_CANVAS_W - 40, Math.max(40, e.clientX - d.dx));
+      const y = Math.min(MIND_CANVAS_H - 30, Math.max(30, e.clientY - d.dy));
+      dragRef.current = { ...d, x, y };
+      setDrag(dragRef.current);
+    };
+    const up = () => {
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (d) patchMap((m) => moveMindNode(m, d.id, d.x, d.y));
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, [patchMap]);
   const onNodePointerDown = (e: RPointerEvent<HTMLButtonElement>, n: MindNode) => {
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
     setSelNode(n.id);
-    setDrag({ id: n.id, dx: e.clientX - n.x, dy: e.clientY - n.y, x: n.x, y: n.y });
-  };
-  const onNodePointerMove = (e: RPointerEvent<HTMLButtonElement>) => {
-    setDrag((d) => (d ? { ...d, x: e.clientX - d.dx, y: e.clientY - d.dy } : d));
-  };
-  const onNodePointerUp = () => {
-    if (drag) patchMap((m) => moveMindNode(m, drag.id, drag.x, drag.y));
-    setDrag(null);
+    const d = { id: n.id, dx: e.clientX - n.x, dy: e.clientY - n.y, x: n.x, y: n.y };
+    dragRef.current = d;
+    setDrag(d);
   };
 
   const accuracy = useMemo(() => subjectAccuracy(data.studyHistory), [data.studyHistory]);
@@ -1463,21 +1519,45 @@ export function StudyTab() {
                 className="overflow-auto rounded-xl border border-border/60 bg-background/40"
                 style={{ maxHeight: 560 }}
               >
-                <div className="relative" style={{ width: 900, height: 900 }}>
-                  <svg className="absolute inset-0" width={900} height={900}>
+                <div
+                  className="relative"
+                  style={{ width: MIND_CANVAS_W + 80, height: MIND_CANVAS_H + 50 }}
+                >
+                  <svg
+                    className="absolute inset-0"
+                    width={MIND_CANVAS_W + 80}
+                    height={MIND_CANVAS_H + 50}
+                  >
                     {curMap.nodes.map((n) => {
                       if (!n.parentId) return null;
                       const par = curMap.nodes.find((x) => x.id === n.parentId);
                       if (!par) return null;
                       const a = nodePos(par);
                       const b = nodePos(n);
+                      const sa = nodeSizes[par.id];
+                      const sb = nodeSizes[n.id];
+                      const ends =
+                        sa && sb
+                          ? connectorEnds(
+                              a.x,
+                              a.y,
+                              sa.w,
+                              sa.h,
+                              par.shape,
+                              b.x,
+                              b.y,
+                              sb.w,
+                              sb.h,
+                              n.shape,
+                            )
+                          : null;
                       return (
                         <line
                           key={n.id}
-                          x1={a.x}
-                          y1={a.y}
-                          x2={b.x}
-                          y2={b.y}
+                          x1={ends ? ends.x1 : a.x}
+                          y1={ends ? ends.y1 : a.y}
+                          x2={ends ? ends.x2 : b.x}
+                          y2={ends ? ends.y2 : b.y}
                           stroke={n.color}
                           strokeWidth={2}
                         />
@@ -1497,9 +1577,11 @@ export function StudyTab() {
                       <button
                         key={n.id}
                         type="button"
+                        ref={(el) => {
+                          if (el) nodeEls.current.set(n.id, el);
+                          else nodeEls.current.delete(n.id);
+                        }}
                         onPointerDown={(e) => onNodePointerDown(e, n)}
-                        onPointerMove={onNodePointerMove}
-                        onPointerUp={onNodePointerUp}
                         className={`absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 touch-none select-none text-xs font-medium leading-snug text-foreground ${pad} ${
                           isSel ? "ring-2 ring-primary" : ""
                         }`}
