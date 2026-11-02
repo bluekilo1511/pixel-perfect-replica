@@ -627,11 +627,33 @@ export function StudyTab() {
       return changed ? next : prev;
     });
   }, [sizeKeys]);
-  // Canvas hugs the mindmap content so there is no dead scroll space.
-  const mindSize = useMemo(
-    () => (curMap ? mindCanvasSize(curMap.nodes, nodeSizes) : { w: 560, h: 360 }),
-    [curMap, nodeSizes],
-  );
+  // Canvas hugs the mindmap content so there is no dead scroll space, fills the
+  // visible editor width, and grows live while a node is dragged outward.
+  const scrollBoxRef = useRef<HTMLDivElement | null>(null);
+  const [boxW, setBoxW] = useState(0);
+  useEffect(() => {
+    const el = scrollBoxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBoxW(el.clientWidth));
+    ro.observe(el);
+    setBoxW(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+  const mindSize = useMemo(() => {
+    if (!curMap) return { w: 560, h: 360 };
+    const pos = (n: MindNode) =>
+      drag && drag.id === n.id ? { x: drag.x, y: drag.y } : { x: n.x, y: n.y };
+    const base = mindCanvasSize(
+      curMap.nodes.map((n) => ({ id: n.id, x: pos(n).x, y: pos(n).y })),
+      nodeSizes,
+    );
+    // Never wider than the farthest a node can legally reach + padding.
+    const maxW = MIND_CANVAS_W - 40 + 85 + 60;
+    return {
+      w: Math.min(maxW, Math.max(base.w, boxW, 560)),
+      h: Math.max(base.h, 360),
+    };
+  }, [curMap, nodeSizes, boxW, drag]);
   // Track the pointer on window so a drag keeps working even when the cursor
   // leaves the canvas, the browser window, or a scroll edge interrupts it.
   useEffect(() => {
@@ -1522,6 +1544,7 @@ export function StudyTab() {
                 ))}
               </div>
               <div
+                ref={scrollBoxRef}
                 className="overflow-auto rounded-xl border border-border/60 bg-background/40"
                 style={{ maxHeight: 560 }}
               >
