@@ -12,6 +12,35 @@ export const MIND_TEXT_MAX = 60;
 export const MINDMAP_TITLE_MAX = 40;
 export const MIND_CANVAS_W = 900;
 export const MIND_CANVAS_H = 900;
+
+/** Minimum canvas size so a tiny map is still comfortably usable. */
+export const MIND_MIN_CANVAS_W = 560;
+export const MIND_MIN_CANVAS_H = 360;
+/** Breathing room added around the outermost nodes. */
+const MIND_PAD = 60;
+
+/**
+ * Canvas size that hugs the content: big enough to contain every node plus
+ * padding, never bigger. Keeps empty scroll space out of the editor.
+ */
+export function mindCanvasSize(
+  nodes: Pick<MindNode, "id" | "x" | "y">[],
+  sizes: Record<string, { w: number; h: number }> = {},
+): { w: number; h: number } {
+  let x1 = 0;
+  let y1 = 0;
+  for (const n of nodes) {
+    const s = sizes[n.id];
+    const w = s?.w ?? 170;
+    const h = s?.h ?? 44;
+    x1 = Math.max(x1, n.x + w / 2);
+    y1 = Math.max(y1, n.y + h / 2);
+  }
+  return {
+    w: Math.round(Math.max(MIND_MIN_CANVAS_W, x1 + MIND_PAD)),
+    h: Math.round(Math.max(MIND_MIN_CANVAS_H, y1 + MIND_PAD)),
+  };
+}
 export const MIND_COLORS = [
   "#38bdf8",
   "#34d399",
