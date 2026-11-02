@@ -27,6 +27,7 @@ import {
   deleteMindNode,
   MINDMAPS_MAX,
   MIND_CANVAS_H,
+  mindCanvasSize,
   MIND_CANVAS_W,
   MIND_NODES_MAX,
   MIND_COLORS,
@@ -626,6 +627,11 @@ export function StudyTab() {
       return changed ? next : prev;
     });
   }, [sizeKeys]);
+  // Canvas hugs the mindmap content so there is no dead scroll space.
+  const mindSize = useMemo(
+    () => (curMap ? mindCanvasSize(curMap.nodes, nodeSizes) : { w: 560, h: 360 }),
+    [curMap, nodeSizes],
+  );
   // Track the pointer on window so a drag keeps working even when the cursor
   // leaves the canvas, the browser window, or a scroll edge interrupts it.
   useEffect(() => {
@@ -1519,15 +1525,8 @@ export function StudyTab() {
                 className="overflow-auto rounded-xl border border-border/60 bg-background/40"
                 style={{ maxHeight: 560 }}
               >
-                <div
-                  className="relative"
-                  style={{ width: MIND_CANVAS_W + 80, height: MIND_CANVAS_H + 50 }}
-                >
-                  <svg
-                    className="absolute inset-0"
-                    width={MIND_CANVAS_W + 80}
-                    height={MIND_CANVAS_H + 50}
-                  >
+                <div className="relative" style={{ width: mindSize.w, height: mindSize.h }}>
+                  <svg className="absolute inset-0" width={mindSize.w} height={mindSize.h}>
                     {curMap.nodes.map((n) => {
                       if (!n.parentId) return null;
                       const par = curMap.nodes.find((x) => x.id === n.parentId);
