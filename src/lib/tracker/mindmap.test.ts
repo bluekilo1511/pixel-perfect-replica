@@ -7,6 +7,7 @@ import {
   deleteMindNode,
   MIND_CANVAS_H,
   MIND_CANVAS_W,
+  mindCanvasSize,
   moveMindNode,
   newMindmap,
   normalizeMindmaps,
@@ -221,5 +222,35 @@ describe("connectorEnds", () => {
     const r = connectorEnds(100, 100, 60, 20, "rect", 101, 100, 60, 20, "rect");
     expect(r.x1).toBe(100);
     expect(r.x2).toBe(101);
+  });
+});
+
+describe("mindCanvasSize", () => {
+  it("returns the minimum size for a tiny map", () => {
+    const m = newMindmap("root");
+    const size = mindCanvasSize(m.nodes);
+    expect(size.w).toBe(450 + 85 + 60); // root sits at canvas W/2
+    expect(size.h).toBe(360); // bottom padding floored at the minimum
+  });
+  it("grows to fit the rightmost and bottom-most node plus padding", () => {
+    const nodes = [
+      { id: "a", x: 100, y: 80 },
+      { id: "b", x: 700, y: 500 },
+    ];
+    const size = mindCanvasSize(nodes, { b: { w: 100, h: 40 } });
+    expect(size.w).toBe(700 + 50 + 60);
+    expect(size.h).toBe(500 + 20 + 60);
+  });
+  it("uses fallback node size when unmeasured", () => {
+    const nodes = [{ id: "a", x: 500, y: 300 }];
+    const size = mindCanvasSize(nodes);
+    expect(size.w).toBe(500 + 85 + 60);
+    expect(size.h).toBe(300 + 22 + 60);
+  });
+  it("never goes below the minimum even with one far node only in one axis", () => {
+    const nodes = [{ id: "a", x: 550, y: 40 }];
+    const size = mindCanvasSize(nodes);
+    expect(size.w).toBe(550 + 85 + 60);
+    expect(size.h).toBe(360);
   });
 });
