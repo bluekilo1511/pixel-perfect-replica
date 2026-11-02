@@ -267,3 +267,56 @@ export function buildMindPuzzle(
     });
   return { nodes, holes: [...holes], candidates };
 }
+
+/**
+ * Endpoints of the connector line between two nodes, trimmed so the line
+ * starts at the edge of node A and ends at the edge of node B (not the
+ * centers, which would draw through the node text).
+ */
+export function connectorEnds(
+  ax: number,
+  ay: number,
+  aw: number,
+  ah: number,
+  aShape: MindShape,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+  bShape: MindShape,
+): { x1: number; y1: number; x2: number; y2: number } {
+  const dist = Math.hypot(bx - ax, by - ay);
+  if (dist < 1e-6) return { x1: ax, y1: ay, x2: bx, y2: by };
+  const dx = (bx - ax) / dist;
+  const dy = (by - ay) / dist;
+  const reach = (
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+    shape: MindShape,
+    sx: number,
+    sy: number,
+  ): { x: number; y: number } => {
+    const hw = Math.max(1, w / 2);
+    const hh = Math.max(1, h / 2);
+    let t: number;
+    if (shape === "ellipse") {
+      t = 1 / Math.sqrt((sx / hw) ** 2 + (sy / hh) ** 2);
+    } else if (shape === "diamond") {
+      t = 1 / (Math.abs(sx) / hw + Math.abs(sy) / hh);
+    } else {
+      const tx = Math.abs(sx) < 1e-9 ? Infinity : hw / Math.abs(sx);
+      const ty = Math.abs(sy) < 1e-9 ? Infinity : hh / Math.abs(sy);
+      t = Math.min(tx, ty);
+    }
+    return { x: cx + sx * t, y: cy + sy * t };
+  };
+  const p1 = reach(ax, ay, aw, ah, aShape, dx, dy);
+  const p2 = reach(bx, by, bw, bh, bShape, -dx, -dy);
+  // Guard against heavy overlap: if the trimmed segment points backwards,
+  // fall back to the centers instead of drawing through the nodes.
+  const forward = (p2.x - p1.x) * dx + (p2.y - p1.y) * dy;
+  if (forward < 0) return { x1: ax, y1: ay, x2: bx, y2: by };
+  return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+}
