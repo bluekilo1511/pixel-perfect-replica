@@ -229,7 +229,7 @@ describe("mindCanvasSize", () => {
   it("returns the minimum size for a tiny map", () => {
     const m = newMindmap("root");
     const size = mindCanvasSize(m.nodes);
-    expect(size.w).toBe(450 + 85 + 60); // root sits at canvas W/2
+    expect(size.w).toBe(560); // root spawns at x=300; width floored at the minimum
     expect(size.h).toBe(360); // bottom padding floored at the minimum
   });
   it("grows to fit the rightmost and bottom-most node plus padding", () => {
