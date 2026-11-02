@@ -4,13 +4,19 @@ import {
   addChildNode,
   buildMindPuzzle,
   connectorEnds,
+  connectorPath,
   deleteMindNode,
   MIND_CANVAS_H,
   MIND_CANVAS_W,
   mindCanvasSize,
+  MIND_NODE_H_MAX,
+  MIND_NODE_H_MIN,
+  MIND_NODE_W_MAX,
+  MIND_NODE_W_MIN,
   moveMindNode,
   newMindmap,
   normalizeMindmaps,
+  resetMindNodeSize,
   updateMindNode,
   type Mindmap,
 } from "./mindmap";
@@ -252,5 +258,90 @@ describe("mindCanvasSize", () => {
     const size = mindCanvasSize(nodes);
     expect(size.w).toBe(550 + 85 + 60);
     expect(size.h).toBe(360);
+  });
+});
+
+describe("node size customization", () => {
+  it("new nodes auto-fit (no stored size)", () => {
+    const m = newMindmap("T");
+    expect(m.nodes[0]!.w).toBeUndefined();
+    expect(m.nodes[0]!.h).toBeUndefined();
+  });
+
+  it("stores a custom size with clamping, per dimension", () => {
+    let m = newMindmap("T");
+    const root = m.nodes[0]!.id;
+    m = updateMindNode(m, root, { w: 9999 });
+    expect(m.nodes[0]!.w).toBe(MIND_NODE_W_MAX);
+    expect(m.nodes[0]!.h).toBeUndefined(); // height untouched
+    m = updateMindNode(m, root, { h: -5 });
+    expect(m.nodes[0]!.h).toBe(MIND_NODE_H_MIN);
+    expect(m.nodes[0]!.w).toBe(MIND_NODE_W_MAX); // width kept
+    m = updateMindNode(m, root, { w: 250, h: 90 });
+    expect(m.nodes[0]!.w).toBe(250);
+    expect(m.nodes[0]!.h).toBe(90);
+  });
+
+  it("resetMindNodeSize strips the size back to auto-fit", () => {
+    let m = newMindmap("T");
+    const root = m.nodes[0]!.id;
+    m = updateMindNode(m, root, { w: 250, h: 90 });
+    m = resetMindNodeSize(m, root);
+    expect(m.nodes[0]!.w).toBeUndefined();
+    expect(m.nodes[0]!.h).toBeUndefined();
+    // Other fields survive the reset.
+    expect(m.nodes[0]!.text).toBeTruthy();
+  });
+
+  it("normalizes stored sizes, keeping custom sizes and dropping invalid ones", () => {
+    const [m] = normalizeMindmaps([
+      {
+        id: "mm1",
+        title: "S",
+        nodes: [
+          { id: "r", text: "gốc", parentId: null, x: 300, y: 70, w: 5000, h: 10 },
+          { id: "a", text: "con", parentId: "r", x: 470, y: 180 },
+          { id: "b", text: "toang", parentId: "r", x: 470, y: 280, w: "rác", h: 0 },
+        ],
+      },
+    ]);
+    expect(m).toBeTruthy();
+    expect(m!.nodes[0]!.w).toBe(MIND_NODE_W_MAX);
+    expect(m!.nodes[0]!.h).toBe(MIND_NODE_H_MIN);
+    expect(m!.nodes[1]!.w).toBeUndefined();
+    expect(m!.nodes[1]!.h).toBeUndefined();
+    expect(m!.nodes[2]!.w).toBeUndefined(); // invalid -> auto
+  });
+});
+
+describe("curved connectors", () => {
+  it("maps default to curved and the toggle flips it", () => {
+    const m = newMindmap("T");
+    expect(normalizeMindmaps([{ ...m, nodes: m.nodes }])[0]!.curve).toBe(true);
+    expect(normalizeMindmaps([{ ...m, nodes: m.nodes, curve: false }])[0]!.curve).toBe(false);
+  });
+
+  it("straight path is a plain line between the endpoints", () => {
+    const d = connectorPath(10, 10, 100, 50, false);
+    expect(d).toMatch(/^M 10 10 L 100 50$/);
+  });
+
+  it("curved path keeps the endpoints but bows off the straight line", () => {
+    const d = connectorPath(10, 10, 100, 50, true);
+    expect(d.startsWith("M 10 10")).toBe(true);
+    expect(d.endsWith("100 50")).toBe(true);
+    expect(d).toContain(" Q "); // quadratic control point present
+    // Control point is off the chord, so the path is genuinely curved.
+    const q = d.match(/Q (-?[\d.]+) (-?[\d.]+)/)!;
+    const [cx, cy] = [Number(q[1]), Number(q[2])];
+    const midx = 55;
+    const midy = 30;
+    const dist = Math.hypot(cx - midx, cy - midy);
+    expect(dist).toBeGreaterThan(0);
+    expect(dist).toBeLessThanOrEqual(60); // bow is capped
+  });
+
+  it("short segments stay straight even when curved is on", () => {
+    expect(connectorPath(10, 10, 12, 11, true)).not.toContain("Q");
   });
 });
