@@ -21,6 +21,17 @@ export const MIND_MIN_CANVAS_H = 360;
 /** Breathing room added around the outermost nodes. */
 const MIND_PAD = 60;
 
+/** Bounds for hand-resized nodes (px). Unset width/height = auto-fit text. */
+export const MIND_NODE_W_MIN = 90;
+export const MIND_NODE_W_MAX = 420;
+export const MIND_NODE_H_MIN = 40;
+export const MIND_NODE_H_MAX = 260;
+
+const clampNodeW = (w: number) =>
+  Math.round(Math.min(MIND_NODE_W_MAX, Math.max(MIND_NODE_W_MIN, w)));
+const clampNodeH = (h: number) =>
+  Math.round(Math.min(MIND_NODE_H_MAX, Math.max(MIND_NODE_H_MIN, h)));
+
 /**
  * Canvas size that hugs the content: big enough to contain every node plus
  * padding, never bigger. Keeps empty scroll space out of the editor.
@@ -61,12 +72,17 @@ export interface MindNode {
   y: number;
   color: string;
   shape: MindShape;
+  /** Custom size in px; both absent means auto-fit the text. */
+  w?: number;
+  h?: number;
 }
 
 export interface Mindmap {
   id: string;
   title: string;
   nodes: MindNode[]; // nodes[0] is the root (parentId null)
+  /** Connector style: true (default) draws gently bowed curves, false straight lines. */
+  curve?: boolean;
   updatedAt: string;
 }
 
@@ -120,7 +136,7 @@ export function addChildNode(map: Mindmap, parentId: string, text = ""): Mindmap
 export function updateMindNode(
   map: Mindmap,
   id: string,
-  patch: Partial<Pick<MindNode, "text" | "color" | "shape">>,
+  patch: Partial<Pick<MindNode, "text" | "color" | "shape" | "w" | "h">>,
 ): Mindmap {
   return touchMap({
     ...map,
@@ -131,7 +147,23 @@ export function updateMindNode(
             text: patch.text !== undefined ? clampText(patch.text) || n.text : n.text,
             color: patch.color ?? n.color,
             shape: patch.shape ?? n.shape,
+            ...(patch.w !== undefined ? { w: clampNodeW(patch.w) } : {}),
+            ...(patch.h !== undefined ? { h: clampNodeH(patch.h) } : {}),
           }
+        : n,
+    ),
+  });
+}
+
+/** Drop a node's custom size so it auto-fits its text again. Pure. */
+export function resetMindNodeSize(map: Mindmap, id: string): Mindmap {
+  return touchMap({
+    ...map,
+    nodes: map.nodes.map((n) =>
+      n.id === id
+        ? (Object.fromEntries(
+            Object.entries(n).filter(([k]) => k !== "w" && k !== "h"),
+          ) as MindNode)
         : n,
     ),
   });
@@ -182,6 +214,9 @@ export function normalizeMindmaps(raw: unknown): Mindmap[] {
       ids.add(nid);
       rawParents.set(nid, typeof no.parentId === "string" && no.parentId ? no.parentId : null);
       const shape: MindShape = no.shape === "ellipse" || no.shape === "diamond" ? no.shape : "rect";
+      // Custom size survives storage, clamped; absent/invalid stays auto-fit.
+      const rawW = Number(no.w);
+      const rawH = Number(no.h);
       nodes.push({
         id: nid,
         text: typeof no.text === "string" ? clampText(no.text) : "",
@@ -193,6 +228,9 @@ export function normalizeMindmaps(raw: unknown): Mindmap[] {
             ? no.color
             : MIND_DEFAULT_COLOR,
         shape,
+        // Custom size survives storage, clamped; absent/invalid stays auto-fit.
+        ...(Number.isFinite(rawW) && rawW > 0 ? { w: clampNodeW(rawW) } : {}),
+        ...(Number.isFinite(rawH) && rawH > 0 ? { h: clampNodeH(rawH) } : {}),
       });
     }
     if (!nodes.length) continue;
@@ -219,6 +257,8 @@ export function normalizeMindmaps(raw: unknown): Mindmap[] {
       id,
       title: title || "Sơ đồ mới",
       nodes: kept,
+      // Maps saved before the toggle simply gain curves; an explicit false sticks.
+      curve: o.curve !== false,
       updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : new Date().toISOString(),
     });
   }
@@ -350,4 +390,28 @@ export function connectorEnds(
   const forward = (p2.x - p1.x) * dx + (p2.y - p1.y) * dy;
   if (forward < 0) return { x1: ax, y1: ay, x2: bx, y2: by };
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+}
+
+/**
+ * SVG path for a connector between two already-trimmed endpoints.
+ * Straight: a plain line. Curved: a quadratic Bézier bowed perpendicular to
+ * the chord (same side for every line, so the map reads consistently).
+ */
+export function connectorPath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  curved: boolean,
+): string {
+  const f = (v: number) => Math.round(v * 100) / 100;
+  if (!curved) return `M ${f(x1)} ${f(y1)} L ${f(x2)} ${f(y2)}`;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 8) return `M ${f(x1)} ${f(y1)} L ${f(x2)} ${f(y2)}`; // too short to bow
+  const bow = Math.min(0.22 * dist, 60);
+  const cx = (x1 + x2) / 2 + (-dy / dist) * bow;
+  const cy = (y1 + y2) / 2 + (dx / dist) * bow;
+  return `M ${f(x1)} ${f(y1)} Q ${f(cx)} ${f(cy)} ${f(x2)} ${f(y2)}`;
 }
