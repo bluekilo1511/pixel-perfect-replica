@@ -24,16 +24,23 @@ import {
   addChildNode,
   buildMindPuzzle,
   connectorEnds,
+  connectorPath,
   deleteMindNode,
   MINDMAPS_MAX,
   MIND_CANVAS_H,
   mindCanvasSize,
   MIND_CANVAS_W,
+  MIND_NODE_H_MAX,
+  MIND_NODE_H_MIN,
   MIND_NODES_MAX,
   MIND_COLORS,
   MIND_TEXT_MAX,
+  MIND_NODE_W_MAX,
+  MIND_NODE_W_MIN,
   moveMindNode,
   newMindmap,
+  resetMindNodeSize,
+  touchMap,
   updateMindNode,
   type Mindmap,
   type MindNode,
@@ -185,6 +192,14 @@ export function StudyTab() {
     y: number;
   } | null>(null);
   const dragRef = useRef<{ id: string; dx: number; dy: number; x: number; y: number } | null>(null);
+  const [resz, setResz] = useState<{ id: string; w: number; h: number } | null>(null);
+  const reszRef = useRef<{
+    id: string;
+    w: number;
+    h: number;
+    cx: number;
+    cy: number;
+  } | null>(null);
 
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const decks = useMemo(() => dueBySubject(cards, today), [cards, today]);
@@ -627,6 +642,16 @@ export function StudyTab() {
       return changed ? next : prev;
     });
   }, [sizeKeys]);
+  // Effective node size: a live resize wins, then a stored custom size (either
+  // dimension may be customized alone), then the measured auto-fit size.
+  const nodeSize = useCallback(
+    (n: MindNode): { w: number; h: number } => {
+      if (resz && resz.id === n.id) return { w: resz.w, h: resz.h };
+      const m = nodeSizes[n.id] ?? { w: 170, h: 44 };
+      return { w: n.w ?? m.w, h: n.h ?? m.h };
+    },
+    [resz, nodeSizes],
+  );
   // Canvas hugs the mindmap content so there is no dead scroll space, fills the
   // visible editor width, and grows live while a node is dragged outward.
   const scrollBoxRef = useRef<HTMLDivElement | null>(null);
@@ -643,9 +668,11 @@ export function StudyTab() {
     if (!curMap) return { w: 560, h: 360 };
     const pos = (n: MindNode) =>
       drag && drag.id === n.id ? { x: drag.x, y: drag.y } : { x: n.x, y: n.y };
+    const sizes: Record<string, { w: number; h: number }> = {};
+    for (const n of curMap.nodes) sizes[n.id] = nodeSize(n);
     const base = mindCanvasSize(
       curMap.nodes.map((n) => ({ id: n.id, x: pos(n).x, y: pos(n).y })),
-      nodeSizes,
+      sizes,
     );
     // Never wider than the farthest a node can legally reach + padding.
     const maxW = MIND_CANVAS_W - 40 + 85 + 60;
@@ -653,11 +680,25 @@ export function StudyTab() {
       w: Math.min(maxW, Math.max(base.w, boxW, 560)),
       h: Math.max(base.h, 360),
     };
-  }, [curMap, nodeSizes, boxW, drag]);
+  }, [curMap, nodeSize, boxW, drag]);
   // Track the pointer on window so a drag keeps working even when the cursor
   // leaves the canvas, the browser window, or a scroll edge interrupts it.
   useEffect(() => {
     const move = (e: PointerEvent) => {
+      const r = reszRef.current;
+      if (r) {
+        const w = Math.min(
+          MIND_NODE_W_MAX,
+          Math.max(MIND_NODE_W_MIN, Math.round(r.w + (e.clientX - r.cx))),
+        );
+        const h = Math.min(
+          MIND_NODE_H_MAX,
+          Math.max(MIND_NODE_H_MIN, Math.round(r.h + (e.clientY - r.cy))),
+        );
+        reszRef.current = { ...r, w, h, cx: e.clientX, cy: e.clientY };
+        setResz({ id: r.id, w, h });
+        return;
+      }
       const d = dragRef.current;
       if (!d) return;
       const x = Math.min(MIND_CANVAS_W - 40, Math.max(40, e.clientX - d.dx));
@@ -666,6 +707,13 @@ export function StudyTab() {
       setDrag(dragRef.current);
     };
     const up = () => {
+      const r = reszRef.current;
+      if (r) {
+        reszRef.current = null;
+        setResz(null);
+        patchMap((m) => updateMindNode(m, r.id, { w: r.w, h: r.h }));
+        return;
+      }
       const d = dragRef.current;
       dragRef.current = null;
       setDrag(null);
@@ -686,6 +734,13 @@ export function StudyTab() {
     const d = { id: n.id, dx: e.clientX - n.x, dy: e.clientY - n.y, x: n.x, y: n.y };
     dragRef.current = d;
     setDrag(d);
+  };
+  const onResizeStart = (e: RPointerEvent<HTMLElement>, n: MindNode) => {
+    e.preventDefault();
+    e.stopPropagation(); // grab the handle without also dragging the node
+    const size = nodeSize(n);
+    reszRef.current = { id: n.id, w: size.w, h: size.h, cx: e.clientX, cy: e.clientY };
+    setResz({ id: n.id, w: size.w, h: size.h });
   };
 
   const accuracy = useMemo(() => subjectAccuracy(data.studyHistory), [data.studyHistory]);
@@ -1457,6 +1512,15 @@ export function StudyTab() {
                 >
                   🗑️ Xoá ô
                 </Button>
+                <Button
+                  size="sm"
+                  variant={curMap.curve !== false ? "default" : "secondary"}
+                  onClick={() => patchMap((m) => touchMap({ ...m, curve: !(m.curve !== false) }))}
+                  aria-label="Đổi nét nối cong/thẳng"
+                  title="Bật/tắt đường nối uốn cong"
+                >
+                  〰️ Nét cong
+                </Button>
               </div>
               <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 p-2">
                 <span className="text-xs text-muted-foreground">
@@ -1542,6 +1606,57 @@ export function StudyTab() {
                     aria-label={`Màu ${c}`}
                   />
                 ))}
+                <span className="text-xs text-muted-foreground">Cỡ ô:</span>
+                {(() => {
+                  const sel = selNode ? curMap.nodes.find((n) => n.id === selNode) : null;
+                  const size = sel ? nodeSize(sel) : { w: 170, h: 44 };
+                  return (
+                    <>
+                      <input
+                        type="range"
+                        min={MIND_NODE_W_MIN}
+                        max={MIND_NODE_W_MAX}
+                        value={Math.min(
+                          MIND_NODE_W_MAX,
+                          Math.max(MIND_NODE_W_MIN, Math.round(size.w)),
+                        )}
+                        onChange={(e) =>
+                          selNode &&
+                          patchMap((m) => updateMindNode(m, selNode, { w: Number(e.target.value) }))
+                        }
+                        disabled={!selNode}
+                        aria-label="Độ rộng ô"
+                        className="w-20 accent-primary"
+                      />
+                      <input
+                        type="range"
+                        min={MIND_NODE_H_MIN}
+                        max={MIND_NODE_H_MAX}
+                        value={Math.min(
+                          MIND_NODE_H_MAX,
+                          Math.max(MIND_NODE_H_MIN, Math.round(size.h)),
+                        )}
+                        onChange={(e) =>
+                          selNode &&
+                          patchMap((m) => updateMindNode(m, selNode, { h: Number(e.target.value) }))
+                        }
+                        disabled={!selNode}
+                        aria-label="Chiều cao ô"
+                        className="w-20 accent-primary"
+                      />
+                      <button
+                        type="button"
+                        disabled={!selNode}
+                        onClick={() => selNode && patchMap((m) => resetMindNodeSize(m, selNode))}
+                        className="rounded px-2 py-1 text-xs bg-secondary/60 hover:bg-secondary disabled:opacity-40"
+                        aria-label="Về cỡ tự động"
+                        title="Về cỡ tự động theo chữ"
+                      >
+                        ↺ auto
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
               <div
                 ref={scrollBoxRef}
@@ -1556,32 +1671,33 @@ export function StudyTab() {
                       if (!par) return null;
                       const a = nodePos(par);
                       const b = nodePos(n);
-                      const sa = nodeSizes[par.id];
-                      const sb = nodeSizes[n.id];
-                      const ends =
-                        sa && sb
-                          ? connectorEnds(
-                              a.x,
-                              a.y,
-                              sa.w,
-                              sa.h,
-                              par.shape,
-                              b.x,
-                              b.y,
-                              sb.w,
-                              sb.h,
-                              n.shape,
-                            )
-                          : null;
+                      const sa = nodeSize(par);
+                      const sb = nodeSize(n);
+                      const ends = connectorEnds(
+                        a.x,
+                        a.y,
+                        sa.w,
+                        sa.h,
+                        par.shape,
+                        b.x,
+                        b.y,
+                        sb.w,
+                        sb.h,
+                        n.shape,
+                      );
                       return (
-                        <line
+                        <path
                           key={n.id}
-                          x1={ends ? ends.x1 : a.x}
-                          y1={ends ? ends.y1 : a.y}
-                          x2={ends ? ends.x2 : b.x}
-                          y2={ends ? ends.y2 : b.y}
+                          d={connectorPath(
+                            ends.x1,
+                            ends.y1,
+                            ends.x2,
+                            ends.y2,
+                            curMap.curve !== false,
+                          )}
                           stroke={n.color}
                           strokeWidth={2}
+                          fill="none"
                         />
                       );
                     })}
@@ -1589,12 +1705,16 @@ export function StudyTab() {
                   {curMap.nodes.map((n) => {
                     const pos = nodePos(n);
                     const isSel = selNode === n.id;
+                    const fixedW = resz && resz.id === n.id ? resz.w : n.w;
+                    const fixedH = resz && resz.id === n.id ? resz.h : n.h;
                     const pad =
-                      n.shape === "diamond"
-                        ? "px-7 py-3"
-                        : n.shape === "ellipse"
-                          ? "px-5 py-2"
-                          : "px-3 py-1.5";
+                      fixedW && fixedH
+                        ? "p-0"
+                        : n.shape === "diamond"
+                          ? "px-7 py-3"
+                          : n.shape === "ellipse"
+                            ? "px-5 py-2"
+                            : "px-3 py-1.5";
                     return (
                       <button
                         key={n.id}
@@ -1604,10 +1724,17 @@ export function StudyTab() {
                           else nodeEls.current.delete(n.id);
                         }}
                         onPointerDown={(e) => onNodePointerDown(e, n)}
-                        className={`absolute max-w-[170px] -translate-x-1/2 -translate-y-1/2 touch-none select-none text-xs font-medium leading-snug text-foreground ${pad} ${
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 touch-none select-none overflow-hidden text-xs font-medium leading-snug text-foreground ${pad} ${
                           isSel ? "ring-2 ring-primary" : ""
+                        } ${fixedW ? "" : "max-w-[170px]"} ${
+                          fixedW && fixedH ? "flex items-center justify-center" : ""
                         }`}
-                        style={{ left: pos.x, top: pos.y }}
+                        style={{
+                          left: pos.x,
+                          top: pos.y,
+                          width: fixedW,
+                          height: fixedH,
+                        }}
                       >
                         <svg
                           className="absolute inset-0 h-full w-full overflow-visible"
@@ -1645,14 +1772,23 @@ export function StudyTab() {
                           )}
                         </svg>
                         <span className="relative">{n.text || "…"}</span>
+                        <span
+                          onPointerDown={(e) => onResizeStart(e, n)}
+                          className={`absolute bottom-0 right-0 h-3 w-3 rounded-tl-md bg-primary/90 ${
+                            isSel ? "block" : "hidden"
+                          }`}
+                          style={{ cursor: "nwse-resize" }}
+                          aria-hidden="true"
+                        />
                       </button>
                     );
                   })}
                 </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Kéo ô để sắp xếp lại · bấm ô để chọn rồi thêm nhánh con, đổi nội dung/hình/màu ·
-                nhánh con tự mọc sang hai bên.
+                Kéo ô để sắp xếp lại · bấm ô để chọn rồi thêm nhánh con, đổi nội dung/hình/màu/cỡ ·
+                kéo góc phải-dưới ô đang chọn để căng size · 〰️ đổi nét nối cong/thẳng · nhánh con
+                tự mọc sang hai bên.
               </p>
             </>
           )}
