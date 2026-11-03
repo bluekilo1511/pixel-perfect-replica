@@ -594,8 +594,28 @@ export function StudyTab() {
       setSelNode(null);
     }
   };
+  const deselectNode = useCallback(() => {
+    if (selNode && drafts[selNode]) {
+      patchMap((m) => updateMindNode(m, selNode, { text: drafts[selNode]!.q }));
+      setDrafts((m) => {
+        const next = { ...m };
+        delete next[selNode];
+        return next;
+      });
+    }
+    setSelNode(null);
+  }, [selNode, drafts, patchMap]);
+
   const addChildHere = () => {
     if (!curMap || !selNode) return;
+    if (drafts[selNode]) {
+      patchMap((m) => updateMindNode(m, selNode, { text: drafts[selNode]!.q }));
+      setDrafts((m) => {
+        const next = { ...m };
+        delete next[selNode];
+        return next;
+      });
+    }
     const next = addChildNode(curMap, selNode);
     if (!next) {
       toast.error(
@@ -606,7 +626,7 @@ export function StudyTab() {
       return;
     }
     patchMap(() => next);
-    setSelNode(next.nodes[next.nodes.length - 1]!.id);
+    // Giữ nguyên ô đang chọn để người dùng có thể tạo 5 nhánh liên tiếp mà không bị nhảy panel
   };
   const removeSelNode = () => {
     if (!curMap || !selNode) return;
@@ -730,6 +750,7 @@ export function StudyTab() {
   }, [patchMap]);
   const onNodePointerDown = (e: RPointerEvent<HTMLButtonElement>, n: MindNode) => {
     e.preventDefault();
+    e.stopPropagation(); // Ngăn sự kiện nổi lên canvas gây bỏ chọn nhầm
     setSelNode(n.id);
     const d = { id: n.id, dx: e.clientX - n.x, dy: e.clientY - n.y, x: n.x, y: n.y };
     dragRef.current = d;
@@ -742,6 +763,17 @@ export function StudyTab() {
     reszRef.current = { id: n.id, w: size.w, h: size.h, cx: e.clientX, cy: e.clientY };
     setResz({ id: n.id, w: size.w, h: size.h });
   };
+
+  // Nhấn Escape để bỏ chọn ô và tắt viền
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        deselectNode();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deselectNode]);
 
   const accuracy = useMemo(() => subjectAccuracy(data.studyHistory), [data.studyHistory]);
   const current: Flashcard | null = queue ? (byId.get(queue[qi]!) ?? null) : null;
@@ -1489,182 +1521,233 @@ export function StudyTab() {
             </>
           ) : (
             <>
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="secondary" onClick={() => setMapId("")}>
-                  ← Danh sách
-                </Button>
-                <Input
-                  value={curMap.title}
-                  onChange={(e) => patchMap((m) => ({ ...m, title: e.target.value.slice(0, 40) }))}
-                  maxLength={40}
-                  aria-label="Tên sơ đồ"
-                  className="h-9 w-48 text-sm"
-                />
-                <Button size="sm" onClick={addChildHere} disabled={!selNode}>
-                  ➕ Nhánh con
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={removeSelNode}
-                  disabled={!selNode}
-                >
-                  🗑️ Xoá ô
-                </Button>
-                <Button
-                  size="sm"
-                  variant={curMap.curve !== false ? "default" : "secondary"}
-                  onClick={() => patchMap((m) => touchMap({ ...m, curve: !(m.curve !== false) }))}
-                  aria-label="Đổi nét nối cong/thẳng"
-                  title="Bật/tắt đường nối uốn cong"
-                >
-                  〰️ Nét cong
-                </Button>
-              </div>
-              <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 p-2">
-                <span className="text-xs text-muted-foreground">
-                  Ô đang chọn:{" "}
-                  <strong>
-                    {selNode
-                      ? curMap.nodes.find((n) => n.id === selNode)?.text || "(trống)"
-                      : "chưa chọn"}
-                  </strong>
-                </span>
-                <Input
-                  value={
-                    selNode
-                      ? (drafts[selNode]?.q ??
-                        curMap.nodes.find((n) => n.id === selNode)?.text ??
-                        "")
-                      : ""
-                  }
-                  onChange={(e) =>
-                    selNode &&
-                    setDrafts((m) => ({
-                      ...m,
-                      [selNode]: { q: e.target.value, a: m[selNode]?.a ?? "" },
-                    }))
-                  }
-                  onBlur={() => {
-                    if (selNode && drafts[selNode]) {
-                      patchMap((m) => updateMindNode(m, selNode, { text: drafts[selNode]!.q }));
-                      setDrafts((m) => {
-                        const next = { ...m };
-                        delete next[selNode];
-                        return next;
-                      });
-                    }
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                  disabled={!selNode}
-                  placeholder="Nội dung ô đang chọn"
-                  maxLength={MIND_TEXT_MAX}
-                  aria-label="Nội dung ô"
-                  className="h-9 w-56 text-sm"
-                />
-                <span className="text-xs text-muted-foreground">Hình:</span>
-                {(
-                  [
-                    ["rect", "▭"],
-                    ["ellipse", "◯"],
-                    ["diamond", "◇"],
-                  ] as const
-                ).map(([shape, icon]) => (
-                  <button
-                    key={shape}
-                    type="button"
-                    disabled={!selNode}
-                    onClick={() =>
-                      selNode && patchMap((m) => updateMindNode(m, selNode, { shape }))
-                    }
-                    className={`rounded px-2 py-1 text-sm ${
-                      selNode && curMap.nodes.find((n) => n.id === selNode)?.shape === shape
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary/60 hover:bg-secondary"
-                    } disabled:opacity-40`}
-                    aria-label={`Hình ${shape}`}
+              <div className="sticky top-0 z-20 space-y-2 rounded-xl border border-border/60 bg-background/95 p-2 backdrop-blur-md shadow-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      deselectNode();
+                      setMapId("");
+                    }}
                   >
-                    {icon}
-                  </button>
-                ))}
-                <span className="text-xs text-muted-foreground">Màu:</span>
-                {MIND_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    disabled={!selNode}
-                    onClick={() =>
-                      selNode && patchMap((m) => updateMindNode(m, selNode, { color: c }))
+                    ← Danh sách
+                  </Button>
+                  <Input
+                    value={curMap.title}
+                    onChange={(e) =>
+                      patchMap((m) => ({ ...m, title: e.target.value.slice(0, 40) }))
                     }
-                    className={`h-6 w-6 rounded-full border-2 ${
-                      selNode && curMap.nodes.find((n) => n.id === selNode)?.color === c
-                        ? "border-foreground"
-                        : "border-transparent"
-                    } disabled:opacity-40`}
-                    style={{ background: c }}
-                    aria-label={`Màu ${c}`}
+                    maxLength={40}
+                    aria-label="Tên sơ đồ"
+                    className="h-9 w-48 text-sm"
                   />
-                ))}
-                <span className="text-xs text-muted-foreground">Cỡ ô:</span>
-                {(() => {
-                  const sel = selNode ? curMap.nodes.find((n) => n.id === selNode) : null;
-                  const size = sel ? nodeSize(sel) : { w: 170, h: 44 };
-                  return (
-                    <>
-                      <input
-                        type="range"
-                        min={MIND_NODE_W_MIN}
-                        max={MIND_NODE_W_MAX}
-                        value={Math.min(
-                          MIND_NODE_W_MAX,
-                          Math.max(MIND_NODE_W_MIN, Math.round(size.w)),
-                        )}
-                        onChange={(e) =>
-                          selNode &&
-                          patchMap((m) => updateMindNode(m, selNode, { w: Number(e.target.value) }))
-                        }
-                        disabled={!selNode}
-                        aria-label="Độ rộng ô"
-                        className="w-20 accent-primary"
-                      />
-                      <input
-                        type="range"
-                        min={MIND_NODE_H_MIN}
-                        max={MIND_NODE_H_MAX}
-                        value={Math.min(
-                          MIND_NODE_H_MAX,
-                          Math.max(MIND_NODE_H_MIN, Math.round(size.h)),
-                        )}
-                        onChange={(e) =>
-                          selNode &&
-                          patchMap((m) => updateMindNode(m, selNode, { h: Number(e.target.value) }))
-                        }
-                        disabled={!selNode}
-                        aria-label="Chiều cao ô"
-                        className="w-20 accent-primary"
-                      />
-                      <button
-                        type="button"
-                        disabled={!selNode}
-                        onClick={() => selNode && patchMap((m) => resetMindNodeSize(m, selNode))}
-                        className="rounded px-2 py-1 text-xs bg-secondary/60 hover:bg-secondary disabled:opacity-40"
-                        aria-label="Về cỡ tự động"
-                        title="Về cỡ tự động theo chữ"
-                      >
-                        ↺ auto
-                      </button>
-                    </>
-                  );
-                })()}
+                  <Button
+                    size="sm"
+                    onClick={addChildHere}
+                    disabled={!selNode}
+                    title={
+                      selNode
+                        ? "Thêm nhánh con từ ô này (bấm liên tiếp để tạo nhiều nhánh)"
+                        : "Chọn một ô trước khi thêm nhánh con"
+                    }
+                  >
+                    ➕ Nhánh con
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={removeSelNode}
+                    disabled={!selNode}
+                  >
+                    🗑️ Xoá ô
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={curMap.curve !== false ? "default" : "secondary"}
+                    onClick={() => patchMap((m) => touchMap({ ...m, curve: !(m.curve !== false) }))}
+                    aria-label="Đổi nét nối cong/thẳng"
+                    title="Bật/tắt đường nối uốn cong"
+                  >
+                    〰️ Nét cong
+                  </Button>
+                  {selNode && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto h-8 gap-1 text-xs"
+                      onClick={deselectNode}
+                      title="Bỏ chọn ô (Esc hoặc bấm ra vùng trống)"
+                    >
+                      ✕ Bỏ chọn
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/40 bg-secondary/30 p-2">
+                  <span className="text-xs text-muted-foreground">
+                    Ô đang chọn:{" "}
+                    <strong>
+                      {selNode
+                        ? curMap.nodes.find((n) => n.id === selNode)?.text || "(trống)"
+                        : "chưa chọn"}
+                    </strong>
+                  </span>
+                  <Input
+                    value={
+                      selNode
+                        ? (drafts[selNode]?.q ??
+                          curMap.nodes.find((n) => n.id === selNode)?.text ??
+                          "")
+                        : ""
+                    }
+                    onChange={(e) =>
+                      selNode &&
+                      setDrafts((m) => ({
+                        ...m,
+                        [selNode]: { q: e.target.value, a: m[selNode]?.a ?? "" },
+                      }))
+                    }
+                    onBlur={() => {
+                      if (selNode && drafts[selNode]) {
+                        patchMap((m) => updateMindNode(m, selNode, { text: drafts[selNode]!.q }));
+                        setDrafts((m) => {
+                          const next = { ...m };
+                          delete next[selNode];
+                          return next;
+                        });
+                      }
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                    disabled={!selNode}
+                    placeholder="Nội dung ô đang chọn"
+                    maxLength={MIND_TEXT_MAX}
+                    aria-label="Nội dung ô"
+                    className="h-9 w-56 text-sm"
+                  />
+                  <span className="text-xs text-muted-foreground">Hình:</span>
+                  {(
+                    [
+                      ["rect", "▭"],
+                      ["ellipse", "◯"],
+                      ["diamond", "◇"],
+                    ] as const
+                  ).map(([shape, icon]) => (
+                    <button
+                      key={shape}
+                      type="button"
+                      disabled={!selNode}
+                      onClick={() =>
+                        selNode && patchMap((m) => updateMindNode(m, selNode, { shape }))
+                      }
+                      className={`rounded px-2 py-1 text-sm ${
+                        selNode && curMap.nodes.find((n) => n.id === selNode)?.shape === shape
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary/60 hover:bg-secondary"
+                      } disabled:opacity-40`}
+                      aria-label={`Hình ${shape}`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                  <span className="text-xs text-muted-foreground">Màu:</span>
+                  {MIND_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      disabled={!selNode}
+                      onClick={() =>
+                        selNode && patchMap((m) => updateMindNode(m, selNode, { color: c }))
+                      }
+                      className={`h-6 w-6 rounded-full border-2 ${
+                        selNode && curMap.nodes.find((n) => n.id === selNode)?.color === c
+                          ? "border-foreground"
+                          : "border-transparent"
+                      } disabled:opacity-40`}
+                      style={{ background: c }}
+                      aria-label={`Màu ${c}`}
+                    />
+                  ))}
+                  <span className="text-xs text-muted-foreground">Cỡ ô:</span>
+                  {(() => {
+                    const sel = selNode ? curMap.nodes.find((n) => n.id === selNode) : null;
+                    const size = sel ? nodeSize(sel) : { w: 170, h: 44 };
+                    return (
+                      <>
+                        <input
+                          type="range"
+                          min={MIND_NODE_W_MIN}
+                          max={MIND_NODE_W_MAX}
+                          value={Math.min(
+                            MIND_NODE_W_MAX,
+                            Math.max(MIND_NODE_W_MIN, Math.round(size.w)),
+                          )}
+                          onChange={(e) =>
+                            selNode &&
+                            patchMap((m) =>
+                              updateMindNode(m, selNode, { w: Number(e.target.value) }),
+                            )
+                          }
+                          disabled={!selNode}
+                          aria-label="Độ rộng ô"
+                          className="w-20 accent-primary"
+                        />
+                        <input
+                          type="range"
+                          min={MIND_NODE_H_MIN}
+                          max={MIND_NODE_H_MAX}
+                          value={Math.min(
+                            MIND_NODE_H_MAX,
+                            Math.max(MIND_NODE_H_MIN, Math.round(size.h)),
+                          )}
+                          onChange={(e) =>
+                            selNode &&
+                            patchMap((m) =>
+                              updateMindNode(m, selNode, { h: Number(e.target.value) }),
+                            )
+                          }
+                          disabled={!selNode}
+                          aria-label="Chiều cao ô"
+                          className="w-20 accent-primary"
+                        />
+                        <button
+                          type="button"
+                          disabled={!selNode}
+                          onClick={() => selNode && patchMap((m) => resetMindNodeSize(m, selNode))}
+                          className="rounded px-2 py-1 text-xs bg-secondary/60 hover:bg-secondary disabled:opacity-40"
+                          aria-label="Về cỡ tự động"
+                          title="Về cỡ tự động theo chữ"
+                        >
+                          ↺ auto
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
               <div
                 ref={scrollBoxRef}
                 className="overflow-auto rounded-xl border border-border/60 bg-background/40"
                 style={{ maxHeight: 560 }}
+                onPointerDown={(e) => {
+                  if (e.target === e.currentTarget) deselectNode();
+                }}
               >
-                <div className="relative" style={{ width: mindSize.w, height: mindSize.h }}>
-                  <svg className="absolute inset-0" width={mindSize.w} height={mindSize.h}>
+                <div
+                  className="relative cursor-default"
+                  style={{ width: mindSize.w, height: mindSize.h }}
+                  onPointerDown={(e) => {
+                    if (e.target === e.currentTarget) deselectNode();
+                  }}
+                >
+                  <svg
+                    className="absolute inset-0"
+                    width={mindSize.w}
+                    height={mindSize.h}
+                    onPointerDown={(e) => {
+                      if (e.target === e.currentTarget) deselectNode();
+                    }}
+                  >
                     {curMap.nodes.map((n) => {
                       if (!n.parentId) return null;
                       const par = curMap.nodes.find((x) => x.id === n.parentId);
@@ -1715,6 +1798,12 @@ export function StudyTab() {
                           : n.shape === "ellipse"
                             ? "px-5 py-2"
                             : "px-3 py-1.5";
+                    const roundedClass =
+                      n.shape === "ellipse"
+                        ? "rounded-full"
+                        : n.shape === "diamond"
+                          ? "rounded-sm"
+                          : "rounded-xl";
                     return (
                       <button
                         key={n.id}
@@ -1724,8 +1813,8 @@ export function StudyTab() {
                           else nodeEls.current.delete(n.id);
                         }}
                         onPointerDown={(e) => onNodePointerDown(e, n)}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 touch-none select-none overflow-hidden text-xs font-medium leading-snug text-foreground ${pad} ${
-                          isSel ? "ring-2 ring-primary" : ""
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 touch-none select-none overflow-hidden text-xs font-medium leading-snug text-foreground ${roundedClass} ${pad} ${
+                          isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                         } ${fixedW ? "" : "max-w-[170px]"} ${
                           fixedW && fixedH ? "flex items-center justify-center" : ""
                         }`}
@@ -1786,9 +1875,9 @@ export function StudyTab() {
                 </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Kéo ô để sắp xếp lại · bấm ô để chọn rồi thêm nhánh con, đổi nội dung/hình/màu/cỡ ·
-                kéo góc phải-dưới ô đang chọn để căng size · 〰️ đổi nét nối cong/thẳng · nhánh con
-                tự mọc sang hai bên.
+                Kéo ô để sắp xếp · bấm ô để chỉnh (giữ nguyên ô cha để bấm ➕ thêm nhiều nhánh liên
+                tiếp) · bấm vùng trống hoặc phím Esc để bỏ chọn · kéo góc phải-dưới để chỉnh cỡ · 〰️
+                đổi nét cong/thẳng.
               </p>
             </>
           )}
