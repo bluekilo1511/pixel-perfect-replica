@@ -1,15 +1,32 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { morningBriefing } from "@/lib/tracker/briefing";
+import { dueCountAll } from "@/lib/tracker/studyStore";
+import { dateStr } from "@/lib/tracker/model";
 
 /** 🌅 Bản tin buổi sáng — một card duy nhất gói mọi thứ đáng biết hôm nay. */
 export function MorningBriefingCard() {
   const { data } = useTracker();
+  // Flashcards live in IndexedDB now, so the due count arrives async.
+  const [dueCount, setDueCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    dueCountAll(dateStr())
+      .then((n) => {
+        if (alive) setDueCount(n);
+      })
+      .catch(() => {
+        if (alive) setDueCount(0);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const items = useMemo(() => {
     const now = new Date();
     if (now.getHours() >= 12) return null; // chỉ là "bản tin buổi sáng"
-    return morningBriefing(data, now);
-  }, [data]);
+    return morningBriefing(data, now, { dueFlashcards: dueCount });
+  }, [data, dueCount]);
   if (!items) return null;
   return (
     <section className="glass p-5" aria-label="Bản tin buổi sáng">
