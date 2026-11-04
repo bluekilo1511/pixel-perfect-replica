@@ -11,8 +11,18 @@ export interface BriefingItem {
   text: string;
 }
 
-/** Items for the morning briefing card; null when there is nothing to say. */
-export function morningBriefing(data: AppData, now = new Date()): BriefingItem[] | null {
+export interface BriefingStudy {
+  dueFlashcards: number; // due count from the IndexedDB study store (see studyStore.ts)
+}
+
+/** Items for the morning briefing card; null when there is nothing to say.
+ * `study` carries the flashcard due count from the IndexedDB store; when omitted
+ * the legacy AppData.flashcards array is used (backwards compatible). */
+export function morningBriefing(
+  data: AppData,
+  now = new Date(),
+  study?: BriefingStudy,
+): BriefingItem[] | null {
   const today = dateStr(now);
   const items: BriefingItem[] = [];
 
@@ -33,7 +43,7 @@ export function morningBriefing(data: AppData, now = new Date()): BriefingItem[]
   }
 
   // Flashcards due for review today.
-  const due = dueCards(data.flashcards, today).length;
+  const due = study ? study.dueFlashcards : dueCards(data.flashcards, today).length;
   if (due > 0) items.push({ emoji: "🃏", text: `${due} flashcard đến hạn ôn` });
 
   // Daily quests not finished yet.
