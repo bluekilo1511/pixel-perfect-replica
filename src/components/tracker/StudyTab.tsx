@@ -419,18 +419,29 @@ export function StudyTab() {
     );
   };
 
+  // In-app dialog replaces native prompt/confirm dialogs (blocked in preview iframes)
+  type AskDialog =
+    | { kind: "name"; title: string; value: string; onOk: (v: string) => void }
+    | { kind: "confirm"; title: string; onOk: () => void };
+  const [ask, setAsk] = useState<AskDialog | null>(null);
+
   const removeDeck = () => {
     if (!activeDeck || !library) return;
-    if (!window.confirm(`Xoá bộ "${deckTitle}" cùng toàn bộ thẻ? Không hoàn tác được.`)) return;
-    const res = removeNode(library, activeDeck);
-    if (!res) return;
-    setLibrary(res.library);
-    void saveLibrary(res.library);
-    void deleteDeckCards(activeDeck);
-    setCards((cs) => cs.filter((c) => (c.deckId ?? c.subject) !== activeDeck));
-    setActiveDeck("");
-    persist("ppr.studyDeck", "");
-    toast("🗑️ Đã xoá bộ thẻ");
+    setAsk({
+      kind: "confirm",
+      title: `Xoá bộ "${deckTitle}" cùng toàn bộ thẻ? Không hoàn tác được.`,
+      onOk: () => {
+        const res = removeNode(library, activeDeck);
+        if (!res) return;
+        setLibrary(res.library);
+        void saveLibrary(res.library);
+        void deleteDeckCards(activeDeck);
+        setCards((cs) => cs.filter((c) => (c.deckId ?? c.subject) !== activeDeck));
+        setActiveDeck("");
+        persist("ppr.studyDeck", "");
+        toast("🗑️ Đã xoá bộ thẻ");
+      },
+    });
   };
 
   // ---- Library tree editing ----
@@ -449,85 +460,115 @@ export function StudyTab() {
 
   const doRename = (kind: "folder" | "subject" | "term" | "deck", id: string, current: string) => {
     if (!library) return;
-    const name = window.prompt("Tên mới:", current);
-    if (name === null) return;
-    const res = renameNode(library, kind, id, name);
-    if (!res) {
-      toast.error("Tên trống hoặc không tìm thấy mục.");
-      return;
-    }
-    commitTree(res);
+    setAsk({
+      kind: "name",
+      title: "Đổi tên:",
+      value: current,
+      onOk: (name) => {
+        const res = renameNode(library, kind, id, name);
+        if (!res) {
+          toast.error("Tên trống hoặc không tìm thấy mục.");
+          return;
+        }
+        commitTree(res);
+      },
+    });
   };
 
   const doAddFolder = () => {
     if (!library) return;
-    const name = window.prompt("Tên thư mục (vd: Năm lớp 9):", "");
-    if (!name) return;
-    const res = addFolder(library, name);
-    if (!res) {
-      toast.error(`Tối đa ${FOLDERS_MAX} thư mục.`);
-      return;
-    }
-    commitTree(res);
-    const f = res.folders[res.folders.length - 1]!;
-    setExpanded((p) => new Set(p).add(f.id));
+    setAsk({
+      kind: "name",
+      title: "Tên thư mục (vd: Năm lớp 9):",
+      value: "",
+      onOk: (name) => {
+        const res = addFolder(library, name);
+        if (!res) {
+          toast.error(`Tối đa ${FOLDERS_MAX} thư mục.`);
+          return;
+        }
+        commitTree(res);
+        const f = res.folders[res.folders.length - 1]!;
+        setExpanded((p) => new Set(p).add(f.id));
+      },
+    });
   };
 
   const doAddSubject = (folderId: string) => {
     if (!library) return;
-    const name = window.prompt("Tên môn (vd: Toán):", "");
-    if (!name) return;
-    const res = addSubject(library, folderId, name);
-    if (!res) {
-      toast.error("Không thêm được môn.");
-      return;
-    }
-    commitTree(res);
-    setExpanded((p) => new Set(p).add(folderId));
+    setAsk({
+      kind: "name",
+      title: "Tên môn (vd: Toán):",
+      value: "",
+      onOk: (name) => {
+        const res = addSubject(library, folderId, name);
+        if (!res) {
+          toast.error("Không thêm được môn.");
+          return;
+        }
+        commitTree(res);
+        setExpanded((p) => new Set(p).add(folderId));
+      },
+    });
   };
 
   const doAddTerm = (folderId: string, subjectId: string) => {
     if (!library) return;
-    const name = window.prompt("Tên học kỳ (vd: HK1):", "");
-    if (!name) return;
-    const res = addTerm(library, folderId, subjectId, name);
-    if (!res) {
-      toast.error("Không thêm được học kỳ.");
-      return;
-    }
-    commitTree(res);
-    setExpanded((p) => new Set(p).add(folderId).add(subjectId));
+    setAsk({
+      kind: "name",
+      title: "Tên học kỳ (vd: HK1):",
+      value: "",
+      onOk: (name) => {
+        const res = addTerm(library, folderId, subjectId, name);
+        if (!res) {
+          toast.error("Không thêm được học kỳ.");
+          return;
+        }
+        commitTree(res);
+        setExpanded((p) => new Set(p).add(folderId).add(subjectId));
+      },
+    });
   };
 
   const doAddDeck = (folderId: string, subjectId: string, termId: string | null) => {
     if (!library) return;
-    const name = window.prompt("Tên bộ thẻ (vd: HK1 - Đại lượng tỉ lệ):", "");
-    if (!name) return;
-    const res = addDeck(library, folderId, subjectId, termId, name);
-    if (!res) {
-      toast.error("Không thêm được bộ thẻ.");
-      return;
-    }
-    commitTree(res.library);
-    const ex = new Set(expanded).add(folderId).add(subjectId);
-    if (termId) ex.add(termId);
-    setExpanded(ex);
-    pickDeck(res.deckId);
+    setAsk({
+      kind: "name",
+      title: "Tên bộ thẻ (vd: HK1 - Đại lượng tỉ lệ):",
+      value: "",
+      onOk: (name) => {
+        const res = addDeck(library, folderId, subjectId, termId, name);
+        if (!res) {
+          toast.error("Không thêm được bộ thẻ.");
+          return;
+        }
+        commitTree(res.library);
+        const ex = new Set(expanded).add(folderId).add(subjectId);
+        if (termId) ex.add(termId);
+        setExpanded(ex);
+        pickDeck(res.deckId);
+      },
+    });
   };
 
   const doRemove = (id: string, name: string) => {
     if (!library) return;
-    if (!window.confirm(`Xoá "${name}" cùng mọi nội dung bên trong? Không hoàn tác được.`)) return;
-    const res = removeNode(library, id);
-    if (!res) return;
-    commitTree(res.library);
-    for (const deckId of res.deckIds) void deleteDeckCards(deckId);
-    const gone = new Set(res.deckIds);
-    setCards((cs) => cs.filter((c) => !(c.deckId && gone.has(c.deckId))));
-    if (activeDeck && gone.has(activeDeck)) {
-      setActiveDeck("");
-      persist("ppr.studyDeck", "");
-    }
+    setAsk({
+      kind: "confirm",
+      title: `Xoá "${name}" cùng mọi nội dung bên trong? Không hoàn tác được.`,
+      onOk: () => {
+        const res = removeNode(library, id);
+        if (!res) return;
+        commitTree(res.library);
+        for (const deckId of res.deckIds) void deleteDeckCards(deckId);
+        const gone = new Set(res.deckIds);
+        setCards((cs) => cs.filter((c) => !(c.deckId && gone.has(c.deckId))));
+        if (activeDeck && gone.has(activeDeck)) {
+          setActiveDeck("");
+          persist("ppr.studyDeck", "");
+        }
+      },
+    });
   };
 
   // ---- Games ----
@@ -789,13 +830,18 @@ export function StudyTab() {
     setSelNode(null);
   };
   const removeMap = (id: string) => {
-    if (!window.confirm("Xoá sơ đồ này? Không hoàn tác được.")) return;
-    setMaps((ms) => ms.filter((m) => m.id !== id));
-    void deleteMapRecord(id);
-    if (id === mapId) {
-      setMapId("");
-      setSelNode(null);
-    }
+    setAsk({
+      kind: "confirm",
+      title: "Xoá sơ đồ này? Không hoàn tác được.",
+      onOk: () => {
+        setMaps((ms) => ms.filter((m) => m.id !== id));
+        void deleteMapRecord(id);
+        if (id === mapId) {
+          setMapId("");
+          setSelNode(null);
+        }
+      },
+    });
   };
   const deselectNode = useCallback(() => {
     if (selNode && drafts[selNode]) {
@@ -2320,6 +2366,59 @@ export function StudyTab() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* Hộp thoại thêm/đổi tên/xoá (thay window.prompt/confirm bị chặn trong iframe) */}
+      {ask && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setAsk(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-primary/30 bg-card p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-3 text-sm font-medium">{ask.title}</p>
+            {ask.kind === "name" && (
+              <input
+                autoFocus
+                maxLength={60}
+                className="mb-3 w-full rounded-lg border border-primary/30 bg-secondary/40 px-3 py-2 text-sm outline-none focus:border-primary"
+                value={ask.value}
+                onChange={(e) => setAsk({ ...ask, value: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && ask.value.trim()) {
+                    const v = ask.value.trim();
+                    setAsk(null);
+                    ask.onOk(v);
+                  }
+                  if (e.key === "Escape") setAsk(null);
+                }}
+              />
+            )}
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setAsk(null)}>
+                Huỷ
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (ask.kind === "name") {
+                    const v = ask.value.trim();
+                    if (!v) return;
+                    setAsk(null);
+                    ask.onOk(v);
+                  } else {
+                    setAsk(null);
+                    ask.onOk();
+                  }
+                }}
+              >
+                {ask.kind === "name" ? "Lưu" : "Xoá"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </section>
