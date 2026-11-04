@@ -4,6 +4,7 @@
 export interface Flashcard {
   id: string;
   subject: string; // matches data.subjects entries
+  deckId?: string; // library deck this card belongs to (see library.ts); legacy cards group by subject
   question: string;
   answer: string;
   ease: number; // 1.3 .. 3.0 (SM-2 style multiplier)
@@ -149,9 +150,11 @@ export function normalizeFlashcards(raw: unknown): Flashcard[] {
       typeof o.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.due)
         ? o.due
         : dueFromTodayFallback();
+    const deckId = typeof o.deckId === "string" && o.deckId ? o.deckId : undefined;
     out.push({
       id,
       subject: typeof o.subject === "string" ? o.subject.trim().slice(0, SUBJECT_MAX) : "",
+      ...(deckId ? { deckId } : {}),
       question,
       answer,
       ease: clampEase(typeof o.ease === "number" && Number.isFinite(o.ease) ? o.ease : defaultEase),
