@@ -27,6 +27,8 @@ import {
 import { AmbientControl } from "./AmbientControl";
 import { OriginButton } from "./OriginOverlay";
 import { cleanupData, dataHealth, removedTotal } from "@/lib/tracker/dataHealth";
+import { studyStats } from "@/lib/tracker/studyStore";
+import { dateStr } from "@/lib/tracker/model";
 
 function Row({
   label,
@@ -534,13 +536,31 @@ export function SettingsPanel() {
 /** Read-only report of the save file's weight plus a conservative one-click cleanup. */
 function DataHealth() {
   const { data, update } = useTracker();
-  const h = dataHealth(data);
+  // Flashcards/mindmaps live in IndexedDB now — fetch their counts async.
+  const [study, setStudy] = useState<{ cards: number; decks: number; maps: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    studyStats(dateStr())
+      .then((st) => {
+        if (alive) setStudy(st);
+      })
+      .catch(() => {
+        if (alive) setStudy(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const h = dataHealth(data, dateStr(), study ?? undefined);
   return (
     <>
       <p className="mb-2 text-xs text-muted-foreground">
         File nặng ~<b>{(h.bytes / 1024).toFixed(1)} KB</b> · {h.tasks} nhiệm vụ ({h.oldTasks} cũ) ·{" "}
-        {h.sessionLog} mục nhật ký phiên · {h.dailyStatsDays} ngày thống kê · {h.flashcards}{" "}
-        flashcard · {h.gradeEntries} cột điểm · {h.scratch} mảnh ghi chú
+        {h.sessionLog} mục nhật ký phiên · {h.dailyStatsDays} ngày thống kê ·{" "}
+        {study
+          ? `${study.cards} flashcard / ${study.decks} bộ / ${study.maps} sơ đồ (IndexedDB)`
+          : `${h.flashcards} flashcard`}{" "}
+        · {h.gradeEntries} cột điểm · {h.scratch} mảnh ghi chú
       </p>
       {h.warnings.length > 0 && (
         <ul className="mb-2 space-y-1 text-xs text-amber-500">
