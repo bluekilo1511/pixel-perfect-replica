@@ -19,7 +19,13 @@ const OLD_DAYS = 14;
 const SESSION_CAP = 400;
 const STATS_CAP_DAYS = 180;
 
-export function dataHealth(data: AppData, today = dateStr()): DataHealth {
+export interface StudyHealth {
+  cards: number; // flashcards across all decks in the IndexedDB study store
+  decks: number;
+  maps: number;
+}
+
+export function dataHealth(data: AppData, today = dateStr(), study?: StudyHealth): DataHealth {
   const cutoff = new Date(`${today}T23:59:59`);
   cutoff.setDate(cutoff.getDate() - OLD_DAYS);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
@@ -45,7 +51,7 @@ export function dataHealth(data: AppData, today = dateStr()): DataHealth {
     oldTasks,
     sessionLog,
     dailyStatsDays,
-    flashcards: data.flashcards.length,
+    flashcards: study ? study.cards : data.flashcards.length,
     gradeEntries: data.gradeBook.length,
     scratch: data.scratch.length,
     lastBackupAt,
