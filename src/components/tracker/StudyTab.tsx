@@ -54,7 +54,6 @@ import {
   type BlankQuestion,
   buildTrueFalseRound,
   deleteCard,
-  deleteDeck,
   deckSubjects,
   grantStudyReward,
   mergeBulk,
@@ -71,6 +70,31 @@ import {
   type StudyGame,
   type TrueFalseQuestion,
 } from "@/lib/tracker/study";
+import {
+  addDeck,
+  addFolder,
+  addSubject,
+  addTerm,
+  countDecks,
+  deckLabel,
+  deckSubjectName,
+  findDeck,
+  FOLDERS_MAX,
+  removeNode,
+  renameNode,
+  type Library,
+} from "@/lib/tracker/library";
+import {
+  deleteDeckCards,
+  deleteMap as deleteMapRecord,
+  loadAllCards,
+  loadLibrary,
+  loadMaps,
+  mergeLegacy,
+  saveDeck,
+  saveLibrary,
+  saveMap as saveMapRecord,
+} from "@/lib/tracker/studyStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -116,15 +140,19 @@ function persist(key: string, value: string) {
 export function StudyTab() {
   const { data, update } = useTracker();
   const today = dateStr();
-  const cards = data.flashcards;
+  // Cards, mindmaps and the library tree live in IndexedDB (one record per deck,
+  // see studyStore.ts) — no longer inside the single AppData JSON file.
+  const [cards, setCards] = useState<Flashcard[]>([]);
+  const [maps, setMaps] = useState<Mindmap[]>([]);
+  const [library, setLibrary] = useState<Library | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const [view, setView] = useState<View>(() =>
     readStored<View>("ppr.studyView", ["learn", "games", "history"], "learn"),
   );
-  const [subject, setSubject] = useState<string>(
-    () => localStorage.getItem("ppr.studySubject") ?? "",
+  const [activeDeck, setActiveDeck] = useState<string>(
+    () => localStorage.getItem("ppr.studyDeck") ?? "",
   );
-  const [subjectInput, setSubjectInput] = useState("");
 
   // Review session state (ported from the old flashcards card).
   const [queue, setQueue] = useState<string[] | null>(null);
@@ -221,9 +249,65 @@ export function StudyTab() {
     setView(v);
     persist("ppr.studyView", v);
   };
-  const pickSubject = (s: string) => {
-    setSubject(s);
-    persist("ppr.studySubject", s);
+  const pickDeck = (deckId: string) => {
+    setActiveDeck(deckId);
+    persist("ppr.studyDeck", deckId);
+  };
+
+  // Load the IndexedDB study library once. Legacy AppData arrays are merged in
+  // by card id first (restoring an old backup never duplicates), then cleared.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const merged = await mergeLegacy(data.flashcards, data.mindmaps);
+        if (merged > 0) update((d) => ({ ...d, flashcards: [], mindmaps: [] }));
+        const [lib, allCards, allMaps] = await Promise.all([
+          loadLibrary(),
+          loadAllCards(),
+          loadMaps(),
+        ]);
+        if (!alive) return;
+        setLibrary(lib);
+        setCards(allCards);
+        setMaps(allMaps);
+        const last = localStorage.getItem("ppr.studyDeck") ?? "";
+        if (last && !findDeck(lib ?? { folders: [] }, last)) {
+          setActiveDeck("");
+          persist("ppr.studyDeck", "");
+        }
+      } catch {
+        if (alive) {
+          // Degraded mode without IndexedDB: show whatever AppData still holds.
+          setLibrary({ folders: [] });
+          setCards(data.flashcards);
+          setMaps(data.mindmaps);
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const deckTitle = useMemo(
+    () => (library && activeDeck ? deckLabel(library, activeDeck) : activeDeck),
+    [library, activeDeck],
+  );
+  const subjLabel = useMemo(
+    () => (library && activeDeck ? deckSubjectName(library, activeDeck) : activeDeck),
+    [library, activeDeck],
+  );
+
+  // Every card mutation funnels through here: update the in-memory pool and
+  // rewrite just this deck's record in IndexedDB (the "file" for this deck).
+  const persistDeck = (deckId: string, deckList: Flashcard[]) => {
+    setCards((cs) => {
+      const others = cs.filter((c) => (c.deckId ?? c.subject) !== deckId);
+      return [...others, ...deckList];
+    });
+    void saveDeck(deckId, deckList);
   };
 
   // ---- Review runner ----
@@ -243,10 +327,14 @@ export function StudyTab() {
     const id = queue[qi]!;
     const card = byId.get(id);
     if (!card) return;
-    update((d) => ({
-      ...d,
-      flashcards: d.flashcards.map((c) => (c.id === id ? reviewCard(c, rating, today) : c)),
-    }));
+    const updated = reviewCard(card, rating, today);
+    const deckId = card.deckId ?? (card.subject || "Chung");
+    persistDeck(
+      deckId,
+      cards
+        .filter((c) => (c.deckId ?? c.subject) === deckId)
+        .map((c) => (c.id === id ? updated : c)),
+    );
     setSession((s) => ({
       good: s.good + (rating > 0 ? 1 : 0),
       again: s.again + (rating === 0 ? 1 : 0),
@@ -272,9 +360,9 @@ export function StudyTab() {
 
   // ---- Deck editing ----
   const deckCards = useMemo(() => {
-    const list = subject ? cards.filter((c) => (c.subject || "Chung") === subject) : [];
+    const list = activeDeck ? cards.filter((c) => (c.deckId ?? c.subject) === activeDeck) : [];
     return [...list].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  }, [cards, subject]);
+  }, [cards, activeDeck]);
 
   const commitRow = (card: Flashcard) => {
     const draft = drafts[card.id];
@@ -282,36 +370,36 @@ export function StudyTab() {
     const q = draft.q.trim();
     const a = draft.a.trim();
     if (!q || !a) return; // never blank out a card
-    update((d) => ({
-      ...d,
-      flashcards: updateCard(d.flashcards, card.id, { question: q, answer: a }),
-    }));
+    const deckId = card.deckId ?? (card.subject || "Chung");
+    persistDeck(deckId, updateCard(deckCards, card.id, { question: q, answer: a }));
   };
 
   const commitWrong = (card: Flashcard) => {
     const draft = wrongDrafts[card.id];
     if (!draft) return;
-    update((d) => ({ ...d, flashcards: updateCard(d.flashcards, card.id, { wrong: draft }) }));
+    const deckId = card.deckId ?? (card.subject || "Chung");
+    persistDeck(deckId, updateCard(deckCards, card.id, { wrong: draft }));
   };
 
   const addRow = () => {
-    if (!subject) {
-      toast.error("Chọn hoặc gõ tên môn trước đã!");
+    if (!activeDeck) {
+      toast.error("Chọn một bộ thẻ trong thư viện trước đã!");
       return;
     }
-    if (cards.length >= FLASHCARDS_MAX) {
-      toast.error(`Tối đa ${FLASHCARDS_MAX} thẻ — xoá bớt thẻ cũ nhé!`);
+    if (deckCards.length >= FLASHCARDS_MAX) {
+      toast.error(`Tối đa ${FLASHCARDS_MAX} thẻ mỗi bộ — xoá bớt thẻ cũ nhé!`);
       return;
     }
-    update((d) => ({
-      ...d,
-      flashcards: [...d.flashcards, newFlashcard(subject, "Câu hỏi mới", "Đáp án", today)],
-    }));
+    const card = {
+      ...newFlashcard(subjLabel || activeDeck, "Câu hỏi mới", "Đáp án", today),
+      deckId: activeDeck,
+    };
+    persistDeck(activeDeck, [...deckCards, card]);
   };
 
   const runImport = () => {
-    if (!subject) {
-      toast.error("Chọn hoặc gõ tên môn trước đã!");
+    if (!activeDeck) {
+      toast.error("Chọn một bộ thẻ trong thư viện trước đã!");
       return;
     }
     const parsed = parseBulk(importText);
@@ -319,8 +407,11 @@ export function StudyTab() {
       toast.error("Chưa có dòng hợp lệ nào — mỗi dòng dạng: câu hỏi | đáp án");
       return;
     }
-    const res = mergeBulk(cards, subject, parsed, today);
-    update((d) => ({ ...d, flashcards: res.cards }));
+    const res = mergeBulk(deckCards, subjLabel || activeDeck, parsed, today);
+    persistDeck(
+      activeDeck,
+      res.cards.map((c) => ({ ...c, deckId: c.deckId ?? activeDeck })),
+    );
     setImportText("");
     setImportOpen(false);
     toast.success(
@@ -329,10 +420,114 @@ export function StudyTab() {
   };
 
   const removeDeck = () => {
-    if (!subject) return;
-    if (!window.confirm(`Xoá toàn bộ thẻ của môn "${subject}"? Không hoàn tác được.`)) return;
-    update((d) => ({ ...d, flashcards: deleteDeck(d.flashcards, subject) }));
-    toast("🗑️ Đã xoá bộ thẻ của môn này");
+    if (!activeDeck || !library) return;
+    if (!window.confirm(`Xoá bộ "${deckTitle}" cùng toàn bộ thẻ? Không hoàn tác được.`)) return;
+    const res = removeNode(library, activeDeck);
+    if (!res) return;
+    setLibrary(res.library);
+    void saveLibrary(res.library);
+    void deleteDeckCards(activeDeck);
+    setCards((cs) => cs.filter((c) => (c.deckId ?? c.subject) !== activeDeck));
+    setActiveDeck("");
+    persist("ppr.studyDeck", "");
+    toast("🗑️ Đã xoá bộ thẻ");
+  };
+
+  // ---- Library tree editing ----
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const commitTree = (lib: Library) => {
+    setLibrary(lib);
+    void saveLibrary(lib);
+  };
+
+  const doRename = (kind: "folder" | "subject" | "term" | "deck", id: string, current: string) => {
+    if (!library) return;
+    const name = window.prompt("Tên mới:", current);
+    if (name === null) return;
+    const res = renameNode(library, kind, id, name);
+    if (!res) {
+      toast.error("Tên trống hoặc không tìm thấy mục.");
+      return;
+    }
+    commitTree(res);
+  };
+
+  const doAddFolder = () => {
+    if (!library) return;
+    const name = window.prompt("Tên thư mục (vd: Năm lớp 9):", "");
+    if (!name) return;
+    const res = addFolder(library, name);
+    if (!res) {
+      toast.error(`Tối đa ${FOLDERS_MAX} thư mục.`);
+      return;
+    }
+    commitTree(res);
+    const f = res.folders[res.folders.length - 1]!;
+    setExpanded((p) => new Set(p).add(f.id));
+  };
+
+  const doAddSubject = (folderId: string) => {
+    if (!library) return;
+    const name = window.prompt("Tên môn (vd: Toán):", "");
+    if (!name) return;
+    const res = addSubject(library, folderId, name);
+    if (!res) {
+      toast.error("Không thêm được môn.");
+      return;
+    }
+    commitTree(res);
+    setExpanded((p) => new Set(p).add(folderId));
+  };
+
+  const doAddTerm = (folderId: string, subjectId: string) => {
+    if (!library) return;
+    const name = window.prompt("Tên học kỳ (vd: HK1):", "");
+    if (!name) return;
+    const res = addTerm(library, folderId, subjectId, name);
+    if (!res) {
+      toast.error("Không thêm được học kỳ.");
+      return;
+    }
+    commitTree(res);
+    setExpanded((p) => new Set(p).add(folderId).add(subjectId));
+  };
+
+  const doAddDeck = (folderId: string, subjectId: string, termId: string | null) => {
+    if (!library) return;
+    const name = window.prompt("Tên bộ thẻ (vd: HK1 - Đại lượng tỉ lệ):", "");
+    if (!name) return;
+    const res = addDeck(library, folderId, subjectId, termId, name);
+    if (!res) {
+      toast.error("Không thêm được bộ thẻ.");
+      return;
+    }
+    commitTree(res.library);
+    const ex = new Set(expanded).add(folderId).add(subjectId);
+    if (termId) ex.add(termId);
+    setExpanded(ex);
+    pickDeck(res.deckId);
+  };
+
+  const doRemove = (id: string, name: string) => {
+    if (!library) return;
+    if (!window.confirm(`Xoá "${name}" cùng mọi nội dung bên trong? Không hoàn tác được.`)) return;
+    const res = removeNode(library, id);
+    if (!res) return;
+    commitTree(res.library);
+    for (const deckId of res.deckIds) void deleteDeckCards(deckId);
+    const gone = new Set(res.deckIds);
+    setCards((cs) => cs.filter((c) => !(c.deckId && gone.has(c.deckId))));
+    if (activeDeck && gone.has(activeDeck)) {
+      setActiveDeck("");
+      persist("ppr.studyDeck", "");
+    }
   };
 
   // ---- Games ----
@@ -568,13 +763,19 @@ export function StudyTab() {
     }
   };
 
-  // Mind-map editor helpers
-  const maps = data.mindmaps;
+  // Mind-map editor helpers — each map is its own IndexedDB record.
+  const mapsRef = useRef<Mindmap[]>([]);
+  mapsRef.current = maps;
   const curMap: Mindmap | null = maps.find((m) => m.id === mapId) ?? null;
   const patchMap = useCallback(
-    (fn: (m: Mindmap) => Mindmap) =>
-      update((d) => ({ ...d, mindmaps: d.mindmaps.map((m) => (m.id === mapId ? fn(m) : m)) })),
-    [update, mapId],
+    (fn: (m: Mindmap) => Mindmap) => {
+      const next = mapsRef.current.map((m) => (m.id === mapId ? touchMap(fn(m)) : m));
+      mapsRef.current = next;
+      setMaps(next);
+      const cur = next.find((m) => m.id === mapId);
+      if (cur) void saveMapRecord(cur);
+    },
+    [mapId],
   );
   const createMap = () => {
     if (maps.length >= MINDMAPS_MAX) {
@@ -582,13 +783,15 @@ export function StudyTab() {
       return;
     }
     const m = newMindmap(`Sơ đồ ${maps.length + 1}`);
-    update((d) => ({ ...d, mindmaps: [...d.mindmaps, m] }));
+    setMaps((ms) => [...ms, m]);
+    void saveMapRecord(m);
     setMapId(m.id);
     setSelNode(null);
   };
   const removeMap = (id: string) => {
     if (!window.confirm("Xoá sơ đồ này? Không hoàn tác được.")) return;
-    update((d) => ({ ...d, mindmaps: d.mindmaps.filter((m) => m.id !== id) }));
+    setMaps((ms) => ms.filter((m) => m.id !== id));
+    void deleteMapRecord(id);
     if (id === mapId) {
       setMapId("");
       setSelNode(null);
@@ -821,7 +1024,7 @@ export function StudyTab() {
         ))}
       </div>
 
-      {view === "learn" && (
+      {library && view === "learn" && (
         <>
           {queue && current ? (
             <div className="mb-4 rounded-xl border border-primary/25 bg-secondary/40 p-4">
@@ -884,55 +1087,247 @@ export function StudyTab() {
             )
           )}
 
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">Môn:</span>
-            {subjects.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => pickSubject(s)}
-                className={
-                  subject === s
-                    ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground"
-                    : "rounded-full px-3 py-1 text-xs bg-secondary/60 hover:bg-secondary"
-                }
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-          {!subject && (
-            <div className="mb-3 grid gap-2 rounded-xl border border-primary/20 bg-secondary/30 p-3 sm:grid-cols-[200px_1fr]">
-              <Input
-                value={subjectInput}
-                onChange={(e) => setSubjectInput(e.target.value)}
-                placeholder="Gõ tên môn (vd: Toán)"
-                maxLength={24}
-                aria-label="Tên môn"
-                className="h-9 text-sm"
-              />
-              <Button
-                size="sm"
-                onClick={() => {
-                  const name = subjectInput.trim();
-                  if (!name) return;
-                  pickSubject(name);
-                  setSubjectInput("");
-                }}
-              >
-                📖 Mở bộ soạn
+          {/* Thư viện: Thư mục → Môn → Học kỳ → Bộ thẻ (mỗi bộ là một bản ghi riêng) */}
+          <div className="mb-3 rounded-xl border border-primary/20 bg-secondary/30 p-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">
+                🗂️ Thư viện · {library ? countDecks(library) : 0} bộ thẻ
+              </h3>
+              <Button size="sm" variant="secondary" onClick={doAddFolder}>
+                ➕ Thư mục
               </Button>
-              <p className="text-xs text-muted-foreground sm:col-span-2">
-                Chọn một môn ở trên, hoặc gõ tên môn mới để soạn bộ đầu tiên.
-              </p>
             </div>
-          )}
+            {library && !library.folders.length && (
+              <p className="text-xs text-muted-foreground">
+                Chưa có thư mục nào — bấm “➕ Thư mục” (vd: Năm lớp 9), rồi thêm môn → học kỳ → bộ
+                thẻ. Mỗi bộ là một “tệp” riêng, mở bộ nào nạp bộ đó.
+              </p>
+            )}
+            <div className="space-y-1">
+              {library?.folders.map((f) => (
+                <div key={f.id}>
+                  <div className="flex items-center gap-1 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => toggle(f.id)}
+                      className="min-w-0 flex-1 truncate text-left font-medium hover:text-primary"
+                    >
+                      {expanded.has(f.id) ? "▾" : "▸"} 📁 {f.name}
+                    </button>
+                    <button
+                      type="button"
+                      title="Đổi tên"
+                      aria-label="Đổi tên thư mục"
+                      onClick={() => doRename("folder", f.id, f.name)}
+                      className="px-1 text-xs opacity-60 hover:opacity-100"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      title="Thêm môn"
+                      aria-label="Thêm môn"
+                      onClick={() => doAddSubject(f.id)}
+                      className="px-1 text-xs opacity-60 hover:opacity-100"
+                    >
+                      ➕
+                    </button>
+                    <button
+                      type="button"
+                      title="Xoá thư mục"
+                      aria-label="Xoá thư mục"
+                      onClick={() => doRemove(f.id, f.name)}
+                      className="px-1 text-xs opacity-60 hover:opacity-100"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                  {expanded.has(f.id) && (
+                    <div className="ml-4 space-y-1 border-l border-border/40 pl-2">
+                      {f.subjects.map((sub) => (
+                        <div key={sub.id}>
+                          <div className="flex items-center gap-1 text-sm">
+                            <button
+                              type="button"
+                              onClick={() => toggle(sub.id)}
+                              className="min-w-0 flex-1 truncate text-left hover:text-primary"
+                            >
+                              {expanded.has(sub.id) ? "▾" : "▸"} 📚 {sub.name}
+                            </button>
+                            <button
+                              type="button"
+                              title="Đổi tên"
+                              aria-label="Đổi tên môn"
+                              onClick={() => doRename("subject", sub.id, sub.name)}
+                              className="px-1 text-xs opacity-60 hover:opacity-100"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              title="Thêm học kỳ"
+                              aria-label="Thêm học kỳ"
+                              onClick={() => doAddTerm(f.id, sub.id)}
+                              className="px-1 text-xs opacity-60 hover:opacity-100"
+                            >
+                              ➕
+                            </button>
+                            <button
+                              type="button"
+                              title="Thêm bộ thẻ"
+                              aria-label="Thêm bộ thẻ"
+                              onClick={() => doAddDeck(f.id, sub.id, null)}
+                              className="px-1 text-xs opacity-60 hover:opacity-100"
+                            >
+                              🃏
+                            </button>
+                            <button
+                              type="button"
+                              title="Xoá môn"
+                              aria-label="Xoá môn"
+                              onClick={() => doRemove(sub.id, sub.name)}
+                              className="px-1 text-xs opacity-60 hover:opacity-100"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                          {expanded.has(sub.id) && (
+                            <div className="ml-4 space-y-1 border-l border-border/40 pl-2">
+                              {sub.terms.map((t) => (
+                                <div key={t.id}>
+                                  <div className="flex items-center gap-1 text-sm">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggle(t.id)}
+                                      className="min-w-0 flex-1 truncate text-left hover:text-primary"
+                                    >
+                                      {expanded.has(t.id) ? "▾" : "▸"} 🗂️ {t.name}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Đổi tên"
+                                      aria-label="Đổi tên học kỳ"
+                                      onClick={() => doRename("term", t.id, t.name)}
+                                      className="px-1 text-xs opacity-60 hover:opacity-100"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Thêm bộ thẻ"
+                                      aria-label="Thêm bộ thẻ vào học kỳ"
+                                      onClick={() => doAddDeck(f.id, sub.id, t.id)}
+                                      className="px-1 text-xs opacity-60 hover:opacity-100"
+                                    >
+                                      🃏
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Xoá học kỳ"
+                                      aria-label="Xoá học kỳ"
+                                      onClick={() => doRemove(t.id, t.name)}
+                                      className="px-1 text-xs opacity-60 hover:opacity-100"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                  {expanded.has(t.id) && (
+                                    <div className="ml-4 flex flex-wrap gap-1 border-l border-border/40 py-1 pl-2">
+                                      {t.decks.map((d) => (
+                                        <span key={d.id} className="flex items-center gap-0.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => pickDeck(d.id)}
+                                            className={
+                                              activeDeck === d.id
+                                                ? "rounded-full px-2.5 py-1 text-xs font-semibold bg-primary text-primary-foreground"
+                                                : "rounded-full px-2.5 py-1 text-xs bg-secondary/60 hover:bg-secondary"
+                                            }
+                                          >
+                                            🃏 {d.name} (
+                                            {
+                                              cards.filter((c) => (c.deckId ?? c.subject) === d.id)
+                                                .length
+                                            }
+                                            )
+                                          </button>
+                                          <button
+                                            type="button"
+                                            title="Đổi tên"
+                                            aria-label="Đổi tên bộ thẻ"
+                                            onClick={() => doRename("deck", d.id, d.name)}
+                                            className="text-xs opacity-60 hover:opacity-100"
+                                          >
+                                            ✏️
+                                          </button>
+                                          <button
+                                            type="button"
+                                            title="Xoá bộ"
+                                            aria-label="Xoá bộ thẻ"
+                                            onClick={() => doRemove(d.id, d.name)}
+                                            className="text-xs opacity-60 hover:opacity-100"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              <div className="flex flex-wrap gap-1 border-l border-border/40 py-1 pl-2">
+                                {sub.decks.map((d) => (
+                                  <span key={d.id} className="flex items-center gap-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => pickDeck(d.id)}
+                                      className={
+                                        activeDeck === d.id
+                                          ? "rounded-full px-2.5 py-1 text-xs font-semibold bg-primary text-primary-foreground"
+                                          : "rounded-full px-2.5 py-1 text-xs bg-secondary/60 hover:bg-secondary"
+                                      }
+                                    >
+                                      🃏 {d.name} (
+                                      {cards.filter((c) => (c.deckId ?? c.subject) === d.id).length}
+                                      )
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Đổi tên"
+                                      aria-label="Đổi tên bộ thẻ"
+                                      onClick={() => doRename("deck", d.id, d.name)}
+                                      className="text-xs opacity-60 hover:opacity-100"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Xoá bộ"
+                                      aria-label="Xoá bộ thẻ"
+                                      onClick={() => doRemove(d.id, d.name)}
+                                      className="text-xs opacity-60 hover:opacity-100"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
-          {subject && (
+          {activeDeck && (
             <>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">
-                  📖 Bộ soạn: {subject} · {deckCards.length} thẻ
+                  📖 Bộ soạn: {deckTitle} · {deckCards.length} thẻ
                 </h3>
                 <div className="flex gap-2">
                   <Button size="sm" variant="secondary" onClick={() => setImportOpen((o) => !o)}>
@@ -1010,12 +1405,10 @@ export function StudyTab() {
                             className="h-9 px-2"
                             title="Đảo chiều hỏi ↔ đáp"
                             aria-label="Đảo chiều thẻ"
-                            onClick={() =>
-                              update((d) => ({
-                                ...d,
-                                flashcards: reverseCard(d.flashcards, card.id),
-                              }))
-                            }
+                            onClick={() => {
+                              const deckId = card.deckId ?? (card.subject || "Chung");
+                              persistDeck(deckId, reverseCard(deckCards, card.id));
+                            }}
                           >
                             ⇄
                           </Button>
@@ -1046,12 +1439,10 @@ export function StudyTab() {
                             className="h-9 px-2 text-destructive"
                             aria-label={`Xoá thẻ ${card.id}`}
                             title="Xoá thẻ này"
-                            onClick={() =>
-                              update((d) => ({
-                                ...d,
-                                flashcards: deleteCard(d.flashcards, card.id),
-                              }))
-                            }
+                            onClick={() => {
+                              const deckId = card.deckId ?? (card.subject || "Chung");
+                              persistDeck(deckId, deleteCard(deckCards, card.id));
+                            }}
                           >
                             🗑️
                           </Button>
@@ -1093,7 +1484,7 @@ export function StudyTab() {
         </>
       )}
 
-      {view === "games" && (
+      {library && view === "games" && (
         <>
           <div className="mb-3 flex flex-wrap gap-2">
             {(Object.keys(GAME_META) as StudyGame[]).map((g) => (
@@ -1466,7 +1857,7 @@ export function StudyTab() {
         </>
       )}
 
-      {view === "maps" && (
+      {library && view === "maps" && (
         <>
           {!curMap ? (
             <>
@@ -1884,7 +2275,7 @@ export function StudyTab() {
         </>
       )}
 
-      {view === "history" && (
+      {library && view === "history" && (
         <div className="space-y-3">
           {accuracy.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-2">
