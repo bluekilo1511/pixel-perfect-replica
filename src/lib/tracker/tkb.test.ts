@@ -257,7 +257,10 @@ describe("exam prep & tonight suggestion", () => {
     expect(r.added).toBe(2);
     const tasks = r.data.tasks.filter((t) => t.date === today && t.examId === exam.id);
     expect(tasks.every((t) => t.title.startsWith("Ôn thi:"))).toBe(true);
-    expect(addExamPrepTasks(r.data, exam, today).added).toBe(0);
+    // Pressing again adds another round of sessions — no per-day cap.
+    const r2 = addExamPrepTasks(r.data, exam, today);
+    expect(r2.added).toBe(2);
+    expect(r2.data.tasks.filter((t) => t.date === today && t.examId === exam.id).length).toBe(4);
   });
 
   it("suggests the earliest tracked slot tomorrow without a prep task", () => {

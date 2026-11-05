@@ -648,20 +648,15 @@ function ExamCard() {
                       size="sm"
                       variant="outline"
                       className="mt-1 h-7 text-xs"
-                      title="Tạo 2 pomodoro ôn thi hôm nay (chỉ 1 lần/ngày/kỳ thi)"
+                      title="Thêm ca ôn thi hôm nay — ấn thêm để ôn thêm, không giới hạn"
                       onClick={() => {
-                        const r = addExamPrepTasks(data, e, today);
-                        if (!r.added) {
-                          toast("Đã có kế hoạch ôn cho kỳ thi này hôm nay 👍");
-                          return;
-                        }
                         update((d) => addExamPrepTasks(d, e, today).data);
-                        toast.success(`Đã tạo ${r.added} việc ôn thi hôm nay 🌙`, {
-                          description: `Gợi ý: ôn ${EXAM_PREP_PER_DAY} pomodoro/ngày đến ngày thi.`,
+                        toast.success(`Đã thêm ${EXAM_PREP_PER_DAY} ca ôn thi hôm nay 🌙`, {
+                          description: "Ấn thêm để ôn thêm — không giới hạn ca/ngày.",
                         });
                       }}
                     >
-                      💡 Tạo {EXAM_PREP_PER_DAY} việc ôn hôm nay
+                      ➕ Thêm {EXAM_PREP_PER_DAY} ca ôn thi
                     </Button>
                   )}
                 </div>

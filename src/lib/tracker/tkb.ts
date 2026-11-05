@@ -381,7 +381,8 @@ export const EXAM_PREP_PER_DAY = 2;
 
 /**
  * Creates `perDay` "Ôn thi: {name}" pomodoro tasks today for an upcoming exam,
- * attached to it via examId. Idempotent per exam per day.
+ * attached to it via examId. Every call adds more sessions — press as many
+ * times as you want to review; nothing caps them per day.
  */
 export function addExamPrepTasks(
   data: AppData,
@@ -389,10 +390,6 @@ export function addExamPrepTasks(
   today = dateStr(),
   perDay = EXAM_PREP_PER_DAY,
 ): { data: AppData; added: number } {
-  const dupe = data.tasks.some(
-    (t) => t.date === today && t.examId === exam.id && t.title.startsWith("Ôn thi:"),
-  );
-  if (dupe) return { data, added: 0 };
   const mins = Math.max(5, data.settings.pomodoroMinutes || 25);
   const count = Math.min(4, Math.max(1, Math.round(perDay)));
   const subject = exam.mon
