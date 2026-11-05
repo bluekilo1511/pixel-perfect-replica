@@ -5,6 +5,7 @@ import {
   checkAchievements,
   defaultAchievements,
   emptyMaterials,
+  EXPEDITION_TRIGGER_MINUTES,
   recordWaterGoal,
   RECIPES,
   expeditionStatus,
@@ -143,5 +144,31 @@ describe("streak achievements and expedition reload", () => {
     expect(startExpedition(done!.expedition, 500, new Date("2026-10-29T10:06:00.000Z"))).toBe(
       done!.expedition,
     );
+  });
+});
+
+describe("expedition survives reopen", () => {
+  it("keeps a running trip after migrate round-trip", () => {
+    const now = new Date();
+    const started = startExpedition(
+      { ...defaultData().expedition },
+      EXPEDITION_TRIGGER_MINUTES,
+      now,
+    );
+    const back = migrate(JSON.parse(JSON.stringify({ ...defaultData(), expedition: started })));
+    expect(back.expedition.endAt).toBe(started.endAt);
+    expect(expeditionStatus(back.expedition, 0, new Date(started.startedAt!)).away).toBe(true);
+    expect(resolveExpedition(back.expedition, new Date(started.startedAt!))).toBeNull();
+  });
+  it("keeps the daily trip counter after reopen while the pet is home", () => {
+    const today = new Date();
+    let exp = startExpedition({ ...defaultData().expedition }, 50, today);
+    exp = resolveExpedition(exp, new Date(today.getTime() + 31 * 60_000))!.expedition;
+    expect(exp.tripsToday).toBe(1);
+    const back = migrate(JSON.parse(JSON.stringify({ ...defaultData(), expedition: exp })));
+    const st = expeditionStatus(back.expedition, 100, today);
+    expect(st.tripsToday).toBe(1);
+    expect(st.ready).toBe(true);
+    expect(st.needMinutes).toBe(0);
   });
 });

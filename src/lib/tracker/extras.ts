@@ -696,7 +696,10 @@ export function normalizeExtras(rawInput: unknown): ExtrasState {
           .slice(0, 60)
       : [],
     dailyStats: stats,
-    expedition: expedition.startedAt || expedition.endAt ? expedition : defaultExpedition(),
+    // Keep the full state even when the pet is home: wiping it here would
+    // reset lastTriggerDate/tripsToday on every reopen and restore the
+    // daily trip quota mid-day (the "expedition resets on refresh" bug).
+    expedition,
     lastDiaryDate: typeof r.lastDiaryDate === "string" ? r.lastDiaryDate : null,
   };
 }
