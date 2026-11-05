@@ -19,6 +19,7 @@ import {
   streakMultiplier,
   STREAK_GOAL,
 } from "@/lib/tracker/gamify";
+import { PetAura } from "./PetAura";
 import { StudyRoom3D } from "./StudyRoom3D";
 import { ExpeditionScene } from "./ExpeditionScene";
 import { JournalModal } from "./JournalModal";
@@ -406,11 +407,13 @@ export function PetWidget() {
               </span>
             )}
             <span className={`relative block text-7xl leading-none ${anim}`}>
-              {pet.accessories.back && (
+              {pet.accessories.back === "wings" ? (
+                <PetAura pet={pet} />
+              ) : pet.accessories.back ? (
                 <span className={`absolute ${ACCESSORY_UI.back[pet.species]}`} aria-hidden>
                   {ACCESSORIES[pet.accessories.back].emoji}
                 </span>
-              )}
+              ) : null}
               <span className="relative">{petForm}</span>
               {(["head", "face"] as const).map((slot) =>
                 pet.accessories[slot] ? (

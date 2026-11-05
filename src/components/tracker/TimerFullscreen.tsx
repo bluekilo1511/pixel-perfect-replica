@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META } from "@/lib/tracker/model";
 import { ACCESSORIES, ACCESSORY_UI, moodOf, SPECIES } from "@/lib/tracker/gamify";
+import { PetAura } from "./PetAura";
 import { accessoryClass, petEmoji } from "@/lib/tracker/extras";
 import { timerPetState } from "@/lib/tracker/timerPet";
 import { addScratch, promoteScratch, removeScratch } from "@/lib/tracker/scratch";
@@ -207,11 +208,13 @@ export function TimerFullscreen() {
               petR.anim === "dance" ? "animate-pet-dance" : "animate-pet-idle"
             }`}
           >
-            {pet.accessories.back && (
+            {pet.accessories.back === "wings" ? (
+              <PetAura pet={pet} />
+            ) : pet.accessories.back ? (
               <span className={`absolute ${ACCESSORY_UI.back[pet.species]}`} aria-hidden>
                 {ACCESSORIES[pet.accessories.back].emoji}
               </span>
-            )}
+            ) : null}
             <span className="relative">{petEmoji(pet)}</span>
             {(["head", "face"] as const).map((slot) =>
               pet.accessories[slot] ? (

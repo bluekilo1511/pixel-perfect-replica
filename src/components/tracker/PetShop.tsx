@@ -3,6 +3,8 @@ import { useTracker } from "@/lib/tracker/store";
 import {
   ACCESSORIES,
   ACCESSORY_SLOT,
+  AURAS,
+  buyAura,
   buyDecor,
   bumpPet,
   CONSUMABLES,
@@ -10,8 +12,10 @@ import {
   FREEZE_PRICE,
   MAX_ACTIVE_DECOR,
   SPECIES,
+  toggleAura,
   toggleDecor,
   type Accessory,
+  type AuraId,
   type DecorId,
   type Species,
 } from "@/lib/tracker/gamify";
@@ -77,6 +81,16 @@ export function PetShop() {
     ting();
     toast(`${petEmoji(pet)} Măm măm! Cảm ơn ${it.emoji}`);
   };
+  const coin = (price: number, apply: (d: typeof data) => typeof data, msg: string) => {
+    if (g.catCoins < price) {
+      toast.error("Chưa đủ 😺");
+      return;
+    }
+    update((d) => apply({ ...d, game: { ...d.game, catCoins: d.game.catCoins - price } }));
+    ting();
+    toast.success(msg);
+  };
+
   const gem = (price: number, apply: (d: typeof data) => typeof data, msg: string) => {
     if (g.lizardGems < price) {
       toast.error("Chưa đủ 🦎");
@@ -306,6 +320,75 @@ export function PetShop() {
                             },
                           }),
                           `Đã mua ${m.emoji} ${m.name}!`,
+                        )
+                      }
+                    >
+                      {m.price} 🦎
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+        </ul>
+        <h3 className="mb-2 mt-6 font-semibold">🌈 Aura Vũ Trụ</h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Màu hào quang sau lưng khi pet đeo Cánh Thiên Thần Vũ Trụ. Pet hưng phấn thì aura to và
+          sáng hơn, đói/buồn thì mờ nhỏ. Màu pha nhiều màu chỉ bán bằng 🦎. Bạn có {g.catCoins} 😺 /{" "}
+          {g.lizardGems} 🦎
+        </p>
+        <ul className="mb-5 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {(Object.keys(AURAS) as AuraId[])
+            .filter((id) => id !== "stardust")
+            .map((id) => {
+              const m = AURAS[id];
+              const owned = pet.auraOwned.includes(id);
+              const active = pet.auraActive === id;
+              return (
+                <li
+                  key={id}
+                  className={`rounded-xl p-3 text-center ${active ? "bg-secondary glass-glow" : "bg-muted"}`}
+                >
+                  <div
+                    className="mx-auto mb-1 h-10 w-10 rounded-full blur-[2px]"
+                    style={{
+                      background: `radial-gradient(closest-side, ${m.colors[0]}, ${m.colors[1]}88, transparent)`,
+                    }}
+                  />
+                  <p className="my-1 text-xs font-medium">{m.name}</p>
+                  {owned ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        update((d) => ({
+                          ...d,
+                          petState: toggleAura(d.petState, id) ?? d.petState,
+                        }))
+                      }
+                    >
+                      {active ? "Tắt" : "Chọn"}
+                    </Button>
+                  ) : m.currency === "coins" ? (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        coin(
+                          m.price,
+                          (d) => ({ ...d, petState: buyAura(d.petState, id) ?? d.petState }),
+                          `Đã mở khóa aura ${m.name}!`,
+                        )
+                      }
+                    >
+                      {m.price} 😺
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        gem(
+                          m.price,
+                          (d) => ({ ...d, petState: buyAura(d.petState, id) ?? d.petState }),
+                          `Đã mở khóa aura ${m.name}!`,
                         )
                       }
                     >

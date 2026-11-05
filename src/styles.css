@@ -346,7 +346,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .aurora::before,
-  .aurora::after {
+  .aurora::after,
+  .animate-aura-pulse,
+  .animate-aura-twinkle {
     animation: none;
   }
 }
@@ -694,6 +696,34 @@
   80% {
     transform: translateX(0);
   }
+}
+@keyframes aura-pulse {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+@keyframes aura-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.6) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(20deg);
+  }
+}
+@utility animate-aura-pulse {
+  animation: aura-pulse 5s ease-in-out infinite;
+}
+@utility animate-aura-twinkle {
+  animation: aura-twinkle 3.6s ease-in-out infinite;
 }
 @utility animate-pet-dance {
   display: inline-block;

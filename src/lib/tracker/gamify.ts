@@ -35,6 +35,8 @@ export interface PetState {
   ownedSpecies: Species[];
   accessories: Record<AccessorySlot, Accessory | null>;
   ownedAccessories: Accessory[];
+  auraOwned: AuraId[]; // cosmic aura colors bought for the wings accessory
+  auraActive: AuraId | null;
   decorOwned: DecorId[]; // decorations bought for the pet room
   decorActive: DecorId[]; // placed in the room (max MAX_ACTIVE_DECOR)
   hunger: number; // 0-100 (Độ no)
@@ -84,6 +86,45 @@ export const ACCESSORIES: Record<
   crown: { emoji: "👑", name: "Vương miện", price: 12 },
   wings: { emoji: "🪽", name: "Cánh Thiên Thần", price: 0, craftOnly: true },
 };
+
+/** Cosmic aura colors for the evolved wings accessory. Basic colors cost 😺 coins,
+ *  multi-color premium ones cost 🦎 gems. "stardust" is the free default look. */
+export type AuraId =
+  "stardust" | "ocean" | "emerald" | "violet" | "rose" | "sunset" | "aurora" | "cosmic";
+
+export interface AuraDef {
+  name: string;
+  colors: [string, string]; // inner glow, outer glow
+  price: number;
+  currency: "coins" | "gems";
+}
+
+export const AURAS: Record<AuraId, AuraDef> = {
+  stardust: { name: "Bụi Sao", colors: ["#e0e7ff", "#93c5fd"], price: 0, currency: "coins" },
+  ocean: { name: "Xanh Đại Dương", colors: ["#7dd3fc", "#38bdf8"], price: 15, currency: "coins" },
+  emerald: { name: "Lục Bảo", colors: ["#6ee7b7", "#34d399"], price: 15, currency: "coins" },
+  violet: { name: "Tím Hư Không", colors: ["#c4b5fd", "#a78bfa"], price: 15, currency: "coins" },
+  rose: { name: "Hồng Tinh Thạch", colors: ["#fda4af", "#fb7185"], price: 18, currency: "coins" },
+  sunset: { name: "Hoàng Hôn", colors: ["#fdba74", "#f472b6"], price: 20, currency: "coins" },
+  aurora: { name: "Cực Quang", colors: ["#67e8f9", "#a3e635"], price: 5, currency: "gems" },
+  cosmic: { name: "Thiên Hà Ba Màu", colors: ["#f472b6", "#60a5fa"], price: 8, currency: "gems" },
+};
+
+/** Buys an aura color; returns null when it is already owned. Payment stays in the caller. */
+export function buyAura(pet: PetState, id: AuraId): PetState | null {
+  if (id === "stardust" || !AURAS[id] || pet.auraOwned.includes(id)) return null;
+  return {
+    ...pet,
+    auraOwned: [...pet.auraOwned, id],
+    auraActive: pet.auraActive ?? id, // auto-equip the first color bought
+  };
+}
+
+/** Selects or deselects an owned aura color; null when not owned. */
+export function toggleAura(pet: PetState, id: AuraId): PetState | null {
+  if (!pet.auraOwned.includes(id)) return null;
+  return { ...pet, auraActive: pet.auraActive === id ? null : id };
+}
 
 /** Emoji-overlay placement (Tailwind classes) for each accessory slot, tuned per species glyph. */
 export const ACCESSORY_UI: Record<AccessorySlot, Record<Species, string>> = {
@@ -193,6 +234,8 @@ export function defaultPet(now = new Date()): PetState {
     ownedSpecies: ["cat"],
     accessories: emptyAccessories(),
     ownedAccessories: [],
+    auraOwned: [],
+    auraActive: null,
     decorOwned: [],
     decorActive: [],
     hunger: 80,
@@ -396,11 +439,27 @@ export function normalizePet(rawInput: unknown, now = new Date()): PetState {
   const ownedAccessories = Array.isArray(raw.ownedAccessories)
     ? raw.ownedAccessories.filter((x) => ac.includes(x as Accessory))
     : [];
+  const auraIds = Object.keys(AURAS) as AuraId[];
+  const auraOwned = Array.from(
+    new Set<AuraId>(
+      (Array.isArray(raw.auraOwned) ? raw.auraOwned : []).filter((x) =>
+        auraIds.includes(x as AuraId),
+      ),
+    ),
+  );
+  const auraActive =
+    typeof raw.auraActive === "string" &&
+    auraIds.includes(raw.auraActive as AuraId) &&
+    (raw.auraActive === "stardust" || auraOwned.includes(raw.auraActive as AuraId))
+      ? (raw.auraActive as AuraId)
+      : null;
   return {
     species: sp.includes(raw.species as Species) ? (raw.species as Species) : "cat",
     ownedSpecies: Array.from(new Set<Species>(["cat", ...owned])),
     accessories: normalizeAccessories(raw),
     ownedAccessories,
+    auraOwned,
+    auraActive,
     decorOwned,
     decorActive,
     hunger: typeof raw.hunger === "number" ? clamp(raw.hunger) : b.hunger,
