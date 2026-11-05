@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SPECIES } from "./gamify";
 import { petEmoji, petTitle, tierOf } from "./extras";
 import { weekSummary } from "./weeklyReport";
-import { defaultData, completeTask } from "./model";
+import { defaultData, completeTask, applyAdminBoost } from "./model";
 import type { PetState } from "./gamify";
 
 const petAt = (level: number, species: PetState["species"] = "cat"): PetState =>

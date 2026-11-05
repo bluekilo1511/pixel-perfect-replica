@@ -286,8 +286,31 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     boot(null, null, null);
     setData((d) => ({ ...d, settings: { ...d.settings, admin: true } }));
   };
-  const adminBoost = (kind: AdminBoostKind, amount: number) =>
-    setData((d) => applyAdminBoost(d, kind, amount));
+  const adminBoost = (kind: AdminBoostKind, amount: number) => {
+    const prev = dataRef.current;
+    const next = applyAdminBoost(prev, kind, amount);
+    setData(next);
+    // Test-mode pet XP now follows the same announcement path as real XP:
+    // full evolution cutscene on a tier change, a toast on a plain level-up.
+    if (kind === "petXp") {
+      const prevTier = tierOf(prev.petState.petLevel || 1);
+      const nextTier = tierOf(next.petState.petLevel || 1);
+      if (nextTier > prevTier) {
+        levelUpFx();
+        setEvolution({
+          from: petEmoji(prev.petState),
+          to: petEmoji(next.petState),
+          title: petTitle(next.petState),
+        });
+        toast.success(
+          `${TIER_BADGE[nextTier]} Thú cưng tiến hóa thành ${petTitle(next.petState)}!`,
+        );
+      } else if (next.petState.petLevel > prev.petState.petLevel) {
+        levelUpFx();
+        toast(`🐾 Thú cưng lên cấp ${next.petState.petLevel}!`);
+      }
+    }
+  };
   const download = () => {
     if (dataRef.current.settings.admin) {
       toast.error("Chế độ test (Admin) đang bật — tắt trong Cài đặt để tải backup.");

@@ -26,6 +26,7 @@ import { defaultShootingStar, normalizeShootingStar, type ShootingStarState } fr
 import {
   addPetXp,
   bumpLifetime,
+  grantPetXp,
   bumpStats,
   checkAchievements,
   claimReward,
@@ -612,14 +613,12 @@ export function applyAdminBoost(data: AppData, kind: AdminBoostKind, amount: num
           best: Math.max(data.streak.best, data.streak.count + n),
         },
       };
-    case "petXp":
-      return {
-        ...data,
-        petState: {
-          ...data.petState,
-          petXp: Math.max(0, data.petState.petXp + n),
-        },
-      };
+    case "petXp": {
+      // Run the real XP pipeline so the pet levels up (and evolves) — a raw
+      // petXp bump left petXp above the level threshold without ever leveling.
+      const r = grantPetXp(data.petState, n);
+      return { ...data, petState: r.pet };
+    }
   }
 }
 
