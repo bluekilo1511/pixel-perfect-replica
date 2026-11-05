@@ -7,7 +7,7 @@ import {
   SPECIES,
   type PetState,
 } from "@/lib/tracker/gamify";
-import { petEmoji } from "@/lib/tracker/extras";
+import { accessoryClass, petEmoji } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 import { BreathWidget } from "@/components/tracker/BreathWidget";
 import { AmbientControl } from "./AmbientControl";
@@ -72,7 +72,7 @@ export function FocusMode({
           <span className="relative">{petEmoji(pet)}</span>
           {(["head", "face"] as const).map((slot) =>
             pet.accessories[slot] ? (
-              <span key={slot} className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}>
+              <span key={slot} className={`absolute ${accessoryClass(slot, pet)}`}>
                 {ACCESSORIES[pet.accessories[slot]!].emoji}
               </span>
             ) : null,

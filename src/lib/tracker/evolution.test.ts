@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SPECIES } from "./gamify";
-import { petEmoji, petTitle, tierOf } from "./extras";
+import { accessoryClass, petEmoji, petTitle, tierOf } from "./extras";
 import { weekSummary } from "./weeklyReport";
 import { defaultData, completeTask, applyAdminBoost } from "./model";
 import type { PetState } from "./gamify";
@@ -101,5 +101,27 @@ describe("evolved pet label", () => {
     data.tasks = [t];
     const r = completeTask(data, "t1", new Date(), Math.random);
     expect(r.data.tasks[0]!.completed).toBe(true);
+  });
+});
+
+describe("tier-2 accessory placement", () => {
+  it("repositions face accessories for the evolved cat and owl", () => {
+    expect(accessoryClass("face", petAt(6, "cat"))).not.toBe(
+      accessoryClass("face", petAt(1, "cat")),
+    );
+    expect(accessoryClass("face", petAt(6, "owl"))).not.toBe(
+      accessoryClass("face", petAt(1, "owl")),
+    );
+    // Head (grad cap) placement is fine on the evolved glyphs — unchanged.
+    expect(accessoryClass("head", petAt(6, "cat"))).toBe(accessoryClass("head", petAt(1, "cat")));
+    expect(accessoryClass("head", petAt(6, "owl"))).toBe(accessoryClass("head", petAt(1, "owl")));
+  });
+
+  it("keeps the base placement for species without an evolved override", () => {
+    for (const species of ["dog", "whale", "lizard"] as const) {
+      expect(accessoryClass("face", petAt(6, species))).toBe(
+        accessoryClass("face", petAt(1, species)),
+      );
+    }
   });
 });

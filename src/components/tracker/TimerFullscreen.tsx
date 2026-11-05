@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
 import { KIND_META } from "@/lib/tracker/model";
 import { ACCESSORIES, ACCESSORY_UI, moodOf, SPECIES } from "@/lib/tracker/gamify";
-import { petEmoji } from "@/lib/tracker/extras";
+import { accessoryClass, petEmoji } from "@/lib/tracker/extras";
 import { timerPetState } from "@/lib/tracker/timerPet";
 import { addScratch, promoteScratch, removeScratch } from "@/lib/tracker/scratch";
 import { dateStr } from "@/lib/tracker/model";
@@ -215,7 +215,7 @@ export function TimerFullscreen() {
             <span className="relative">{petEmoji(pet)}</span>
             {(["head", "face"] as const).map((slot) =>
               pet.accessories[slot] ? (
-                <span key={slot} className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}>
+                <span key={slot} className={`absolute ${accessoryClass(slot, pet)}`}>
                   {ACCESSORIES[pet.accessories[slot]!].emoji}
                 </span>
               ) : null,

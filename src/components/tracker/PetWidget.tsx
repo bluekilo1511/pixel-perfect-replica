@@ -39,6 +39,7 @@ import {
 import {
   ADVANCED_LINES,
   expeditionStatus,
+  accessoryClass,
   petEmoji,
   petTitle,
   petXpForLevel,
@@ -413,7 +414,7 @@ export function PetWidget() {
               <span className="relative">{petForm}</span>
               {(["head", "face"] as const).map((slot) =>
                 pet.accessories[slot] ? (
-                  <span key={slot} className={`absolute ${ACCESSORY_UI[slot][pet.species]}`}>
+                  <span key={slot} className={`absolute ${accessoryClass(slot, pet)}`}>
                     {ACCESSORIES[pet.accessories[slot]!].emoji}
                   </span>
                 ) : null,
