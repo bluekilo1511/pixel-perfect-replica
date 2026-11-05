@@ -1,6 +1,14 @@
 // Pure rules for premium extras: materials & alchemy, pet evolution, achievements,
 // adventure diary, daily stats/weekly chronicle, weather. No browser APIs.
-import { daysBetween, shiftDate, type Accessory, type PetState, type Species } from "./gamify";
+import {
+  ACCESSORY_UI,
+  daysBetween,
+  shiftDate,
+  type Accessory,
+  type AccessorySlot,
+  type PetState,
+  type Species,
+} from "./gamify";
 
 export type MaterialId = "magicFeather" | "starShard" | "mysticHerb";
 export const MATERIALS: Record<MaterialId, { emoji: string; name: string }> = {
@@ -98,6 +106,24 @@ export const tierOf = (petLevel: number) => (petLevel >= 6 ? 2 : petLevel >= 3 ?
 export const petTitle = (pet: PetState) => TIERS[pet.species][tierOf(pet.petLevel)];
 /** The emoji shown everywhere — final tier swaps in the evolved form. */
 export const petEmoji = (pet: PetState) => TIER_FORM[pet.species][tierOf(pet.petLevel)];
+
+/** Evolved tier-2 glyphs (🐈‍⬛ 🦅 🐉 …) have different anatomy than the base 🐱 🦉 🦎,
+ *  so their face accessories need their own placement. Falls through to the base placement. */
+const ACCESSORY_UI_TIER2: Partial<Record<AccessorySlot, Partial<Record<Species, string>>>> = {
+  face: {
+    cat: "top-[16%] left-[34%] -translate-x-1/2 text-4xl",
+    owl: "top-[14%] left-[40%] -translate-x-1/2 text-4xl",
+  },
+};
+
+/** Placement classes for an accessory on this pet, honouring evolved tier-2 forms. */
+export function accessoryClass(slot: AccessorySlot, pet: PetState): string {
+  if (tierOf(pet.petLevel) === 2) {
+    const override = ACCESSORY_UI_TIER2[slot]?.[pet.species];
+    if (override) return override;
+  }
+  return ACCESSORY_UI[slot][pet.species];
+}
 
 export const ADVANCED_LINES = [
   "Sức mạnh của chúng ta đang tiến hóa! ⚡",
