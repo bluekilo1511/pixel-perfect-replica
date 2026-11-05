@@ -117,9 +117,9 @@ function AppInner() {
           </div>
         </TabsContent>
         <TabsContent value="shop" className="mt-4 sm:mt-5">
-          <PetShop />
+          <Wheel />
           <div className="mt-4 sm:mt-5">
-            <Wheel />
+            <PetShop />
           </div>
         </TabsContent>
         <TabsContent value="chronicle" className="mt-4 sm:mt-5">
