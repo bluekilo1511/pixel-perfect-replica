@@ -50,7 +50,7 @@ export function MarketCard() {
           const won = haggleWon(data, id, week);
           const price = marketPriceWithHaggle(m, data.petState, won);
           const tierPrice = marketPrice(m, data.petState);
-          const deal = data.market.haggle[id];
+          const deal = data.market?.haggle?.[id];
           const dealt = !!deal && deal.week === week;
           const haggleOpen = openHaggle === id;
           return (
@@ -89,7 +89,7 @@ export function MarketCard() {
                           const d1 = startHaggle(data, id, now);
                           const d2 = resolveHaggle(d1, id, crate);
                           update(() => d2);
-                          const h = d2.market.haggle[id];
+                          const h = d2.market?.haggle?.[id];
                           const wonNow = !!h && h.picked === h.win;
                           toast[wonNow ? "success" : "info"](
                             wonNow

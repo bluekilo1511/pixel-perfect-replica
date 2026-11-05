@@ -212,14 +212,14 @@ export function startHaggle<T extends MarketData>(
   random: () => number = Math.random,
 ): T {
   const week = weekStart(now);
-  const cur = data.market.haggle[id];
+  const cur = data.market?.haggle?.[id];
   if (cur && cur.week === week) return data; // one deal per item per week
   return {
     ...data,
     market: {
       ...data.market,
       haggle: {
-        ...data.market.haggle,
+        ...data.market?.haggle,
         [id]: { week, win: Math.floor(random() * 3), picked: null },
       },
     },
@@ -228,20 +228,20 @@ export function startHaggle<T extends MarketData>(
 
 /** Opens crate `pick` (0..2); the first open this week is final. Pure. */
 export function resolveHaggle<T extends MarketData>(data: T, id: MarketItemId, pick: number): T {
-  const cur = data.market.haggle[id];
+  const cur = data.market?.haggle?.[id];
   if (!cur || cur.picked !== null || pick < 0 || pick > 2) return data;
   return {
     ...data,
     market: {
       ...data.market,
-      haggle: { ...data.market.haggle, [id]: { ...cur, picked: pick } },
+      haggle: { ...data.market?.haggle, [id]: { ...cur, picked: pick } },
     },
   };
 }
 
 /** True when this week's haggle for `id` was played and won. */
 export function haggleWon(data: MarketData, id: MarketItemId, week: string): boolean {
-  const h = data.market.haggle[id];
+  const h = data.market?.haggle?.[id];
   return !!h && h.week === week && h.picked !== null && h.picked === h.win;
 }
 
@@ -313,7 +313,11 @@ export function buyMarket<T extends MarketData>(
   const base: T = {
     ...data,
     game: { ...data.game, catCoins: data.game.catCoins - price },
-    market: { lastWeek: week, bought: { ...data.market.bought, [id]: week } },
+    market: {
+      lastWeek: week,
+      bought: { ...data.market.bought, [id]: week },
+      haggle: data.market.haggle,
+    },
   };
   const message = `Đã mua ${item.emoji} ${item.name}!`;
   if (id === "shield") {

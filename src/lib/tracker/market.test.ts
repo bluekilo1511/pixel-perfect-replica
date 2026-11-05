@@ -366,3 +366,35 @@ describe("haggling", () => {
     expect(marketPriceWithHaggle(item, resolved.petState, false)).toBe(20);
   });
 });
+
+describe("buyMarket — haggle state survives the purchase", () => {
+  it("keeps the haggle map after buying, so the market card keeps rendering", () => {
+    const week = weekWith("gemPouch");
+    let d = makeData(5000);
+    d = startHaggle(d, "gemPouch", week);
+    const deal = d.market.haggle.gemPouch!;
+    d = resolveHaggle(d, "gemPouch", deal.win); // force a won deal
+    const r = buyMarket(d, "gemPouch", week);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.data.market.haggle.gemPouch).toEqual({
+        week: weekStart(week),
+        win: deal.win,
+        picked: deal.win,
+      });
+    }
+  });
+
+  it("tolerates data with no haggle map instead of crashing", () => {
+    const d = { ...makeData(), market: { lastWeek: null, bought: {} } } as unknown as MarketData;
+    expect(haggleWon(d, "gemPouch", weekStart(monday))).toBe(false);
+    const opened = startHaggle(d, "gemPouch", monday);
+    expect(opened.market.haggle.gemPouch).toEqual({
+      week: weekStart(monday),
+      win: expect.any(Number),
+      picked: null,
+    });
+    const resolved = resolveHaggle(opened, "gemPouch", 1);
+    expect(resolved.market.haggle.gemPouch!.picked).toBe(1);
+  });
+});
