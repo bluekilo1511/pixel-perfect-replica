@@ -1,11 +1,13 @@
 /** "Sức khỏe dữ liệu": a read-only report of how big/heavy the save file is plus
  * a conservative one-click cleanup. Pure functions, no browser APIs. */
-import { dateStr, pruneTasks, type AppData } from "./model";
+import { dateStr, type AppData } from "./model";
+import { shiftDate } from "./gamify";
 
 export interface DataHealth {
   bytes: number; // serialized size of the whole AppData (UTF-16 chars ≈ bytes for ASCII-heavy JSON)
   tasks: number; // stored tasks (all dates)
-  oldTasks: number; // tasks older than 14 days that are still stored
+  oldTasks: number; // tasks older than OLD_DAYS that cleanup will actually remove
+  pinnedOldTasks: number; // old tasks that are pinned — cleanup keeps them on purpose
   sessionLog: number;
   dailyStatsDays: number;
   flashcards: number;
@@ -15,6 +17,7 @@ export interface DataHealth {
   warnings: string[];
 }
 
+/** Tasks older than this are what "Dọn dẹp ngay" removes (pinned ones survive). */
 const OLD_DAYS = 14;
 const SESSION_CAP = 400;
 const STATS_CAP_DAYS = 180;
@@ -26,15 +29,16 @@ export interface StudyHealth {
 }
 
 export function dataHealth(data: AppData, today = dateStr(), study?: StudyHealth): DataHealth {
-  const cutoff = new Date(`${today}T23:59:59`);
-  cutoff.setDate(cutoff.getDate() - OLD_DAYS);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
-  const oldTasks = data.tasks.filter((t) => t.date < cutoffStr).length;
+  const cutoffStr = shiftDate(today, -OLD_DAYS);
+  const oldTasks = data.tasks.filter((t) => !t.pinned && t.date < cutoffStr).length;
+  const pinnedOldTasks = data.tasks.filter((t) => t.pinned && t.date < cutoffStr).length;
   const sessionLog = data.sessionLog.length;
   const dailyStatsDays = Object.keys(data.dailyStats).length;
   const warnings: string[] = [];
   if (oldTasks > 0)
-    warnings.push(`${oldTasks} nhiệm vụ quá 14 ngày vẫn còn trong file — dọn dẹp sẽ gọt bớt.`);
+    warnings.push(`${oldTasks} nhiệm vụ quá 14 ngày vẫn còn trong file — bấm Dọn dẹp để gọt.`);
+  if (pinnedOldTasks > 0)
+    warnings.push(`${pinnedOldTasks} nhiệm vụ cũ đang được ghim — dọn dẹp giữ nguyên chúng.`);
   if (sessionLog > SESSION_CAP)
     warnings.push(`${sessionLog} mục nhật ký phiên — phần cũ sẽ được cắt khi dọn dẹp.`);
   if (dailyStatsDays > STATS_CAP_DAYS)
@@ -49,6 +53,7 @@ export function dataHealth(data: AppData, today = dateStr(), study?: StudyHealth
     bytes: JSON.stringify(data).length,
     tasks: data.tasks.length,
     oldTasks,
+    pinnedOldTasks,
     sessionLog,
     dailyStatsDays,
     flashcards: study ? study.cards : data.flashcards.length,
@@ -70,11 +75,13 @@ export function removedTotal(r: CleanupResult): number {
   return r.removedTasks + r.removedSessions + r.removedStatsDays;
 }
 
-/** Trims what only exists to keep history: stale tasks, old session entries, old stat days.
- * Never touches grades, flashcards, scratch notes, inventory or anything user-authored. */
+/** Trims what only exists to keep history: tasks older than OLD_DAYS (pinned survive),
+ * old session entries, old stat days. Never touches grades, flashcards, scratch notes,
+ * inventory or anything user-authored. */
 export function cleanupData(data: AppData, today = dateStr()): CleanupResult {
-  const pruned = pruneTasks(data, today);
-  const removedTasks = pruned.tasks.length - data.tasks.length;
+  const cutoffStr = shiftDate(today, -OLD_DAYS);
+  const kept = data.tasks.filter((t) => t.pinned || t.date >= cutoffStr);
+  const removedTasks = data.tasks.length - kept.length;
 
   const sessionLog = data.sessionLog.slice(-SESSION_CAP);
   const removedSessions = data.sessionLog.length - sessionLog.length;
@@ -88,7 +95,7 @@ export function cleanupData(data: AppData, today = dateStr()): CleanupResult {
   });
 
   return {
-    data: { ...pruned, sessionLog, dailyStats },
+    data: { ...data, tasks: kept, sessionLog, dailyStats },
     removedTasks,
     removedSessions,
     removedStatsDays,
