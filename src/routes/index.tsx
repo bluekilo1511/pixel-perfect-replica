@@ -22,6 +22,7 @@ import { EvolutionFx } from "@/components/tracker/EvolutionFx";
 import { KeyboardShortcuts } from "@/components/tracker/KeyboardShortcuts";
 import { CommandPalette } from "@/components/tracker/CommandPalette";
 import { TabsContent } from "@/components/ui/tabs";
+import { WorkspaceLayout } from "@/components/tracker/WorkspaceLayout";
 import { ConstellationTabs } from "@/components/tracker/ConstellationTabs";
 import { BackupReminder } from "@/components/tracker/BackupReminder";
 import { QuickAdd } from "@/components/tracker/QuickAdd";
@@ -100,38 +101,7 @@ function AppInner() {
       <BackupReminder />
       <QuickAdd />
       <TaskReminders />
-      <ConstellationTabs>
-        <TabsContent value="today" className="mt-4 sm:mt-5">
-          <TodayPanel />
-        </TabsContent>
-        <TabsContent value="stats" className="mt-4 sm:mt-5">
-          <StatsPanel />
-        </TabsContent>
-        <TabsContent value="study" className="mt-4 sm:mt-5">
-          <StudyTab />
-        </TabsContent>
-        <TabsContent value="week" className="mt-4 sm:mt-5">
-          <Timetable />
-          <div className="mt-4 sm:mt-5">
-            <PersonalScheduleCard />
-          </div>
-        </TabsContent>
-        <TabsContent value="shop" className="mt-4 sm:mt-5">
-          <Wheel />
-          <div className="mt-4 sm:mt-5">
-            <PetShop />
-          </div>
-        </TabsContent>
-        <TabsContent value="chronicle" className="mt-4 sm:mt-5">
-          <WeeklyReportCard />
-          <div className="mt-4 sm:mt-5">
-            <Chronicle />
-          </div>
-        </TabsContent>
-        <TabsContent value="settings" className="mt-4 sm:mt-5">
-          <SettingsPanel />
-        </TabsContent>
-      </ConstellationTabs>
+      <WorkspaceLayout />
       <LevelUpOverlay />
       <TimerFullscreen />
       <EvolutionFx />

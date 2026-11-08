@@ -35,3 +35,56 @@ describe("parseQuickAdd", () => {
     expect(r.minutes).toBeNull();
   });
 });
+
+describe("parseQuickAdd natural language extensions", () => {
+  it("extracts priority !1..4 and p1..4", () => {
+    expect(parseQuickAdd("Học Toán 25p !1")).toEqual({
+      title: "Học Toán",
+      minutes: 25,
+      priority: "p1",
+    });
+    expect(parseQuickAdd("Làm bài p2")).toEqual({
+      title: "Làm bài",
+      minutes: null,
+      priority: "p2",
+    });
+  });
+
+  it("extracts time of day", () => {
+    expect(parseQuickAdd("Học nhóm 20h30")).toEqual({
+      title: "Học nhóm",
+      minutes: null,
+      timeRange: "20:30",
+    });
+    expect(parseQuickAdd("Đi tập gym 8h")).toEqual({
+      title: "Đi tập gym",
+      minutes: null,
+      timeRange: "08:00",
+    });
+  });
+
+  it("extracts date offset for mai / ngày mai", () => {
+    expect(parseQuickAdd("Nộp đồ án mai !1")).toEqual({
+      title: "Nộp đồ án",
+      minutes: null,
+      priority: "p1",
+      dateOffsetDays: 1,
+    });
+    expect(parseQuickAdd("Làm bài ngày mai 45p")).toEqual({
+      title: "Làm bài",
+      minutes: 45,
+      dateOffsetDays: 1,
+    });
+  });
+
+  it("parses hour durations (tiếng, giờ)", () => {
+    expect(parseQuickAdd("Ôn Sử 2 tiếng")).toEqual({
+      title: "Ôn Sử",
+      minutes: 120,
+    });
+    expect(parseQuickAdd("Đọc sách 1.5 giờ")).toEqual({
+      title: "Đọc sách",
+      minutes: 90,
+    });
+  });
+});

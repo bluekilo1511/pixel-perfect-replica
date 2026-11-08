@@ -9,12 +9,28 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-const TAB_ORDER = ["today", "stats", "study", "week", "shop", "chronicle", "settings"] as const;
+const TAB_ORDER = [
+  "today",
+  "eisenhower",
+  "timeline",
+  "exams",
+  "grades",
+  "stats",
+  "study",
+  "week",
+  "shop",
+  "chronicle",
+  "settings",
+] as const;
 const TAB_LABEL: Record<(typeof TAB_ORDER)[number], { name: string; emoji: string }> = {
   today: { name: "Hôm nay", emoji: "📋" },
-  stats: { name: "Thống kê", emoji: "📊" },
-  study: { name: "Học tập", emoji: "🎓" },
-  week: { name: "Tuần", emoji: "🗓️" },
+  eisenhower: { name: "Ma trận Eisenhower (4 ô)", emoji: "🗂️" },
+  timeline: { name: "Timeline ngày (Timeblock)", emoji: "⏳" },
+  exams: { name: "Kỳ thi & Đếm ngược", emoji: "🎯" },
+  grades: { name: "Sổ điểm & Mục tiêu", emoji: "📊" },
+  stats: { name: "Thống kê", emoji: "📈" },
+  study: { name: "Học tập (Thẻ & Game)", emoji: "🎓" },
+  week: { name: "Lịch tuần", emoji: "🗓️" },
   shop: { name: "Cửa hàng", emoji: "🛍️" },
   chronicle: { name: "Biên niên", emoji: "📖" },
   settings: { name: "Cài đặt", emoji: "⚙️" },

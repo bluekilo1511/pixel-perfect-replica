@@ -35,6 +35,7 @@ import {
   taskFromTemplate,
   updateExam,
   WATER_GOAL,
+  PRIORITY_META,
   type Task,
   type TaskKind,
 } from "@/lib/tracker/model";
@@ -306,14 +307,30 @@ function TaskRow({ task }: { task: Task }) {
           📝 {exam.name} · {formatDateVN(exam.date)} · {examLabel(daysUntil(exam.date, dateStr()))}
         </span>
       )}
+      {task.priority && (
+        <span
+          className={`rounded border px-1.5 py-0.5 text-[11px] font-bold ${PRIORITY_META[task.priority].badgeClass}`}
+        >
+          {PRIORITY_META[task.priority].short}
+        </span>
+      )}
       {task.subject && (
         <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
           📚 {task.subject}
         </span>
       )}
       <span className="text-xl">{task.emoji ?? KIND_META[task.kind].emoji}</span>
-      <div className="min-w-0 flex-1">
-        <p className={`truncate font-medium ${locked ? "line-through" : ""}`}>{task.title}</p>
+      <div
+        className="min-w-0 flex-1 cursor-pointer"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("ppr:select-task", { detail: task.id }))
+        }
+      >
+        <p
+          className={`truncate font-medium hover:text-primary transition ${locked ? "line-through opacity-60" : ""}`}
+        >
+          {task.title}
+        </p>
         <p className="text-xs text-muted-foreground">
           {task.timeRange && (
             <span className="mr-1.5 rounded-full bg-time-badge px-2 py-0.5 font-semibold text-primary-foreground">
@@ -323,6 +340,11 @@ function TaskRow({ task }: { task: Task }) {
           {task.remindAt && (
             <span className="mr-1.5 rounded-full bg-secondary px-2 py-0.5 font-semibold">
               ⏰ {task.remindAt}
+            </span>
+          )}
+          {task.subtasks && task.subtasks.length > 0 && (
+            <span className="mr-1.5 rounded bg-muted px-1.5 py-0.5 font-medium text-muted-foreground">
+              ✓ {task.subtasks.filter((s) => s.completed).length}/{task.subtasks.length}
             </span>
           )}
           {task.pinned ? "📌 Ghim hằng ngày · " : ""}

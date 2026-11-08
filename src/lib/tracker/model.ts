@@ -113,6 +113,80 @@ export interface NoteItem {
   createdAt: string;
 }
 
+export type PriorityLevel = "p1" | "p2" | "p3" | "p4";
+
+export const PRIORITY_META: Record<
+  PriorityLevel,
+  { label: string; short: string; flagColor: string; badgeClass: string }
+> = {
+  p1: {
+    label: "P1 — Khẩn cấp",
+    short: "P1",
+    flagColor: "text-red-500",
+    badgeClass: "bg-red-500/15 text-red-500 border-red-500/30",
+  },
+  p2: {
+    label: "P2 — Ưu tiên cao",
+    short: "P2",
+    flagColor: "text-amber-500",
+    badgeClass: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  },
+  p3: {
+    label: "P3 — Bình thường",
+    short: "P3",
+    flagColor: "text-blue-500",
+    badgeClass: "bg-blue-500/15 text-blue-500 border-blue-500/30",
+  },
+  p4: {
+    label: "P4 — Thấp / Linh hoạt",
+    short: "P4",
+    flagColor: "text-muted-foreground",
+    badgeClass: "bg-muted text-muted-foreground border-border",
+  },
+};
+
+export type EisenhowerQuadrant = "do_first" | "schedule" | "delegate" | "dont_do";
+
+export const EISENHOWER_META: Record<
+  EisenhowerQuadrant,
+  { label: string; sub: string; badge: string; colorClass: string; borderClass: string }
+> = {
+  do_first: {
+    label: "Khẩn cấp & Quan trọng",
+    sub: "Làm ngay",
+    badge: "🔴 Q1",
+    colorClass: "bg-red-500/10 text-red-500",
+    borderClass: "border-red-500/40",
+  },
+  schedule: {
+    label: "Không khẩn cấp nhưng Quan trọng",
+    sub: "Lên lịch sâu",
+    badge: "🔵 Q2",
+    colorClass: "bg-blue-500/10 text-blue-500",
+    borderClass: "border-blue-500/40",
+  },
+  delegate: {
+    label: "Khẩn cấp, Không quan trọng",
+    sub: "Làm nhanh",
+    badge: "🟡 Q3",
+    colorClass: "bg-amber-500/10 text-amber-500",
+    borderClass: "border-amber-500/40",
+  },
+  dont_do: {
+    label: "Không khẩn cấp & Không quan trọng",
+    sub: "Cân nhắc bỏ",
+    badge: "⚪ Q4",
+    colorClass: "bg-muted/40 text-muted-foreground",
+    borderClass: "border-border",
+  },
+};
+
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -132,6 +206,10 @@ export interface Task {
   remindAt?: string; // "HH:MM" — same-day reminder time; the app pings when it passes
   interruptions?: number; // pauses / tab-escapes during this task's running timer
   emoji?: string; // custom icon (e.g. 🧘) shown instead of the kind emoji
+  priority?: PriorityLevel;
+  eisenhower?: EisenhowerQuadrant;
+  subtasks?: Subtask[];
+  notes?: string;
   createdAt: string;
   [extra: string]: unknown; // keep unknown fields from old files
 }
@@ -642,6 +720,24 @@ export function migrate(raw: unknown): AppData {
       completedAt: t.completedAt ?? null,
       rewardClaimed: t.rewardClaimed ?? !!t.completed,
       emoji: normalizeTemplateEmoji(t.emoji),
+      priority: ["p1", "p2", "p3", "p4"].includes(String(t.priority))
+        ? (t.priority as PriorityLevel)
+        : undefined,
+      eisenhower: ["do_first", "schedule", "delegate", "dont_do"].includes(String(t.eisenhower))
+        ? (t.eisenhower as EisenhowerQuadrant)
+        : undefined,
+      subtasks: Array.isArray(t.subtasks)
+        ? (t.subtasks as unknown[])
+            .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
+            .map((s) => ({
+              id: typeof s.id === "string" && s.id ? s.id : uid("sub"),
+              title: String(s.title ?? "")
+                .trim()
+                .slice(0, 200),
+              completed: !!s.completed,
+            }))
+        : undefined,
+      notes: typeof t.notes === "string" ? t.notes.slice(0, 2000) : undefined,
       createdAt: t.createdAt ?? new Date().toISOString(),
     };
   });
@@ -1187,6 +1283,11 @@ export interface TaskEdit {
   minutes?: number;
   date?: string;
   remindAt?: string | null; // "HH:MM" or null to clear
+  priority?: PriorityLevel | null;
+  eisenhower?: EisenhowerQuadrant | null;
+  notes?: string;
+  subject?: string | null;
+  timeRange?: string | null;
 }
 
 /** Edits an unfinished task. Completed or already-rewarded tasks are locked. Returns null when not editable. */
@@ -1226,6 +1327,25 @@ export function editTask(
       if (patch.remindAt !== undefined) {
         if (remindAt) next.remindAt = remindAt;
         else delete next.remindAt;
+      }
+      if (patch.priority !== undefined) {
+        if (patch.priority) next.priority = patch.priority;
+        else delete next.priority;
+      }
+      if (patch.eisenhower !== undefined) {
+        if (patch.eisenhower) next.eisenhower = patch.eisenhower;
+        else delete next.eisenhower;
+      }
+      if (patch.notes !== undefined) {
+        next.notes = patch.notes ? patch.notes.slice(0, 2000) : undefined;
+      }
+      if (patch.subject !== undefined) {
+        if (patch.subject) next.subject = patch.subject;
+        else delete next.subject;
+      }
+      if (patch.timeRange !== undefined) {
+        if (patch.timeRange) next.timeRange = patch.timeRange;
+        else delete next.timeRange;
       }
       // New duration or kind → restart the countdown; moving days drops the old timetable badge.
       if (retimed) next.remainingSeconds = minutes * 60;
@@ -2095,5 +2215,110 @@ export function claimChallenge(data: AppData, now = new Date()): { ok: boolean; 
         lizardGems: data.game.lizardGems + def.reward.lizardGems,
       },
     },
+  };
+}
+
+// ---- Priority, Eisenhower & Subtasks helpers ----
+
+export function deduceEisenhower(
+  task: Task,
+  upcomingExamsList: { date: string }[] = [],
+): EisenhowerQuadrant {
+  if (task.eisenhower) return task.eisenhower;
+  if (task.priority === "p1") return "do_first";
+  if (task.priority === "p2") return "schedule";
+  if (task.priority === "p4") return "dont_do";
+  if (task.priority === "p3") return "delegate";
+  if (task.examId) return "do_first";
+  if (task.kind === "pomodoro" || task.minutes >= 30) return "schedule";
+  return "schedule";
+}
+
+export function addSubtask(data: AppData, taskId: string, title: string): AppData {
+  const clean = title.trim().slice(0, 200);
+  if (!clean) return data;
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      const subtasks = t.subtasks ? [...t.subtasks] : [];
+      subtasks.push({ id: uid("sub"), title: clean, completed: false });
+      return { ...t, subtasks };
+    }),
+  };
+}
+
+export function toggleSubtask(data: AppData, taskId: string, subtaskId: string): AppData {
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId || !t.subtasks) return t;
+      return {
+        ...t,
+        subtasks: t.subtasks.map((s) =>
+          s.id === subtaskId ? { ...s, completed: !s.completed } : s,
+        ),
+      };
+    }),
+  };
+}
+
+export function removeSubtask(data: AppData, taskId: string, subtaskId: string): AppData {
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId || !t.subtasks) return t;
+      return {
+        ...t,
+        subtasks: t.subtasks.filter((s) => s.id !== subtaskId),
+      };
+    }),
+  };
+}
+
+export function setTaskPriority(
+  data: AppData,
+  taskId: string,
+  priority: PriorityLevel | undefined,
+): AppData {
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      const next = { ...t };
+      if (priority) next.priority = priority;
+      else delete next.priority;
+      return next;
+    }),
+  };
+}
+
+export function setTaskEisenhower(
+  data: AppData,
+  taskId: string,
+  quadrant: EisenhowerQuadrant | undefined,
+): AppData {
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      const next = { ...t };
+      if (quadrant) next.eisenhower = quadrant;
+      else delete next.eisenhower;
+      return next;
+    }),
+  };
+}
+
+export function setTaskNotes(data: AppData, taskId: string, notes: string): AppData {
+  return {
+    ...data,
+    tasks: data.tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      const next = { ...t };
+      if (notes.trim()) next.notes = notes.slice(0, 2000);
+      else delete next.notes;
+      return next;
+    }),
   };
 }

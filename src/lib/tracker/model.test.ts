@@ -20,6 +20,12 @@ import {
   setTaskMood,
   TASK_HARD_CAP,
   shouldNudgeWater,
+  addSubtask,
+  toggleSubtask,
+  removeSubtask,
+  setTaskPriority,
+  setTaskEisenhower,
+  deduceEisenhower,
 } from "./model";
 import { shiftDate } from "./gamify";
 
@@ -532,5 +538,49 @@ describe("task pruning", () => {
     const kept = new Set(r.tasks.map((t) => t.id));
     const oldest = [...tasks].sort((a, b) => a.date.localeCompare(b.date))[0]!;
     expect(kept.has(oldest.id)).toBe(false);
+  });
+});
+
+describe("priority, subtasks & eisenhower", () => {
+  it("adds, toggles and removes subtasks cleanly", () => {
+    let d = defaultData();
+    const task = makeTask("Làm bài tập", "custom", 0, "2026-11-08");
+    d = { ...d, tasks: [task] };
+    d = addSubtask(d, task.id, "Bài 1 trang 12");
+    d = addSubtask(d, task.id, "Bài 2 trang 12");
+    expect(d.tasks[0]?.subtasks?.length).toBe(2);
+    expect(d.tasks[0]?.subtasks?.[0]?.completed).toBe(false);
+
+    const sub1 = d.tasks[0]?.subtasks?.[0]?.id ?? "";
+    d = toggleSubtask(d, task.id, sub1);
+    expect(d.tasks[0]?.subtasks?.[0]?.completed).toBe(true);
+
+    d = removeSubtask(d, task.id, sub1);
+    expect(d.tasks[0]?.subtasks?.length).toBe(1);
+    expect(d.tasks[0]?.subtasks?.[0]?.title).toBe("Bài 2 trang 12");
+  });
+
+  it("sets priority and deduces eisenhower quadrant", () => {
+    let d = defaultData();
+    const task = makeTask("Ôn thi Sử", "custom", 0, "2026-11-08");
+    d = { ...d, tasks: [task] };
+    d = setTaskPriority(d, task.id, "p1");
+    expect(d.tasks[0]?.priority).toBe("p1");
+    expect(deduceEisenhower(d.tasks[0]!)).toBe("do_first");
+
+    d = setTaskPriority(d, task.id, "p2");
+    expect(deduceEisenhower(d.tasks[0]!)).toBe("schedule");
+
+    d = setTaskEisenhower(d, task.id, "delegate");
+    expect(deduceEisenhower(d.tasks[0]!)).toBe("delegate");
+  });
+
+  it("edits task priority and notes via editTask", () => {
+    let d = defaultData();
+    const task = makeTask("Viết luận", "custom", 30, "2026-11-08");
+    d = { ...d, tasks: [task] };
+    const next = editTask(d, task.id, { priority: "p1", notes: "Nhớ dẫn nguồn" });
+    expect(next?.tasks[0]?.priority).toBe("p1");
+    expect(next?.tasks[0]?.notes).toBe("Nhớ dẫn nguồn");
   });
 });
