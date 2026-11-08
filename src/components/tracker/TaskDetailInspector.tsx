@@ -29,7 +29,8 @@ const PRIORITIES: PriorityLevel[] = ["p1", "p2", "p3", "p4"];
 const QUADRANTS: EisenhowerQuadrant[] = ["do_first", "schedule", "delegate", "dont_do"];
 
 export function TaskDetailInspector({ taskId, onClose }: Props) {
-  const { data, update, activeTaskId, startTimer, pauseTimer, finish } = useTracker();
+  const { data, update, timer, startTimer, pauseTimer, finish } = useTracker();
+  const activeTaskId = timer?.taskId ?? null;
   const task = data.tasks.find((t) => t.id === taskId);
   const [subtaskInput, setSubtaskInput] = useState("");
   const [notesInput, setNotesInput] = useState(task?.notes ?? "");

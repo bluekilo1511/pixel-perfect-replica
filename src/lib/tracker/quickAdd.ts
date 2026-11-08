@@ -42,7 +42,7 @@ export function parseQuickAdd(text: string): QuickAddParsed {
   let dateOffsetDays: number | undefined;
   const dateMatch = raw.match(DATE_RE);
   if (dateMatch && dateMatch.index !== undefined) {
-    const kw = dateMatch[1].toLowerCase().replace(/\s+/g, " ");
+    const kw = (dateMatch[1] ?? "").toLowerCase().replace(/\s+/g, " ");
     if (kw === "mai" || kw === "ngày mai") {
       dateOffsetDays = 1;
     } else if (kw === "hôm nay") {
@@ -55,7 +55,7 @@ export function parseQuickAdd(text: string): QuickAddParsed {
   let timeRange: string | undefined;
   const timeMatch = raw.match(TIME_RE);
   if (timeMatch && timeMatch.index !== undefined) {
-    const h = parseInt(timeMatch[1], 10);
+    const h = parseInt(timeMatch[1] ?? "0", 10);
     const mStr = timeMatch[2] ?? timeMatch[3];
     const m = mStr !== undefined ? parseInt(mStr, 10) : 0;
     if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {

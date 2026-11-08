@@ -27,7 +27,7 @@ interface NavItem {
   id: WorkspaceTab;
   label: string;
   icon: string;
-  badge?: number | string;
+  badge?: number | string | undefined;
 }
 
 export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleCollapsed }: Props) {
@@ -88,7 +88,7 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate font-bold text-xs tracking-tight">
-                {data.settings.ownerName || "Học sinh"}
+                {data.ownerName || "Học sinh"}
               </p>
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span title="Chuỗi ngày học liên tục">🔥 {streak} ngày</span>
