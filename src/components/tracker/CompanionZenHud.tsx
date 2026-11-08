@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { BOSS_MAX_HP, bossHp } from "@/lib/tracker/boss";
 import {
   expeditionStatus,
+  grantPetXp,
   petEmoji,
   petTitle,
   petXpForLevel,
@@ -21,14 +22,14 @@ interface Props {
 
 export function CompanionZenHud({ onSelectTask }: Props) {
   const { data, update, activeTaskId, startTimer, pauseTimer, drinkWater } = useTracker();
-  const pet = data.pet;
+  const pet = data.petState;
   const game = data.game;
   const mood = moodOf(pet);
   const moodMeta = MOOD_META[mood];
-  const tier = tierOf(pet.level);
+  const tier = tierOf(pet.petLevel || 1);
   const tierBadge = TIER_BADGE[tier];
-  const neededXp = petXpForLevel(pet.level);
-  const xpPercent = Math.min(100, Math.round((pet.xp / neededXp) * 100));
+  const neededXp = petXpForLevel(pet.petLevel || 1);
+  const xpPercent = Math.min(100, Math.round(((pet.petXp || 0) / neededXp) * 100));
 
   // Focus timer task
   const activeTask = data.tasks.find((t) => t.id === activeTaskId);
@@ -52,30 +53,21 @@ export function CompanionZenHud({ onSelectTask }: Props) {
   };
 
   const handleFeedPet = () => {
-    if (game.inventory.catTreats <= 0 && game.catCoins < 10) {
-      toast.error("Bạn không có đồ ăn cho pet. Hãy ghé Cửa hàng!");
+    if (game.catCoins < 10) {
+      toast.error("Cần 10 😺 để cho pet ăn. Hãy làm thêm nhiệm vụ!");
       return;
     }
     update((d) => {
-      const treats = d.game.inventory.catTreats;
-      const coins = d.game.catCoins;
-      const newTreats = treats > 0 ? treats - 1 : 0;
-      const newCoins = treats > 0 ? coins : Math.max(0, coins - 10);
-      const newHunger = Math.min(100, d.pet.hunger + 30);
-      const newHappy = Math.min(100, d.pet.happiness + 20);
+      const p = d.petState;
+      const fed = {
+        ...p,
+        hunger: Math.min(100, p.hunger + 30),
+        happiness: Math.min(100, p.happiness + 20),
+      };
       return {
         ...d,
-        game: {
-          ...d.game,
-          catCoins: newCoins,
-          inventory: { ...d.game.inventory, catTreats: newTreats },
-        },
-        pet: {
-          ...d.pet,
-          hunger: newHunger,
-          happiness: newHappy,
-          xp: d.pet.xp + 25,
-        },
+        game: { ...d.game, catCoins: d.game.catCoins - 10 },
+        petState: grantPetXp(fed, 25).pet,
       };
     });
     toast.success("Đã cho pet ăn no nê! 🍖 (+25 XP)");
@@ -89,7 +81,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
           Bạn đồng hành & Góc tập trung
         </span>
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
-          Lv.{pet.level} {tierBadge}
+          Lv.{pet.petLevel || 1} {tierBadge}
         </span>
       </div>
 
@@ -97,7 +89,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
       <div className="rounded-2xl border border-border/80 bg-background/80 p-3.5 space-y-3">
         <div className="flex items-center gap-3">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-3xl shadow-inner">
-            <span>{petEmoji(pet.species, pet.level)}</span>
+            <span>{petEmoji(pet)}</span>
             <span className="absolute -bottom-1 -right-1 text-xs" title={moodMeta.label}>
               {moodMeta.emoji}
             </span>
@@ -105,14 +97,14 @@ export function CompanionZenHud({ onSelectTask }: Props) {
           <div className="min-w-0 flex-1">
             <p className="truncate font-bold text-sm">{data.settings.petName || "Pet cưng"}</p>
             <p className="text-[11px] text-muted-foreground truncate">
-              {petTitle(pet.species, pet.level)}
+              {petTitle(pet)}
             </p>
             {/* XP bar */}
             <div className="mt-1.5 space-y-0.5">
               <div className="flex justify-between text-[10px] text-muted-foreground">
                 <span>XP</span>
                 <span>
-                  {pet.xp}/{neededXp}
+                  {pet.petXp || 0}/{neededXp}
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
