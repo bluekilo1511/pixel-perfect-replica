@@ -1,8 +1,9 @@
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
-import { BOSS_MAX_HP, bossHp } from "@/lib/tracker/boss";
+import { RAID_HP, raidStatus } from "@/lib/tracker/quests";
 import {
   expeditionStatus,
+  grantPetXp,
   petEmoji,
   petTitle,
   petXpForLevel,
@@ -11,7 +12,7 @@ import {
   tierOf,
 } from "@/lib/tracker/extras";
 import { moodOf, MOOD_META } from "@/lib/tracker/gamify";
-import { WATER_GOAL } from "@/lib/tracker/model";
+import { WATER_GOAL, dateStr } from "@/lib/tracker/model";
 import { requestTimerFullscreen } from "./TimerFullscreen";
 import { Button } from "@/components/ui/button";
 
@@ -20,62 +21,56 @@ interface Props {
 }
 
 export function CompanionZenHud({ onSelectTask }: Props) {
-  const { data, update, activeTaskId, startTimer, pauseTimer, drinkWater } = useTracker();
-  const pet = data.pet;
+  const { data, update, timer, startTimer, pauseTimer, drinkWater } = useTracker();
+  const activeTaskId = timer?.taskId ?? null;
+  const today = dateStr();
+  const focusToday = data.dailyStats[today]?.focusMin ?? 0;
+  const pet = data.petState;
   const game = data.game;
   const mood = moodOf(pet);
   const moodMeta = MOOD_META[mood];
-  const tier = tierOf(pet.level);
+  const tier = tierOf(pet.petLevel || 1);
   const tierBadge = TIER_BADGE[tier];
-  const neededXp = petXpForLevel(pet.level);
-  const xpPercent = Math.min(100, Math.round((pet.xp / neededXp) * 100));
+  const neededXp = petXpForLevel(pet.petLevel || 1);
+  const xpPercent = Math.min(100, Math.round(((pet.petXp || 0) / neededXp) * 100));
 
   // Focus timer task
   const activeTask = data.tasks.find((t) => t.id === activeTaskId);
   const nextTask = activeTask ?? data.tasks.find((t) => !t.completed && t.minutes > 0);
 
   // Expedition status
-  const exp = expeditionStatus(data);
+  const exp = expeditionStatus(data.expedition, focusToday);
+  const canStart = exp.ready && !exp.away && exp.tripsToday < exp.limit;
 
   // Boss status
-  const boss = bossHp(data);
-  const bossPercent = Math.max(0, Math.min(100, Math.round((boss.hp / BOSS_MAX_HP) * 100)));
+  const raid = raidStatus(data.dailyStats, today, data.raid);
+  const bossPercent = Math.max(0, Math.min(100, Math.round((raid.hpLeft / RAID_HP) * 100)));
 
   const handleStartExpedition = () => {
-    const res = startExpedition(data);
-    if (!res.ok) {
-      toast.error(res.reason);
+    if (!canStart) {
+      toast.error("Chưa đủ phút tập trung để thám hiểm.");
       return;
     }
-    update(() => res.data);
+    update((d) => ({ ...d, expedition: startExpedition(d.expedition, focusToday) }));
     toast.success("Pet đã lên đường thám hiểm! 🧭");
   };
 
   const handleFeedPet = () => {
-    if (game.inventory.catTreats <= 0 && game.catCoins < 10) {
-      toast.error("Bạn không có đồ ăn cho pet. Hãy ghé Cửa hàng!");
+    if (game.catCoins < 10) {
+      toast.error("Cần 10 😺 để cho pet ăn. Hãy làm thêm nhiệm vụ!");
       return;
     }
     update((d) => {
-      const treats = d.game.inventory.catTreats;
-      const coins = d.game.catCoins;
-      const newTreats = treats > 0 ? treats - 1 : 0;
-      const newCoins = treats > 0 ? coins : Math.max(0, coins - 10);
-      const newHunger = Math.min(100, d.pet.hunger + 30);
-      const newHappy = Math.min(100, d.pet.happiness + 20);
+      const p = d.petState;
+      const fed = {
+        ...p,
+        hunger: Math.min(100, p.hunger + 30),
+        happiness: Math.min(100, p.happiness + 20),
+      };
       return {
         ...d,
-        game: {
-          ...d.game,
-          catCoins: newCoins,
-          inventory: { ...d.game.inventory, catTreats: newTreats },
-        },
-        pet: {
-          ...d.pet,
-          hunger: newHunger,
-          happiness: newHappy,
-          xp: d.pet.xp + 25,
-        },
+        game: { ...d.game, catCoins: d.game.catCoins - 10 },
+        petState: grantPetXp(fed, 25).pet,
       };
     });
     toast.success("Đã cho pet ăn no nê! 🍖 (+25 XP)");
@@ -89,7 +84,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
           Bạn đồng hành & Góc tập trung
         </span>
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
-          Lv.{pet.level} {tierBadge}
+          Lv.{pet.petLevel || 1} {tierBadge}
         </span>
       </div>
 
@@ -97,22 +92,22 @@ export function CompanionZenHud({ onSelectTask }: Props) {
       <div className="rounded-2xl border border-border/80 bg-background/80 p-3.5 space-y-3">
         <div className="flex items-center gap-3">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-3xl shadow-inner">
-            <span>{petEmoji(pet.species, pet.level)}</span>
+            <span>{petEmoji(pet)}</span>
             <span className="absolute -bottom-1 -right-1 text-xs" title={moodMeta.label}>
-              {moodMeta.emoji}
+              {moodMeta.face}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-bold text-sm">{data.settings.petName || "Pet cưng"}</p>
+            <p className="truncate font-bold text-sm">{pet.petName || "Pet cưng"}</p>
             <p className="text-[11px] text-muted-foreground truncate">
-              {petTitle(pet.species, pet.level)}
+              {petTitle(pet)}
             </p>
             {/* XP bar */}
             <div className="mt-1.5 space-y-0.5">
               <div className="flex justify-between text-[10px] text-muted-foreground">
                 <span>XP</span>
                 <span>
-                  {pet.xp}/{neededXp}
+                  {pet.petXp || 0}/{neededXp}
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -247,14 +242,14 @@ export function CompanionZenHud({ onSelectTask }: Props) {
             <span className="font-semibold flex items-center gap-1">
               <span>🧭 Thám hiểm</span>
             </span>
-            <span className="text-[11px] text-muted-foreground">{exp.tripsToday}/3 chuyến</span>
+            <span className="text-[11px] text-muted-foreground">{exp.tripsToday}/{exp.limit} chuyến</span>
           </div>
 
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>Tiến độ focus</span>
               <span>
-                {exp.focusMinutesToday}/{exp.thresholdMinutes}p
+                {exp.haveMinutes}/{exp.needMinutes}p
               </span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -263,7 +258,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
                 style={{
                   width: `${Math.min(
                     100,
-                    Math.round((exp.focusMinutesToday / exp.thresholdMinutes) * 100),
+                    Math.round((exp.haveMinutes / exp.needMinutes) * 100),
                   )}%`,
                 }}
               />
@@ -272,14 +267,14 @@ export function CompanionZenHud({ onSelectTask }: Props) {
 
           <Button
             size="sm"
-            variant={exp.canStart ? "default" : "outline"}
-            disabled={!exp.canStart}
+            variant={canStart ? "default" : "outline"}
+            disabled={!canStart}
             className="w-full h-7 text-[11px]"
             onClick={handleStartExpedition}
           >
-            {exp.canStart
+            {canStart
               ? "🧭 Khởi hành ngay"
-              : `Cần thêm ${Math.max(0, exp.thresholdMinutes - exp.focusMinutesToday)}p focus`}
+              : `Cần thêm ${Math.max(0, exp.needMinutes - exp.haveMinutes)}p focus`}
           </Button>
         </div>
 
@@ -290,7 +285,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
               <span>⚔️ Boss tuần</span>
             </span>
             <span className="text-[11px] font-mono text-muted-foreground">
-              {boss.hp}/{BOSS_MAX_HP} HP
+              {raid.hpLeft}/{RAID_HP} HP
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

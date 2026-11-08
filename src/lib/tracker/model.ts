@@ -1337,7 +1337,8 @@ export function editTask(
         else delete next.eisenhower;
       }
       if (patch.notes !== undefined) {
-        next.notes = patch.notes ? patch.notes.slice(0, 2000) : undefined;
+        if (patch.notes) next.notes = patch.notes.slice(0, 2000);
+        else delete next.notes;
       }
       if (patch.subject !== undefined) {
         if (patch.subject) next.subject = patch.subject;
