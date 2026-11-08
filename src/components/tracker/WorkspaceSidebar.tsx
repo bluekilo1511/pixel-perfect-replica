@@ -35,7 +35,7 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
   const today = dateStr();
   const pendingCount = data.tasks.filter((t) => t.date === today && !t.completed).length;
   const level = data.game.level;
-  const streak = data.game.streak;
+  const streak = data.streak.count;
   const coins = data.game.catCoins;
   const gems = data.game.lizardGems;
 
