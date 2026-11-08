@@ -1,6 +1,6 @@
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
-import { BOSS_MAX_HP, bossHp } from "@/lib/tracker/boss";
+import { RAID_HP, raidStatus } from "@/lib/tracker/quests";
 import {
   expeditionStatus,
   grantPetXp,
@@ -12,7 +12,7 @@ import {
   tierOf,
 } from "@/lib/tracker/extras";
 import { moodOf, MOOD_META } from "@/lib/tracker/gamify";
-import { WATER_GOAL } from "@/lib/tracker/model";
+import { WATER_GOAL, dateStr } from "@/lib/tracker/model";
 import { requestTimerFullscreen } from "./TimerFullscreen";
 import { Button } from "@/components/ui/button";
 
@@ -21,7 +21,10 @@ interface Props {
 }
 
 export function CompanionZenHud({ onSelectTask }: Props) {
-  const { data, update, activeTaskId, startTimer, pauseTimer, drinkWater } = useTracker();
+  const { data, update, timer, startTimer, pauseTimer, drinkWater } = useTracker();
+  const activeTaskId = timer?.taskId ?? null;
+  const today = dateStr();
+  const focusToday = data.dailyStats[today]?.focusMin ?? 0;
   const pet = data.petState;
   const game = data.game;
   const mood = moodOf(pet);
@@ -36,19 +39,19 @@ export function CompanionZenHud({ onSelectTask }: Props) {
   const nextTask = activeTask ?? data.tasks.find((t) => !t.completed && t.minutes > 0);
 
   // Expedition status
-  const exp = expeditionStatus(data);
+  const exp = expeditionStatus(data.expedition, focusToday);
+  const canStart = exp.ready && !exp.away && exp.tripsToday < exp.limit;
 
   // Boss status
-  const boss = bossHp(data);
-  const bossPercent = Math.max(0, Math.min(100, Math.round((boss.hp / BOSS_MAX_HP) * 100)));
+  const raid = raidStatus(data.dailyStats, today, data.raid);
+  const bossPercent = Math.max(0, Math.min(100, Math.round((raid.hpLeft / RAID_HP) * 100)));
 
   const handleStartExpedition = () => {
-    const res = startExpedition(data);
-    if (!res.ok) {
-      toast.error(res.reason);
+    if (!canStart) {
+      toast.error("Chưa đủ phút tập trung để thám hiểm.");
       return;
     }
-    update(() => res.data);
+    update((d) => ({ ...d, expedition: startExpedition(d.expedition, focusToday) }));
     toast.success("Pet đã lên đường thám hiểm! 🧭");
   };
 
@@ -91,11 +94,11 @@ export function CompanionZenHud({ onSelectTask }: Props) {
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-3xl shadow-inner">
             <span>{petEmoji(pet)}</span>
             <span className="absolute -bottom-1 -right-1 text-xs" title={moodMeta.label}>
-              {moodMeta.emoji}
+              {moodMeta.face}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-bold text-sm">{data.settings.petName || "Pet cưng"}</p>
+            <p className="truncate font-bold text-sm">{pet.petName || "Pet cưng"}</p>
             <p className="text-[11px] text-muted-foreground truncate">
               {petTitle(pet)}
             </p>
@@ -239,14 +242,14 @@ export function CompanionZenHud({ onSelectTask }: Props) {
             <span className="font-semibold flex items-center gap-1">
               <span>🧭 Thám hiểm</span>
             </span>
-            <span className="text-[11px] text-muted-foreground">{exp.tripsToday}/3 chuyến</span>
+            <span className="text-[11px] text-muted-foreground">{exp.tripsToday}/{exp.limit} chuyến</span>
           </div>
 
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>Tiến độ focus</span>
               <span>
-                {exp.focusMinutesToday}/{exp.thresholdMinutes}p
+                {exp.haveMinutes}/{exp.needMinutes}p
               </span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -255,7 +258,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
                 style={{
                   width: `${Math.min(
                     100,
-                    Math.round((exp.focusMinutesToday / exp.thresholdMinutes) * 100),
+                    Math.round((exp.haveMinutes / exp.needMinutes) * 100),
                   )}%`,
                 }}
               />
@@ -264,14 +267,14 @@ export function CompanionZenHud({ onSelectTask }: Props) {
 
           <Button
             size="sm"
-            variant={exp.canStart ? "default" : "outline"}
-            disabled={!exp.canStart}
+            variant={canStart ? "default" : "outline"}
+            disabled={!canStart}
             className="w-full h-7 text-[11px]"
             onClick={handleStartExpedition}
           >
-            {exp.canStart
+            {canStart
               ? "🧭 Khởi hành ngay"
-              : `Cần thêm ${Math.max(0, exp.thresholdMinutes - exp.focusMinutesToday)}p focus`}
+              : `Cần thêm ${Math.max(0, exp.needMinutes - exp.haveMinutes)}p focus`}
           </Button>
         </div>
 
@@ -282,7 +285,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
               <span>⚔️ Boss tuần</span>
             </span>
             <span className="text-[11px] font-mono text-muted-foreground">
-              {boss.hp}/{BOSS_MAX_HP} HP
+              {raid.hpLeft}/{RAID_HP} HP
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
