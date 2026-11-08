@@ -30,11 +30,10 @@ export function TimelineView({ onSelectTask, selectedTaskId }: Props) {
 
   // 1. School slots today
   const schoolDay = data.timetable.days[dayIndex];
-  const schoolSlots = (schoolDay?.slots ?? []).filter((s) => slotSubject(s));
+  const schoolSlots = (schoolDay?.slots ?? []).filter((s) => slotSubject(data, s) ?? s.title);
 
   // 2. Personal schedule slots today
-  const personalDay = data.personalSchedule?.days?.[dayIndex];
-  const personalSlots = (personalDay?.slots ?? []).filter((s) => (s.subject || s.notes)?.trim());
+  const personalSlots: { subject?: string; notes?: string; time?: string }[] = [];
 
   // 3. Today's tasks
   const todayTasks = data.tasks.filter((t) => t.date === today);
@@ -89,8 +88,8 @@ export function TimelineView({ onSelectTask, selectedTaskId }: Props) {
 
             // Find matching school slots whose time starts with this hour
             const matchingSchool = schoolSlots.filter((s) => {
-              if (!s.time) return false;
-              const h = parseInt(s.time.split(":")[0] ?? "", 10);
+              if (!s.start) return false;
+              const h = parseInt(s.start.split(":")[0] ?? "", 10);
               return h === hour;
             });
 
@@ -135,10 +134,10 @@ export function TimelineView({ onSelectTask, selectedTaskId }: Props) {
                       key={idx}
                       className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary font-medium"
                     >
-                      <span>🏫 Tiết {s.period}:</span>
-                      <span className="font-bold">{slotSubject(s)}</span>
-                      {s.room && <span className="opacity-75">· Phòng {s.room}</span>}
-                      {s.time && <span className="ml-auto opacity-75">{s.time}</span>}
+                      <span>🏫 {s.session === "afternoon" ? "Chiều" : "Sáng"}:</span>
+                      <span className="font-bold">{slotSubject(data, s) ?? s.title}</span>
+                      {s.teacher && <span className="opacity-75">· {s.teacher}</span>}
+                      <span className="ml-auto opacity-75">{s.start}–{s.end}</span>
                     </div>
                   ))}
 
