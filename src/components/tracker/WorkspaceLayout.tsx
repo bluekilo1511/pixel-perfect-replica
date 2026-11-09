@@ -10,6 +10,9 @@ import { TimelineView } from "./TimelineView";
 import { TodayPanel, ExamCard, WeekGoalsCard, WeekReviewCard } from "./TodayPanel";
 import { SpecialDaysCard } from "./SpecialDaysCard";
 import { WeeklyGoalCard } from "./WeeklyGoalCard";
+import { NextSlotCard } from "./NextSlotCard";
+import { TomorrowPrepCard } from "./TomorrowPrepCard";
+import { ExtraScheduleCard } from "./ExtraScheduleCard";
 import { Timetable } from "./Timetable";
 import { PersonalScheduleCard } from "./PersonalScheduleCard";
 import { GradeBookCard } from "./GradeBookCard";
@@ -33,7 +36,7 @@ const VIEW_TITLES: Record<WorkspaceTab, { title: string; icon: string }> = {
   today: { title: "Hôm nay", icon: "☀️" },
   eisenhower: { title: "Ma trận Eisenhower", icon: "🧭" },
   timeline: { title: "Timeline 24h", icon: "⏳" },
-  week: { title: "Thời khóa biểu & Lịch", icon: "📅" },
+  week: { title: "Thời khóa biểu & Lịch trình", icon: "📅" },
   exams: { title: "Kỳ thi & Mục tiêu tuần", icon: "🎯" },
   grades: { title: "Môn học & Bảng điểm", icon: "📚" },
   study: { title: "Thư viện học (Flashcards & Sơ đồ)", icon: "🎓" },
@@ -47,6 +50,7 @@ export function WorkspaceLayout() {
   const { data } = useTracker();
   const [currentTab, setCurrentTab] = useState<WorkspaceTab>("today");
   const [todayView, setTodayView] = useState<TodayViewMode>("list");
+  const [weekView, setWeekView] = useState<"school" | "personal">("school");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPaneOpen, setRightPaneOpen] = useState(true);
@@ -110,15 +114,42 @@ export function WorkspaceLayout() {
       <section className="flex flex-1 flex-col overflow-hidden bg-background/40">
         {/* Top Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3.5 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">{VIEW_TITLES[currentTab].icon}</span>
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-foreground">
-                {VIEW_TITLES[currentTab].title}
-              </h1>
-              <p className="text-xs text-muted-foreground">{formattedToday}</p>
-            </div>
-          </div>
+          {(() => {
+            let icon = VIEW_TITLES[currentTab]?.icon ?? "☀️";
+            let title = VIEW_TITLES[currentTab]?.title ?? "Hôm nay";
+            let desc = formattedToday;
+
+            if (currentTab === "today") {
+              if (todayView === "eisenhower") {
+                icon = "🧭";
+                title = "Ma trận Eisenhower (4 ô ưu tiên)";
+                desc = "Phân loại việc hôm nay theo mức độ Khẩn cấp & Quan trọng";
+              } else if (todayView === "timeline") {
+                icon = "⏳";
+                title = "Timeline 24h (Dòng chảy trong ngày)";
+                desc = "Khung giờ trong ngày kết hợp giờ học lớp, lịch riêng và nhiệm vụ";
+              } else {
+                title = "Hôm nay (Danh sách việc)";
+                desc = `Nhiệm vụ cần làm · ${formattedToday}`;
+              }
+            } else if (currentTab === "week") {
+              title =
+                weekView === "school"
+                  ? "Thời khóa biểu trường (Lớp học)"
+                  : "Lịch cá nhân & Sinh hoạt (Ngoài giờ)";
+              desc = "Tách bạch giữa thời khóa biểu trên lớp và lịch sinh hoạt cá nhân";
+            }
+
+            return (
+              <div className="flex items-center gap-3">
+                <span className="text-xl">{icon}</span>
+                <div>
+                  <h1 className="text-base font-bold tracking-tight text-foreground">{title}</h1>
+                  <p className="text-xs text-muted-foreground">{desc}</p>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex items-center gap-2">
             {/* Today sub-view selector chips */}
@@ -205,9 +236,47 @@ export function WorkspaceLayout() {
           )}
 
           {currentTab === "week" && (
-            <div className="space-y-5">
-              <Timetable />
-              <PersonalScheduleCard />
+            <div className="space-y-4">
+              {/* Tab selector for School vs Personal */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setWeekView("school")}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                    weekView === "school"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>🏫 Thời khóa biểu trường (Lớp học)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWeekView("personal")}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                    weekView === "personal"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>🗓️ Lịch cá nhân & Sinh hoạt (Ngoài giờ)</span>
+                </button>
+              </div>
+
+              {weekView === "school" ? (
+                <div className="space-y-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <NextSlotCard />
+                    <TomorrowPrepCard />
+                  </div>
+                  <Timetable />
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <ExtraScheduleCard />
+                  <PersonalScheduleCard />
+                </div>
+              )}
             </div>
           )}
 

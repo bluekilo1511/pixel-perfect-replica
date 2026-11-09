@@ -55,8 +55,6 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
           icon: "☀️",
           badge: pendingCount > 0 ? pendingCount : undefined,
         },
-        { id: "eisenhower", label: "Ma trận Eisenhower", icon: "🧭" },
-        { id: "timeline", label: "Timeline 24h", icon: "⏳" },
       ],
     },
     {

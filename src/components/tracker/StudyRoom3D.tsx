@@ -1025,12 +1025,12 @@ function Clickable({
     <group
       position={position}
       scale={hover ? 1.09 : 1}
-      onClick={(e) => {
+      onClick={(e: { stopPropagation: () => void }) => {
         e.stopPropagation();
         if (onClick) onClick();
         else onStow(id);
       }}
-      onPointerOver={(e) => {
+      onPointerOver={(e: { stopPropagation: () => void }) => {
         e.stopPropagation();
         setHover(true);
         document.body.style.cursor = "pointer";
