@@ -48,6 +48,9 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
 
   const isRunning = activeTaskId === task.id;
   const locked = task.completed;
+  const remainingSecs = isRunning
+    ? (timer?.remaining ?? task.remainingSeconds) || task.minutes * 60
+    : task.remainingSeconds || task.minutes * 60;
   const quadrant = deduceEisenhower(task, data.exams);
   const subtasks = task.subtasks ?? [];
   const completedSubs = subtasks.filter((s) => s.completed).length;
@@ -287,8 +290,7 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold">Đồng hồ tập trung</span>
               <span className="font-mono text-sm font-bold">
-                {Math.floor(task.remainingSeconds / 60)}:
-                {String(task.remainingSeconds % 60).padStart(2, "0")}
+                {Math.floor(remainingSecs / 60)}:{String(remainingSecs % 60).padStart(2, "0")}
               </span>
             </div>
             <div className="flex gap-2">

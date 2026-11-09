@@ -588,7 +588,7 @@ function ExamDetail({ e }: { e: ExamEvent }) {
   return <p className="text-xs text-muted-foreground">{bits.join(" · ")}</p>;
 }
 
-function ExamCard() {
+export function ExamCard() {
   const { data, update } = useTracker();
   const [draft, setDraft] = useState<ExamDraft>(emptyExamDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1045,7 +1045,7 @@ function AddTask() {
   );
 }
 
-function WeekGoalsCard() {
+export function WeekGoalsCard() {
   const { data, update } = useTracker();
   const goals = currentWeekGoals(data);
   const done = goals.filter((g) => g.doneAt).length;
@@ -1119,7 +1119,7 @@ function WeekGoalsCard() {
   );
 }
 
-function WeekReviewCard() {
+export function WeekReviewCard() {
   const { data } = useTracker();
   const goals = currentWeekGoals(data);
   const goalsDone = goals.filter((g) => g.doneAt).length;

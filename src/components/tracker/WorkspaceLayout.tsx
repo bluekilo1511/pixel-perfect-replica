@@ -7,7 +7,9 @@ import { TaskDetailInspector } from "./TaskDetailInspector";
 import { CompanionZenHud } from "./CompanionZenHud";
 import { EisenhowerMatrixView } from "./EisenhowerMatrixView";
 import { TimelineView } from "./TimelineView";
-import { TodayPanel } from "./TodayPanel";
+import { TodayPanel, ExamCard, WeekGoalsCard, WeekReviewCard } from "./TodayPanel";
+import { SpecialDaysCard } from "./SpecialDaysCard";
+import { WeeklyGoalCard } from "./WeeklyGoalCard";
 import { Timetable } from "./Timetable";
 import { PersonalScheduleCard } from "./PersonalScheduleCard";
 import { GradeBookCard } from "./GradeBookCard";
@@ -164,18 +166,12 @@ export function WorkspaceLayout() {
               variant="outline"
               className="h-8 gap-1.5 text-xs font-semibold"
               onClick={() => {
-                const input = document.querySelector<HTMLInputElement>("input[data-task-input]");
-                if (input) {
-                  input.scrollIntoView({ block: "center", behavior: "smooth" });
-                  input.focus();
-                } else {
-                  window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
-                }
+                window.dispatchEvent(new CustomEvent("ppr:open-quick-add"));
               }}
             >
               <span>⚡ Thêm nhanh</span>
               <kbd className="rounded border bg-muted px-1 py-0.2 text-[10px] text-muted-foreground">
-                Ctrl+K
+                Ctrl+Q
               </kbd>
             </Button>
 
@@ -216,8 +212,16 @@ export function WorkspaceLayout() {
           )}
 
           {currentTab === "exams" && (
-            <div className="space-y-5">
-              <TodayPanel />
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="space-y-5">
+                <ExamCard />
+                <SpecialDaysCard />
+              </div>
+              <div className="space-y-5">
+                <WeeklyGoalCard />
+                <WeekGoalsCard />
+                <WeekReviewCard />
+              </div>
             </div>
           )}
 

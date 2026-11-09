@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { TrackerProvider, useTracker } from "@/lib/tracker/store";
-import { HeaderHud } from "@/components/tracker/HeaderHud";
 import { TodayPanel } from "@/components/tracker/TodayPanel";
 import { WeeklyReportCard } from "@/components/tracker/WeeklyReport";
 import { HeatmapCard } from "@/components/tracker/HeatmapCard";
@@ -96,8 +95,7 @@ function AppInner() {
   }, [data.settings.themeMode, data.settings.dragonTheme, data.settings.batterySaver, band]);
   if (!ready) return <Welcome />;
   return (
-    <main className="mx-auto max-w-7xl space-y-4 p-3 sm:space-y-5 sm:p-6">
-      <HeaderHud />
+    <main className="mx-auto max-w-7xl p-2 sm:p-4">
       <BackupReminder />
       <QuickAdd />
       <TaskReminders />

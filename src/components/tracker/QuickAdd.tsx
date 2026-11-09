@@ -20,14 +20,25 @@ export function QuickAdd() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("ppr:open-quick-add", onOpen);
+
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+      // Open via Ctrl+Q / Cmd+Q or Ctrl+Shift+K
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        (e.key.toLowerCase() === "q" || (e.shiftKey && e.key.toLowerCase() === "k"))
+      ) {
         e.preventDefault();
         setOpen((o) => !o);
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("ppr:open-quick-add", onOpen);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   useEffect(() => {

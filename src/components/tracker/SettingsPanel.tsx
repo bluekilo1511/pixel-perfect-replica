@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AmbientControl } from "./AmbientControl";
+import { TimeCapsuleButton } from "./TimeCapsule";
 import { OriginButton } from "./OriginOverlay";
 import { cleanupData, dataHealth, removedTotal } from "@/lib/tracker/dataHealth";
 import { studyStats } from "@/lib/tracker/studyStore";
@@ -521,6 +522,7 @@ export function SettingsPanel() {
           >
             ⬆️ Nhập backup
           </Button>
+          <TimeCapsuleButton />
         </div>
         <OriginButton />
       </section>

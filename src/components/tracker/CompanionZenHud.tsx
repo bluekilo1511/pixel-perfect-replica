@@ -1,6 +1,7 @@
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { RAID_HP, raidStatus } from "@/lib/tracker/quests";
+import { logPetEvent } from "@/lib/tracker/petLog";
 import {
   expeditionStatus,
   grantPetXp,
@@ -37,6 +38,10 @@ export function CompanionZenHud({ onSelectTask }: Props) {
   // Focus timer task
   const activeTask = data.tasks.find((t) => t.id === activeTaskId);
   const nextTask = activeTask ?? data.tasks.find((t) => !t.completed && t.minutes > 0);
+  const nextSecs =
+    activeTaskId === nextTask?.id
+      ? (timer?.remaining ?? nextTask?.remainingSeconds) || (nextTask ? nextTask.minutes * 60 : 0)
+      : nextTask?.remainingSeconds || (nextTask ? nextTask.minutes * 60 : 0);
 
   // Expedition status
   const exp = expeditionStatus(data.expedition, focusToday);
@@ -51,7 +56,15 @@ export function CompanionZenHud({ onSelectTask }: Props) {
       toast.error("Chưa đủ phút tập trung để thám hiểm.");
       return;
     }
-    update((d) => ({ ...d, expedition: startExpedition(d.expedition, focusToday) }));
+    update((d) => {
+      const nextExp = startExpedition(d.expedition, focusToday);
+      if (nextExp === d.expedition) return d;
+      return logPetEvent(
+        { ...d, expedition: nextExp },
+        "expedition",
+        `🧭 ${petTitle(d.petState)} lên đường thám hiểm — hẹn trở lại sau 30 phút!`,
+      );
+    });
     toast.success("Pet đã lên đường thám hiểm! 🧭");
   };
 
@@ -99,9 +112,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate font-bold text-sm">{pet.petName || "Pet cưng"}</p>
-            <p className="text-[11px] text-muted-foreground truncate">
-              {petTitle(pet)}
-            </p>
+            <p className="truncate text-[11px] text-muted-foreground">{petTitle(pet)}</p>
             {/* XP bar */}
             <div className="mt-1.5 space-y-0.5">
               <div className="flex justify-between text-[10px] text-muted-foreground">
@@ -158,8 +169,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
               <div className="flex justify-between text-[11px] text-muted-foreground mt-0.5">
                 <span>{nextTask.subject ? `📚 ${nextTask.subject}` : "Tự do"}</span>
                 <span className="font-mono font-bold text-foreground">
-                  {Math.floor(nextTask.remainingSeconds / 60)}:
-                  {String(nextTask.remainingSeconds % 60).padStart(2, "0")}
+                  {Math.floor(nextSecs / 60)}:{String(nextSecs % 60).padStart(2, "0")}
                 </span>
               </div>
             </div>
@@ -242,7 +252,9 @@ export function CompanionZenHud({ onSelectTask }: Props) {
             <span className="font-semibold flex items-center gap-1">
               <span>🧭 Thám hiểm</span>
             </span>
-            <span className="text-[11px] text-muted-foreground">{exp.tripsToday}/{exp.limit} chuyến</span>
+            <span className="text-[11px] text-muted-foreground">
+              {exp.tripsToday}/{exp.limit} chuyến
+            </span>
           </div>
 
           <div className="space-y-1">
@@ -256,10 +268,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
               <div
                 className="h-full bg-primary transition-all duration-300"
                 style={{
-                  width: `${Math.min(
-                    100,
-                    Math.round((exp.haveMinutes / exp.needMinutes) * 100),
-                  )}%`,
+                  width: `${Math.min(100, Math.round((exp.haveMinutes / exp.needMinutes) * 100))}%`,
                 }}
               />
             </div>

@@ -90,8 +90,13 @@ export function CommandPalette() {
           ))}
         </CommandGroup>
         <CommandGroup heading="Hành động">
+          <CommandItem
+            onSelect={() => run(() => window.dispatchEvent(new CustomEvent("ppr:open-quick-add")))}
+          >
+            <span aria-hidden>⚡</span> Thêm nhanh nhiệm vụ (Cú pháp tự nhiên)
+          </CommandItem>
           <CommandItem onSelect={() => run(addTask)}>
-            <span aria-hidden>➕</span> Thêm nhiệm vụ mới
+            <span aria-hidden>➕</span> Thêm nhiệm vụ vào danh sách Hôm nay
           </CommandItem>
           <CommandItem onSelect={() => run(startSession)}>
             <span aria-hidden>▶️</span> Bắt đầu phiên tập trung tiếp theo

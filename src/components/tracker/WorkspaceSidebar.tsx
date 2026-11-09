@@ -1,6 +1,8 @@
+import { useRef } from "react";
+import { toast } from "sonner";
 import { useTracker } from "@/lib/tracker/store";
-import { dateStr } from "@/lib/tracker/model";
-import { streakMultiplier } from "@/lib/tracker/gamify";
+import { dateStr, xpForLevel } from "@/lib/tracker/model";
+import { compressImage } from "@/lib/tracker/image";
 import { Button } from "@/components/ui/button";
 
 export type WorkspaceTab =
@@ -31,13 +33,17 @@ interface NavItem {
 }
 
 export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleCollapsed }: Props) {
-  const { data, update } = useTracker();
+  const { data, update, status, fileName } = useTracker();
+  const fileRef = useRef<HTMLInputElement>(null);
   const today = dateStr();
   const pendingCount = data.tasks.filter((t) => t.date === today && !t.completed).length;
   const level = data.game.level;
   const streak = data.streak.count;
   const coins = data.game.catCoins;
   const gems = data.game.lizardGems;
+  const tickets = data.game.spinTickets;
+  const neededXp = xpForLevel(level);
+  const xpPercent = Math.min(100, Math.round((data.game.xp / neededXp) * 100));
 
   const GROUPS: { title: string; items: NavItem[] }[] = [
     {
@@ -80,33 +86,84 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
       }`}
     >
       {/* Profile / Workspace Header */}
-      <div className="flex items-center justify-between border-b border-border/60 p-3.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-lg font-bold text-primary shadow-sm">
-            Lv.{level}
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-bold text-xs tracking-tight">
-                {data.ownerName || "Học sinh"}
-              </p>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <span title="Chuỗi ngày học liên tục">🔥 {streak} ngày</span>
-                <span title="Xu mèo">🪙 {coins}</span>
-                <span title="Đá thằn lằn">💎 {gems}</span>
+      <div className="border-b border-border/60 p-3.5 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              title="Đổi ảnh đại diện"
+              className="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-sm font-bold text-primary shadow-sm hover:ring-2 hover:ring-primary/40 transition"
+            >
+              {data.avatarBase64 ? (
+                <img src={data.avatarBase64} alt="Avatar" className="size-full object-cover" />
+              ) : (
+                <span>Lv.{level}</span>
+              )}
+              <span className="absolute inset-0 grid place-items-center bg-foreground/50 text-[10px] text-background opacity-0 transition group-hover:opacity-100 font-medium">
+                📷
+              </span>
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                try {
+                  const b64 = await compressImage(f, 256);
+                  update((d) => ({ ...d, avatarBase64: b64 }));
+                  toast.success("Đã cập nhật ảnh đại diện");
+                } catch {
+                  toast.error("Không đọc được ảnh");
+                }
+              }}
+            />
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold text-xs tracking-tight">
+                  {data.ownerName || "Học sinh"}
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                  <span title="Chuỗi ngày học liên tục">🔥 {streak}</span>
+                  <span title="Xu mèo">🪙 {coins}</span>
+                  <span title="Đá thằn lằn">💎 {gems}</span>
+                  <span title="Lượt quay">🎡 {tickets}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition text-xs"
+            title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
+          >
+            {collapsed ? "▶" : "◀"}
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition text-xs"
-          title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
-        >
-          {collapsed ? "▶" : "◀"}
-        </button>
+        {/* User XP bar when expanded */}
+        {!collapsed && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>Cấp {level} · XP</span>
+              <span>
+                {data.game.xp}/{neededXp}
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                style={{ width: `${xpPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation Groups */}
@@ -153,7 +210,24 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
       </div>
 
       {/* Footer controls */}
-      <div className="border-t border-border/60 p-2.5">
+      <div className="border-t border-border/60 p-2.5 space-y-2">
+        {!collapsed && (
+          <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5 truncate">
+              <span
+                className={`size-2 shrink-0 rounded-full ${
+                  status === "saved"
+                    ? "bg-success"
+                    : status === "error"
+                      ? "bg-destructive"
+                      : "bg-accent"
+                }`}
+              />
+              <span className="truncate">{fileName ?? "Tự động lưu"}</span>
+            </span>
+            <span className="shrink-0 opacity-60">v2.0</span>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => {

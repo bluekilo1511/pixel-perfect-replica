@@ -33,7 +33,8 @@ export function TimelineView({ onSelectTask, selectedTaskId }: Props) {
   const schoolSlots = (schoolDay?.slots ?? []).filter((s) => slotSubject(data, s) ?? s.title);
 
   // 2. Personal schedule slots today
-  const personalSlots: { subject?: string; notes?: string; time?: string }[] = [];
+  const personalDay = data.personal.days[dayIndex];
+  const personalSlots = personalDay?.slots ?? [];
 
   // 3. Today's tasks
   const todayTasks = data.tasks.filter((t) => t.date === today);
@@ -95,8 +96,8 @@ export function TimelineView({ onSelectTask, selectedTaskId }: Props) {
 
             // Find matching personal slots
             const matchingPersonal = personalSlots.filter((s) => {
-              if (!s.time) return false;
-              const h = parseInt(s.time.split(":")[0] ?? "", 10);
+              if (!s.start) return false;
+              const h = parseInt(s.start.split(":")[0] ?? "", 10);
               return h === hour;
             });
 
@@ -137,19 +138,23 @@ export function TimelineView({ onSelectTask, selectedTaskId }: Props) {
                       <span>🏫 {s.session === "afternoon" ? "Chiều" : "Sáng"}:</span>
                       <span className="font-bold">{slotSubject(data, s) ?? s.title}</span>
                       {s.teacher && <span className="opacity-75">· {s.teacher}</span>}
-                      <span className="ml-auto opacity-75">{s.start}–{s.end}</span>
+                      <span className="ml-auto opacity-75">
+                        {s.start}–{s.end}
+                      </span>
                     </div>
                   ))}
 
                   {/* Personal slots */}
-                  {matchingPersonal.map((s, idx) => (
+                  {matchingPersonal.map((s) => (
                     <div
-                      key={idx}
+                      key={s.id}
                       className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-500 font-medium"
                     >
                       <span>📅 Lịch:</span>
-                      <span className="font-bold">{s.subject || s.notes}</span>
-                      {s.time && <span className="ml-auto opacity-75">{s.time}</span>}
+                      <span className="font-bold">{s.title}</span>
+                      <span className="ml-auto opacity-75">
+                        {s.start}–{s.end}
+                      </span>
                     </div>
                   ))}
 
