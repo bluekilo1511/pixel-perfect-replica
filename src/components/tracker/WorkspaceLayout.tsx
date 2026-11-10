@@ -143,6 +143,17 @@ export function WorkspaceLayout() {
 
             return (
               <div className="flex items-center gap-3">
+                {sidebarCollapsed && (
+                  <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(false)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-card/60 text-muted-foreground hover:bg-muted hover:text-foreground transition text-xs shadow-sm"
+                    title="Mở rộng thanh bên (▶)"
+                    aria-label="Mở rộng thanh bên"
+                  >
+                    ▶
+                  </button>
+                )}
                 <span className="text-xl">{icon}</span>
                 <div>
                   <h1 className="text-base font-bold tracking-tight text-foreground">{title}</h1>

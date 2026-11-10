@@ -84,14 +84,25 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
       }`}
     >
       {/* Profile / Workspace Header */}
-      <div className="border-b border-border/60 p-3.5 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
+      <div
+        className={`border-b border-border/60 ${collapsed ? "p-2 space-y-2 text-center" : "p-3.5 space-y-2.5"}`}
+      >
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-primary/20 hover:text-primary transition text-xs"
+              title="Mở rộng thanh bên (▶)"
+              aria-label="Mở rộng thanh bên"
+            >
+              ▶
+            </button>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               title="Đổi ảnh đại diện"
-              className="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-sm font-bold text-primary shadow-sm hover:ring-2 hover:ring-primary/40 transition"
+              className="group relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-xs font-bold text-primary shadow-sm hover:ring-2 hover:ring-primary/40 transition"
             >
               {data.avatarBase64 ? (
                 <img src={data.avatarBase64} alt="Avatar" className="size-full object-cover" />
@@ -102,25 +113,25 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
                 📷
               </span>
             </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (!f) return;
-                try {
-                  const b64 = await compressImage(f, 256);
-                  update((d) => ({ ...d, avatarBase64: b64 }));
-                  toast.success("Đã cập nhật ảnh đại diện");
-                } catch {
-                  toast.error("Không đọc được ảnh");
-                }
-              }}
-            />
-            {!collapsed && (
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                title="Đổi ảnh đại diện"
+                className="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-sm font-bold text-primary shadow-sm hover:ring-2 hover:ring-primary/40 transition"
+              >
+                {data.avatarBase64 ? (
+                  <img src={data.avatarBase64} alt="Avatar" className="size-full object-cover" />
+                ) : (
+                  <span>Lv.{level}</span>
+                )}
+                <span className="absolute inset-0 grid place-items-center bg-foreground/50 text-[10px] text-background opacity-0 transition group-hover:opacity-100 font-medium">
+                  📷
+                </span>
+              </button>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold text-xs tracking-tight">
                   {data.ownerName || "Học sinh"}
@@ -132,18 +143,38 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
                   <span title="Lượt quay">🎡 {tickets}</span>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition text-xs"
-            title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
-          >
-            {collapsed ? "▶" : "◀"}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition text-xs"
+              title="Thu gọn thanh bên (◀)"
+              aria-label="Thu gọn thanh bên"
+            >
+              ◀
+            </button>
+          </div>
+        )}
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (!f) return;
+            try {
+              const b64 = await compressImage(f, 256);
+              update((d) => ({ ...d, avatarBase64: b64 }));
+              toast.success("Đã cập nhật ảnh đại diện");
+            } catch {
+              toast.error("Không đọc được ảnh");
+            }
+          }}
+        />
 
         {/* User XP bar when expanded */}
         {!collapsed && (
@@ -165,7 +196,7 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
       </div>
 
       {/* Navigation Groups */}
-      <div className="flex-1 space-y-4 overflow-y-auto p-2.5">
+      <div className={`flex-1 space-y-4 overflow-y-auto ${collapsed ? "px-1.5 py-2.5" : "p-2.5"}`}>
         {GROUPS.map((group, gIdx) => (
           <div key={gIdx} className="space-y-1">
             {!collapsed && (
@@ -180,14 +211,23 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
                   key={item.id}
                   type="button"
                   onClick={() => onTabChange(item.id)}
-                  title={collapsed ? item.label : undefined}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition ${
+                  title={item.label}
+                  className={`flex w-full items-center ${
+                    collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-2.5 py-2"
+                  } rounded-xl text-xs font-medium transition ${
                     active
                       ? "bg-primary text-primary-foreground font-semibold shadow-sm"
                       : "text-foreground/80 hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
-                  <span className="text-base shrink-0">{item.icon}</span>
+                  <div className="relative flex items-center justify-center">
+                    <span className="text-base shrink-0">{item.icon}</span>
+                    {collapsed && item.badge !== undefined && (
+                      <span className="absolute -top-1.5 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground ring-1 ring-card">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
                   {!collapsed && <span className="truncate flex-1 text-left">{item.label}</span>}
                   {!collapsed && item.badge !== undefined && (
                     <span
@@ -208,7 +248,7 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
       </div>
 
       {/* Footer controls */}
-      <div className="border-t border-border/60 p-2.5 space-y-2">
+      <div className={`border-t border-border/60 ${collapsed ? "p-1.5" : "p-2.5"} space-y-2`}>
         {!collapsed && (
           <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5 truncate">
@@ -236,10 +276,20 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
               settings: { ...d.settings, themeMode: next },
             }));
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/60 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition"
+          className={`flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/60 ${
+            collapsed ? "py-2 px-0" : "py-1.5 px-2"
+          } text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition`}
           title="Đổi giao diện Sáng / Tối"
         >
-          <span>{(data.settings.themeMode ?? "auto") === "light" ? "☀️ Sáng" : "🌙 Tối"}</span>
+          <span>
+            {collapsed
+              ? (data.settings.themeMode ?? "auto") === "light"
+                ? "☀️"
+                : "🌙"
+              : (data.settings.themeMode ?? "auto") === "light"
+                ? "☀️ Sáng"
+                : "🌙 Tối"}
+          </span>
         </button>
       </div>
     </aside>
