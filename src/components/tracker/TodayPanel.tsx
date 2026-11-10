@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
-import { PetWidget } from "./PetWidget";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 import { NotesCard } from "./NotesCard";
 import { DailyChallengeCard, DailyQuestsCard, RaidBossCard } from "./QuestRaid";
@@ -140,32 +139,6 @@ function ScratchCard() {
         ))}
       </ul>
     </div>
-  );
-}
-
-function WaterCard() {
-  const { data, drinkWater } = useTracker();
-  const cups = data.game.water.cups;
-  return (
-    <section className="glass p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">💧 Uống nước</h2>
-        <span className="text-sm text-muted-foreground">
-          {cups}/{WATER_GOAL} ly
-        </span>
-      </div>
-      <div className="my-4 grid grid-cols-8 gap-1 sm:gap-1.5">
-        {Array.from({ length: WATER_GOAL }, (_, i) => (
-          <div
-            key={i}
-            className={`h-8 rounded-lg border border-border transition-colors sm:h-10 ${i < cups ? "bg-primary" : "bg-muted"}`}
-          />
-        ))}
-      </div>
-      <Button className="w-full" onClick={drinkWater} disabled={cups >= WATER_GOAL}>
-        {cups >= WATER_GOAL ? "Đã đủ hôm nay 🎉" : "+1 Ly"}
-      </Button>
-    </section>
   );
 }
 
@@ -1179,27 +1152,7 @@ export function TodayPanel() {
 
       <MorningBriefingCard />
 
-      {/* Routine notes checklist & water tracker */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <NotesCard />
-        <WaterCard />
-      </div>
-
-      {/* Optional expandable 3D Study Room diorama */}
-      <details className="group rounded-2xl border border-border/80 bg-card/40 p-3.5 backdrop-blur-md transition">
-        <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
-          <span className="flex items-center gap-2">
-            <span>🏠 Góc học 3D & Thú cưng</span>
-            <span className="text-[11px] font-normal lowercase opacity-75">
-              (bấm để xem phòng diorama 3D)
-            </span>
-          </span>
-          <span className="text-xs transition-transform group-open:rotate-180">▼</span>
-        </summary>
-        <div className="pt-3">
-          <PetWidget />
-        </div>
-      </details>
+      <NotesCard />
 
       <section className="glass p-5">
         <div className="mb-4 flex items-center justify-between">
@@ -1269,7 +1222,7 @@ export function TodayPanel() {
         })()}
       </section>
       {!gamifyHidden(mode) && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <DailyQuestsCard />
           <DailyChallengeCard />
           <RaidBossCard />

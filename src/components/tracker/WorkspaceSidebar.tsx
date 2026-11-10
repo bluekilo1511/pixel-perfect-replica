@@ -71,7 +71,7 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
       items: [
         { id: "shop", label: "Cửa hàng & Vòng quay", icon: "🛍️" },
         { id: "stats", label: "Thống kê & Giờ vàng", icon: "📊" },
-        { id: "chronicle", label: "Biên niên sử", icon: "📖" },
+        { id: "chronicle", label: "Nhật ký & Báo cáo", icon: "📖" },
         { id: "settings", label: "Cài đặt", icon: "⚙️" },
       ],
     },

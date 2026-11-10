@@ -43,7 +43,7 @@ const VIEW_TITLES: Record<WorkspaceTab, { title: string; icon: string }> = {
   study: { title: "Thư viện học (Flashcards & Sơ đồ)", icon: "🎓" },
   shop: { title: "Cửa hàng & Vòng quay", icon: "🛍️" },
   stats: { title: "Thống kê & Giờ vàng", icon: "📊" },
-  chronicle: { title: "Biên niên sử", icon: "📖" },
+  chronicle: { title: "Nhật ký & Báo cáo", icon: "📖" },
   settings: { title: "Cài đặt & Sức khỏe dữ liệu", icon: "⚙️" },
 };
 
@@ -290,7 +290,6 @@ export function WorkspaceLayout() {
               <div className="space-y-5">
                 <WeeklyGoalCard />
                 <WeekGoalsCard />
-                <WeekReviewCard />
               </div>
             </div>
           )}
@@ -318,16 +317,23 @@ export function WorkspaceLayout() {
               <div className="grid gap-4 sm:gap-5 grid-cols-1 xl:grid-cols-2">
                 <InterruptionChartCard />
                 <MonthlyReportCard />
-                <FocusJournalCard />
-                <FriendViewCard />
               </div>
             </div>
           )}
 
           {currentTab === "chronicle" && (
             <div className="space-y-5">
-              <WeeklyReportCard />
-              <Chronicle />
+              <div className="grid gap-5 grid-cols-1 xl:grid-cols-2">
+                <div className="space-y-5">
+                  <WeeklyReportCard />
+                  <WeekReviewCard />
+                  <FriendViewCard />
+                </div>
+                <div className="space-y-5">
+                  <FocusJournalCard />
+                  <Chronicle />
+                </div>
+              </div>
             </div>
           )}
 
