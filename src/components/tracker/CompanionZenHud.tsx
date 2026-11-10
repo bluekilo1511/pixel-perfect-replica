@@ -265,14 +265,14 @@ export function CompanionZenHud({ onSelectTask }: Props) {
               <div className="flex justify-between text-[10px] text-muted-foreground">
                 <span>Tiến độ focus</span>
                 <span>
-                  {exp.haveMinutes}/{exp.needMinutes}p
+                  {exp.haveMinutes}/{exp.targetMinutes}p
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full bg-primary transition-all duration-300"
                   style={{
-                    width: `${Math.min(100, Math.round((exp.haveMinutes / exp.needMinutes) * 100))}%`,
+                    width: `${Math.min(100, Math.round((exp.haveMinutes / Math.max(1, exp.targetMinutes)) * 100))}%`,
                   }}
                 />
               </div>
@@ -287,7 +287,11 @@ export function CompanionZenHud({ onSelectTask }: Props) {
             >
               {canStart
                 ? "🧭 Khởi hành ngay"
-                : `Cần thêm ${Math.max(0, exp.needMinutes - exp.haveMinutes)}p focus`}
+                : exp.away
+                  ? "🧭 Pet đang thám hiểm…"
+                  : exp.usedToday
+                    ? `Đã đi đủ ${exp.limit}/${exp.limit} chuyến hôm nay`
+                    : `Cần thêm ${exp.needMinutes}p focus`}
             </Button>
           </div>
 

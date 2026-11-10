@@ -329,22 +329,18 @@ export function WorkspaceLayout() {
                 <InterruptionChartCard />
                 <MonthlyReportCard />
               </div>
+              <FocusJournalCard />
             </div>
           )}
 
           {currentTab === "chronicle" && (
-            <div className="space-y-5">
-              <div className="grid gap-5 grid-cols-1 xl:grid-cols-2">
-                <div className="space-y-5">
-                  <WeeklyReportCard />
-                  <WeekReviewCard />
-                  <FriendViewCard />
-                </div>
-                <div className="space-y-5">
-                  <FocusJournalCard />
-                  <Chronicle />
-                </div>
+            <div className="space-y-6">
+              <div className="grid gap-5 grid-cols-1 lg:grid-cols-3">
+                <WeeklyReportCard />
+                <WeekReviewCard />
+                <FriendViewCard />
               </div>
+              <Chronicle />
             </div>
           )}
 

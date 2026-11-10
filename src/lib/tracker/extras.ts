@@ -464,6 +464,7 @@ export function expeditionStatus(
   ready: boolean;
   haveMinutes: number;
   needMinutes: number;
+  targetMinutes: number;
   tripsToday: number;
   limit: number;
 } {
@@ -479,6 +480,7 @@ export function expeditionStatus(
     ready,
     haveMinutes: focusToday,
     needMinutes: Math.max(0, need - focusToday),
+    targetMinutes: need,
     tripsToday: trips,
     limit: EXPEDITION_DAILY_LIMIT,
   };

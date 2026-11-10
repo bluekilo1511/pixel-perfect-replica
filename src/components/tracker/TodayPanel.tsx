@@ -1080,7 +1080,12 @@ export function WeekReviewCard() {
   };
   const weekDates = new Set(Array.from({ length: 7 }, (_, i) => shift(start, i)));
   const tasksThisWeek = data.tasks.filter((t) => weekDates.has(t.date));
-  const tasksDone = tasksThisWeek.filter((t) => t.completed).length;
+  let statsTasks = 0;
+  weekDates.forEach((d) => {
+    statsTasks += data.dailyStats[d]?.tasks ?? 0;
+  });
+  const tasksDone = Math.max(tasksThisWeek.filter((t) => t.completed).length, statsTasks);
+  const tasksTotal = Math.max(tasksThisWeek.length, tasksDone);
   const focus = weeklyGoalProgress(data);
   const weak = weakTopics(data);
   const notes = data.subjectNotes;
@@ -1098,7 +1103,7 @@ export function WeekReviewCard() {
         <li className="flex justify-between gap-2">
           <span className="text-muted-foreground">Việc cần làm trong tuần</span>
           <span className="font-medium">
-            {tasksDone}/{tasksThisWeek.length} hoàn thành
+            {tasksDone}/{tasksTotal} hoàn thành
           </span>
         </li>
         <li className="flex justify-between gap-2">
