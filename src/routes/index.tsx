@@ -95,7 +95,7 @@ function AppInner() {
   }, [data.settings.themeMode, data.settings.dragonTheme, data.settings.batterySaver, band]);
   if (!ready) return <Welcome />;
   return (
-    <main className="mx-auto max-w-7xl p-2 sm:p-4">
+    <main className="mx-auto flex h-screen w-full max-w-[1720px] flex-col overflow-hidden p-2 sm:p-3">
       <BackupReminder />
       <QuickAdd />
       <TaskReminders />

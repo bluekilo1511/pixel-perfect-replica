@@ -18,6 +18,7 @@ import { PersonalScheduleCard } from "./PersonalScheduleCard";
 import { GradeBookCard } from "./GradeBookCard";
 import { SubjectChartCard } from "./SubjectChartCard";
 import { StudyTab } from "./StudyTab";
+import { PetWidget } from "./PetWidget";
 import { Wheel } from "./Wheel";
 import { PetShop } from "./PetShop";
 import { WeeklyReportCard } from "./WeeklyReport";
@@ -97,7 +98,7 @@ export function WorkspaceLayout() {
   const formattedToday = formatDateVN(todayStr);
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] w-full overflow-hidden rounded-2xl border border-border/80 bg-background/90 shadow-2xl backdrop-blur-xl">
+    <div className="flex h-full w-full overflow-hidden rounded-2xl border border-border/80 bg-background/90 shadow-2xl backdrop-blur-xl">
       {/* 1. Left Sidebar Pane */}
       <WorkspaceSidebar
         currentTab={currentTab}
@@ -111,9 +112,9 @@ export function WorkspaceLayout() {
       />
 
       {/* 2. Middle Work Area Pane */}
-      <section className="flex flex-1 flex-col overflow-hidden bg-background/40">
+      <section className="flex flex-1 min-w-0 flex-col overflow-hidden bg-background/40">
         {/* Top Header Bar */}
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3.5 backdrop-blur-md">
+        <header className="flex min-h-[61px] flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-card/40 px-5 py-3.5 backdrop-blur-md">
           {(() => {
             let icon = VIEW_TITLES[currentTab]?.icon ?? "☀️";
             let title = VIEW_TITLES[currentTab]?.title ?? "Hôm nay";
@@ -220,7 +221,7 @@ export function WorkspaceLayout() {
         </header>
 
         {/* Scrollable Main View Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5">
           {currentTab === "today" && todayView === "list" && <TodayPanel />}
 
           {(currentTab === "eisenhower" ||
@@ -265,7 +266,7 @@ export function WorkspaceLayout() {
 
               {weekView === "school" ? (
                 <div className="space-y-5">
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
                     <NextSlotCard />
                     <TomorrowPrepCard />
                   </div>
@@ -281,7 +282,7 @@ export function WorkspaceLayout() {
           )}
 
           {currentTab === "exams" && (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 grid-cols-1 xl:grid-cols-2">
               <div className="space-y-5">
                 <ExamCard />
                 <SpecialDaysCard />
@@ -305,18 +306,21 @@ export function WorkspaceLayout() {
 
           {currentTab === "shop" && (
             <div className="space-y-5">
+              <PetWidget />
               <Wheel />
               <PetShop />
             </div>
           )}
 
           {currentTab === "stats" && (
-            <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+            <div className="space-y-5">
               <HeatmapCard />
-              <InterruptionChartCard />
-              <MonthlyReportCard />
-              <FocusJournalCard />
-              <FriendViewCard />
+              <div className="grid gap-4 sm:gap-5 grid-cols-1 xl:grid-cols-2">
+                <InterruptionChartCard />
+                <MonthlyReportCard />
+                <FocusJournalCard />
+                <FriendViewCard />
+              </div>
             </div>
           )}
 
@@ -333,7 +337,7 @@ export function WorkspaceLayout() {
 
       {/* 3. Right Pane: Task Detail Inspector OR Companion Zen HUD */}
       {rightPaneOpen && (
-        <div className="w-80 shrink-0 hidden lg:block overflow-hidden">
+        <div className="w-80 shrink-0 hidden lg:flex flex-col border-l border-border bg-card/60 backdrop-blur-md overflow-hidden">
           {selectedTaskId ? (
             <TaskDetailInspector taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />
           ) : (

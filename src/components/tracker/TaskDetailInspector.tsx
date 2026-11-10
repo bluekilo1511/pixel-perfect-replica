@@ -78,9 +78,9 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
   };
 
   return (
-    <aside className="flex h-full flex-col border-l border-border bg-card/60 p-4 backdrop-blur-md">
-      {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-border/60 pb-3">
+    <aside className="flex h-full flex-col overflow-hidden bg-transparent">
+      {/* Top Header - aligned with middle pane header */}
+      <div className="flex min-h-[61px] items-center justify-between border-b border-border/60 bg-card/40 px-4 py-3.5 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Chi tiết nhiệm vụ
@@ -104,7 +104,7 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
         </Button>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto py-3 pr-1">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {/* Title & Status */}
         <div className="space-y-1.5">
           <Input

@@ -1177,90 +1177,104 @@ export function TodayPanel() {
         onChange={(m) => update((d) => ({ ...d, settings: { ...d.settings, studyMode: m } }))}
       />
 
-      <div className="grid gap-4 sm:gap-5 lg:grid-cols-[300px_1fr]">
-        <div className="space-y-4">
-          <WaterCard />
-          <NotesCard />
-        </div>
-        <div className="space-y-4">
-          <MorningBriefingCard />
+      <MorningBriefingCard />
+
+      {/* Routine notes checklist & water tracker */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <NotesCard />
+        <WaterCard />
+      </div>
+
+      {/* Optional expandable 3D Study Room diorama */}
+      <details className="group rounded-2xl border border-border/80 bg-card/40 p-3.5 backdrop-blur-md transition">
+        <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+          <span className="flex items-center gap-2">
+            <span>🏠 Góc học 3D & Thú cưng</span>
+            <span className="text-[11px] font-normal lowercase opacity-75">
+              (bấm để xem phòng diorama 3D)
+            </span>
+          </span>
+          <span className="text-xs transition-transform group-open:rotate-180">▼</span>
+        </summary>
+        <div className="pt-3">
           <PetWidget />
-          <section className="glass p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">✅ Nhiệm vụ cần làm hôm nay</h2>
-              <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span
-                  className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium"
-                  title="Thêm nhanh từ bất kỳ đâu (Ctrl+Q)"
-                >
-                  ⚡ Ctrl+Q
-                </span>
-                {done}/{tasks.length}
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              className="mb-3 w-full text-xs font-semibold"
-              onClick={() => {
-                if (typeof Notification !== "undefined" && Notification.permission === "default")
-                  Notification.requestPermission().catch(() => {});
-                const r = syncTodaySlots(data);
-                if (!r.added) {
-                  toast("Lịch cá nhân hôm nay đã có đủ trong danh sách 👍");
-                  return;
-                }
-                update((d) => syncTodaySlots(d).data);
-                toast.success(`Đã nạp ${r.added} mục lịch cá nhân hôm nay 🗓️`, {
-                  description: "Chỉ nạp từ Lịch cá nhân ngoài giờ (không lấy từ TKB trường).",
-                });
-              }}
+        </div>
+      </details>
+
+      <section className="glass p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">✅ Nhiệm vụ cần làm hôm nay</h2>
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span
+              className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium"
+              title="Thêm nhanh từ bất kỳ đâu (Ctrl+Q)"
             >
-              ⚡ Nạp lịch cá nhân hôm nay vào việc cần làm
-            </Button>
-            <PrepSuggestionBar />
-            <AddTask />
-            <TemplatesCard />
-            <ScratchCard />
-            {(() => {
-              const open = tasks.filter((t) => !t.completed);
-              const completed = tasks.filter((t) => t.completed);
-              return (
-                <>
-                  <ul className="mt-4 space-y-2">
-                    {open.map((t) => (
+              ⚡ Ctrl+Q
+            </span>
+            {done}/{tasks.length}
+          </span>
+        </div>
+        <Button
+          variant="outline"
+          className="mb-3 w-full text-xs font-semibold"
+          onClick={() => {
+            if (typeof Notification !== "undefined" && Notification.permission === "default")
+              Notification.requestPermission().catch(() => {});
+            const r = syncTodaySlots(data);
+            if (!r.added) {
+              toast("Lịch cá nhân hôm nay đã có đủ trong danh sách 👍");
+              return;
+            }
+            update((d) => syncTodaySlots(d).data);
+            toast.success(`Đã nạp ${r.added} mục lịch cá nhân hôm nay 🗓️`, {
+              description: "Chỉ nạp từ Lịch cá nhân ngoài giờ (không lấy từ TKB trường).",
+            });
+          }}
+        >
+          ⚡ Nạp lịch cá nhân hôm nay vào việc cần làm
+        </Button>
+        <PrepSuggestionBar />
+        <AddTask />
+        <TemplatesCard />
+        <ScratchCard />
+        {(() => {
+          const open = tasks.filter((t) => !t.completed);
+          const completed = tasks.filter((t) => t.completed);
+          return (
+            <>
+              <ul className="mt-4 space-y-2">
+                {open.map((t) => (
+                  <TaskRow key={t.id} task={t} />
+                ))}
+                {!tasks.length && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Chưa có nhiệm vụ nào.
+                  </p>
+                )}
+              </ul>
+              {completed.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    ✓ Đã hoàn thành ({completed.length})
+                  </p>
+                  <ul className="space-y-2">
+                    {completed.map((t) => (
                       <TaskRow key={t.id} task={t} />
                     ))}
-                    {!tasks.length && (
-                      <p className="py-6 text-center text-sm text-muted-foreground">
-                        Chưa có nhiệm vụ nào.
-                      </p>
-                    )}
                   </ul>
-                  {completed.length > 0 && (
-                    <div className="mt-4">
-                      <p className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                        ✓ Đã hoàn thành ({completed.length})
-                      </p>
-                      <ul className="space-y-2">
-                        {completed.map((t) => (
-                          <TaskRow key={t.id} task={t} />
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </section>
-          {!gamifyHidden(mode) && (
-            <>
-              <DailyQuestsCard />
-              <DailyChallengeCard />
-              <RaidBossCard />
+                </div>
+              )}
             </>
-          )}
+          );
+        })()}
+      </section>
+      {!gamifyHidden(mode) && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <DailyQuestsCard />
+          <DailyChallengeCard />
+          <RaidBossCard />
         </div>
-      </div>
+      )}
     </div>
   );
 }

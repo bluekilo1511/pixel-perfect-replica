@@ -392,7 +392,7 @@ export function PetWidget() {
   return (
     <section className="glass glass-glow p-5" data-pet-interactions>
       <JournalModal open={journalOpen} onClose={() => setJournalOpen(false)} />
-      <div className="grid gap-5 xl:grid-cols-[auto_1fr_auto] xl:items-center">
+      <div className="grid gap-5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-[auto_1fr_auto] items-center">
         <div className="mx-auto w-fit">
           <Button
             type="button"
@@ -431,7 +431,7 @@ export function PetWidget() {
             </span>
           </Button>
           <div
-            className="mt-2 overflow-hidden rounded-xl border bg-gradient-to-b from-secondary/70 to-accent/70"
+            className="mt-2 w-full max-w-full overflow-hidden rounded-xl border bg-gradient-to-b from-secondary/70 to-accent/70"
             aria-label="Góc học của thú cưng"
             title="Góc học — bấm một món để cất vào kho (kệ sách có bí mật nhỏ 👀)"
           >
