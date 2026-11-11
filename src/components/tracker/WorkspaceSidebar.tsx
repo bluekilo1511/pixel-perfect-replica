@@ -270,7 +270,7 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
           type="button"
           onClick={() => {
             const current = data.settings.themeMode ?? "auto";
-            const next = current === "dark" ? "light" : "dark";
+            const next = current === "light" ? "dark" : current === "dark" ? "auto" : "light";
             update((d) => ({
               ...d,
               settings: { ...d.settings, themeMode: next },
@@ -279,16 +279,20 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
           className={`flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/60 ${
             collapsed ? "py-2 px-0" : "py-1.5 px-2"
           } text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition`}
-          title="Đổi giao diện Sáng / Tối"
+          title="Đổi giao diện (Tự động / Sáng / Tối)"
         >
           <span>
             {collapsed
               ? (data.settings.themeMode ?? "auto") === "light"
                 ? "☀️"
-                : "🌙"
+                : (data.settings.themeMode ?? "auto") === "dark"
+                  ? "🌙"
+                  : "🌓"
               : (data.settings.themeMode ?? "auto") === "light"
                 ? "☀️ Sáng"
-                : "🌙 Tối"}
+                : (data.settings.themeMode ?? "auto") === "dark"
+                  ? "🌙 Tối"
+                  : "🌓 Tự động"}
           </span>
         </button>
       </div>

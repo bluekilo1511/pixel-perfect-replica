@@ -22,7 +22,13 @@ import { PetWidget } from "./PetWidget";
 import { Wheel } from "./Wheel";
 import { PetShop } from "./PetShop";
 import { WeeklyReportCard } from "./WeeklyReport";
-import { Chronicle } from "./Chronicle";
+import {
+  Chronicle,
+  AdventureNewspaperCard,
+  HallOfFameCard,
+  PetAdventureLogCard,
+} from "./Chronicle";
+import { ConstellationMap } from "./ConstellationMap";
 import { SettingsPanel } from "./SettingsPanel";
 import { HeatmapCard } from "./HeatmapCard";
 import { InterruptionChartCard } from "./InterruptionChartCard";
@@ -52,6 +58,7 @@ export function WorkspaceLayout() {
   const [currentTab, setCurrentTab] = useState<WorkspaceTab>("today");
   const [todayView, setTodayView] = useState<TodayViewMode>("list");
   const [weekView, setWeekView] = useState<"school" | "personal">("school");
+  const [chronicleView, setChronicleView] = useState<"report" | "hall" | "friend">("report");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPaneOpen, setRightPaneOpen] = useState(true);
@@ -334,13 +341,69 @@ export function WorkspaceLayout() {
           )}
 
           {currentTab === "chronicle" && (
-            <div className="space-y-6">
-              <div className="grid gap-5 grid-cols-1 lg:grid-cols-3">
-                <WeeklyReportCard />
-                <WeekReviewCard />
-                <FriendViewCard />
+            <div className="space-y-5">
+              {/* Chronicle Sub-Tabs */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setChronicleView("report")}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                    chronicleView === "report"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>📰 Báo cáo tuần &amp; Nhật báo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChronicleView("hall")}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                    chronicleView === "hall"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>🏛️ Kỷ yếu &amp; Thành tựu</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChronicleView("friend")}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                    chronicleView === "friend"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>👥 Tiến trình bạn bè</span>
+                </button>
               </div>
-              <Chronicle />
+
+              {chronicleView === "report" && (
+                <div className="space-y-5">
+                  <div className="grid gap-5 grid-cols-1 xl:grid-cols-2">
+                    <WeeklyReportCard />
+                    <WeekReviewCard />
+                  </div>
+                  <AdventureNewspaperCard />
+                </div>
+              )}
+
+              {chronicleView === "hall" && (
+                <div className="grid gap-5 grid-cols-1 xl:grid-cols-2">
+                  <HallOfFameCard />
+                  <div className="space-y-5">
+                    <ConstellationMap />
+                    <PetAdventureLogCard />
+                  </div>
+                </div>
+              )}
+
+              {chronicleView === "friend" && (
+                <div className="max-w-3xl">
+                  <FriendViewCard />
+                </div>
+              )}
             </div>
           )}
 

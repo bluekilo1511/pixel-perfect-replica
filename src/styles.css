@@ -1021,6 +1021,34 @@
   opacity: 0.35;
 }
 
+[data-theme="light"] .sky-night,
+[data-theme="light"] .sky-dawn,
+[data-theme="light"] .sky-day,
+[data-theme="light"] .sky-dusk {
+  --sky-bg: oklch(0.95 0.02 245);
+  --aurora-1: oklch(0.88 0.08 240);
+  --aurora-2: oklch(0.9 0.07 210);
+  --aurora-3: oklch(0.84 0.09 260);
+  --aurora-4: oklch(0.87 0.07 230);
+  --aurora-cosmic-1: oklch(0.86 0.08 270);
+  --aurora-cosmic-2: oklch(0.88 0.07 290);
+  --aurora-cosmic-3: oklch(0.82 0.06 265);
+}
+
+[data-theme="light"] .aurora {
+  background: var(--sky-bg, oklch(0.95 0.02 245));
+}
+
+[data-theme="light"] .aurora::before,
+[data-theme="light"] .aurora::after {
+  opacity: 0.3;
+}
+
+[data-theme="light"] body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 /* ---- Evolution FX ---- */
 @keyframes evo-flash {
   0% {

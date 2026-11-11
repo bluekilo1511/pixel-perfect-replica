@@ -25,7 +25,7 @@ export function ConstellationMap() {
   return (
     <section className="glass p-5">
       <h2 className="mb-3 text-lg font-semibold">✨ Bản Đồ Chòm Sao</h2>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         {groups.map(({ constellation, achievements }) => (
           <section key={constellation} className="rounded-2xl bg-muted p-4">
             <div className="mb-3 flex items-center gap-2">

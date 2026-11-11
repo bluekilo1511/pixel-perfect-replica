@@ -87,9 +87,10 @@ function AppInner() {
     const mode = data.settings.themeMode;
     const light = mode === "light" || (mode === "auto" && band === "day");
     document.documentElement.dataset["theme"] = light ? "light" : "dark";
-    // Dragon skin forces the dark look (starry night) and lowers effects in battery saver.
-    const dragon = data.settings.dragonTheme === true;
-    if (dragon) document.documentElement.dataset["theme"] = "dark";
+    document.documentElement.classList.toggle("dark", !light);
+
+    // Dragon skin gives starry night art in dark mode; paused in light mode so explicit light stays bright
+    const dragon = data.settings.dragonTheme === true && !light;
     document.documentElement.classList.toggle("theme-dragon", dragon);
     document.documentElement.classList.toggle("fx-lite", data.settings.batterySaver === true);
   }, [data.settings.themeMode, data.settings.dragonTheme, data.settings.batterySaver, band]);
