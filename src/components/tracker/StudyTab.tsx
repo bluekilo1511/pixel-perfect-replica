@@ -75,6 +75,7 @@ import {
   addFolder,
   addSubject,
   addTerm,
+  allDecks,
   countDecks,
   deckLabel,
   deckSubjectName,
@@ -153,6 +154,11 @@ export function StudyTab() {
   const [activeDeck, setActiveDeck] = useState<string>(
     () => localStorage.getItem("ppr.studyDeck") ?? "",
   );
+  const [gameDeckId, setGameDeckId] = useState<string>("");
+  const [reviewMode, setReviewMode] = useState<"free" | "srs">("free");
+  const [libOpen, setLibOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportText, setExportText] = useState("");
 
   // Review session state (ported from the old flashcards card).
   const [queue, setQueue] = useState<string[] | null>(null);
@@ -311,15 +317,71 @@ export function StudyTab() {
   };
 
   // ---- Review runner ----
-  const startReview = (filterSubject?: string) => {
+  const startReview = (filterSubject?: string, filterDeckId?: string, forceAll = false) => {
     const byIdNow = new Map(cards.map((c) => [c.id, c]));
-    let ids = dueCards(cards, today).map((c) => c.id);
-    if (filterSubject) ids = ids.filter((id) => byIdNow.get(id)?.subject === filterSubject);
-    if (!ids.length) return;
-    setQueue(ids);
+    let pool = forceAll ? cards : dueCards(cards, today);
+    if (filterDeckId) {
+      pool = pool.filter((c) => (c.deckId ?? c.subject) === filterDeckId);
+    } else if (filterSubject) {
+      pool = pool.filter((c) => (c.subject || "Chung") === filterSubject);
+    }
+    if (!pool.length) {
+      toast("Không có thẻ nào để ôn!");
+      return;
+    }
+    setQueue(pool.map((c) => c.id));
     setQi(0);
     setRevealed(false);
     setSession({ good: 0, again: 0, done: 0 });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const moveCard = (idx: number, dir: -1 | 1) => {
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= deckCards.length) return;
+    const a = deckCards[idx]!;
+    const b = deckCards[targetIdx]!;
+    let tA = new Date(a.createdAt).getTime();
+    let tB = new Date(b.createdAt).getTime();
+    if (isNaN(tA)) tA = Date.now();
+    if (isNaN(tB)) tB = Date.now();
+    if (tA === tB) {
+      tB = tA + (dir > 0 ? 1000 : -1000);
+    }
+    const updatedA = { ...a, createdAt: new Date(tB).toISOString() };
+    const updatedB = { ...b, createdAt: new Date(tA).toISOString() };
+    const nextList = [...deckCards];
+    nextList[idx] = updatedB;
+    nextList[targetIdx] = updatedA;
+    persistDeck(activeDeck, nextList);
+  };
+
+  const doExport = () => {
+    if (!deckCards.length) {
+      toast.error("Bộ này chưa có thẻ nào!");
+      return;
+    }
+    const lines = deckCards.map((c) => {
+      const wrong = c.wrong && c.wrong.length > 0 ? `|${c.wrong.join("; ")}` : "";
+      return `${c.question}|${c.answer}${wrong}`;
+    });
+    const textOut = lines.join("\n");
+    setExportText(textOut);
+    setExportOpen(true);
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(textOut);
+      toast.success(`Đã sao chép ${deckCards.length} thẻ vào bộ nhớ tạm!`);
+    }
+  };
+
+  const startDeckGame = (g: StudyGame) => {
+    if (!deckCards.length) {
+      toast.error("Bộ này chưa có thẻ nào!");
+      return;
+    }
+    setGameDeckId(activeDeck);
+    pickView("games");
+    startGame(g, deckCards);
   };
 
   const rate = (rating: Rating) => {
@@ -572,10 +634,17 @@ export function StudyTab() {
   };
 
   // ---- Games ----
+  const libraryDecks = useMemo(() => (library ? allDecks(library) : []), [library]);
+
   const gamePool = useMemo(() => {
-    const pool = gameSubject ? cards.filter((c) => (c.subject || "Chung") === gameSubject) : cards;
+    let pool = cards;
+    if (gameDeckId) {
+      pool = pool.filter((c) => (c.deckId ?? c.subject) === gameDeckId);
+    } else if (gameSubject) {
+      pool = pool.filter((c) => (c.subject || "Chung") === gameSubject);
+    }
     return pool;
-  }, [cards, gameSubject]);
+  }, [cards, gameDeckId, gameSubject]);
 
   const finishRound = (g: StudyGame, correct: number, total: number) => {
     const seconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
@@ -596,15 +665,16 @@ export function StudyTab() {
     }
   };
 
-  const startGame = (g: StudyGame) => {
-    if (!gamePool.length) {
+  const startGame = (g: StudyGame, poolOverride?: Flashcard[]) => {
+    const pool = poolOverride ?? gamePool;
+    if (!pool.length) {
       toast.error("Cần có thẻ trước — soạn bộ ở mục Bài học nhé!");
       return;
     }
     setGame(g);
     setStartedAt(Date.now());
     if (g === "blank") {
-      const qs = buildBlankRound(gamePool, 6);
+      const qs = buildBlankRound(pool, 6);
       if (!qs.length) {
         toast.error("Cần thẻ có đáp án từ 2 từ trở lên — thêm thẻ ở mục Bài học nhé!");
         setGame(null);
@@ -614,14 +684,14 @@ export function StudyTab() {
       return;
     }
     if (g === "flashcards") {
-      let pool = dueCards(gamePool, today);
-      if (!pool.length) pool = [...gamePool].sort(() => Math.random() - 0.5).slice(0, 10);
-      if (!pool.length) {
+      let fpool = dueCards(pool, today);
+      if (!fpool.length) fpool = [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
+      if (!fpool.length) {
         toast.error("Chưa có thẻ nào — soạn bộ ở mục Bài học nhé!");
         setGame(null);
         return;
       }
-      setQueue(pool.map((c) => c.id));
+      setQueue(fpool.map((c) => c.id));
       setQi(0);
       setRevealed(false);
       setSession({ good: 0, again: 0, done: 0 });
@@ -629,12 +699,12 @@ export function StudyTab() {
       return;
     }
     if (g === "mindpuzzle") {
-      if (gamePool.length < 6) {
+      if (pool.length < 6) {
         toast.error("Cần ít nhất 6 thẻ để dựng lược đồ có đủ đáp án nhiễu — thêm thẻ nhé!");
         setGame(null);
         return;
       }
-      const puzzle = buildMindPuzzle(gamePool);
+      const puzzle = buildMindPuzzle(pool);
       if (!puzzle) {
         toast.error("Cần ít nhất 6 thẻ để dựng lược đồ có đủ đáp án nhiễu — thêm thẻ nhé!");
         setGame(null);
@@ -644,7 +714,7 @@ export function StudyTab() {
       return;
     }
     if (g === "quiz") {
-      const qs = buildQuizRound(gamePool, QUIZ_LEN);
+      const qs = buildQuizRound(pool, QUIZ_LEN);
       if (!qs.length) {
         toast.error(
           "Cần ít nhất một thẻ có 2 lựa chọn trở lên (thêm đáp án sai, hoặc thêm thẻ khác để tự ghép).",
@@ -656,7 +726,7 @@ export function StudyTab() {
       setTf(null);
       setMatch(null);
     } else if (g === "tf") {
-      const qs = buildTrueFalseRound(gamePool, TRUE_FALSE_LEN);
+      const qs = buildTrueFalseRound(pool, TRUE_FALSE_LEN);
       if (!qs.length) {
         toast.error("Cần ít nhất 2 thẻ khác nhau để chơi Đúng/Sai.");
         setGame(null);
@@ -666,7 +736,7 @@ export function StudyTab() {
       setQuiz(null);
       setMatch(null);
     } else {
-      const pairs = buildMatchRound(gamePool, 6);
+      const pairs = buildMatchRound(pool, 6);
       if (pairs.length < 3) {
         toast.error("Cần ít nhất 3 thẻ có đáp án ngắn (≤ 40 ký tự) để chơi Ghép cặp.");
         setGame(null);
@@ -1073,42 +1143,177 @@ export function StudyTab() {
       {library && view === "learn" && (
         <>
           {queue && current ? (
-            <div className="mb-4 rounded-xl border border-primary/25 bg-secondary/40 p-4">
-              <p className="mb-2 text-xs text-muted-foreground">
-                {current.subject || "Chung"} · thẻ {qi + 1}/{queue.length} · ✅ {session.good} 😵{" "}
-                {session.again}
-              </p>
-              <p className="mb-3 text-base font-medium">{current.question}</p>
-              {revealed ? (
-                <>
-                  <div className="mb-3 rounded-lg bg-background/70 p-3 text-sm whitespace-pre-wrap">
-                    {current.answer}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {RATINGS.map((r) => (
-                      <Button
-                        key={r.rating}
-                        size="sm"
-                        variant="outline"
-                        className={r.className}
-                        onClick={() => rate(r.rating)}
-                      >
-                        {r.label}
-                      </Button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <Button className="w-full" onClick={() => setRevealed(true)}>
-                  👀 Lộn thẻ
-                </Button>
-              )}
-              <button
-                className="mt-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setQueue(null)}
+            <div className="mb-4 rounded-2xl border border-primary/30 bg-card/70 p-4 shadow-md backdrop-blur-md">
+              {/* Header & Mode Switch */}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-primary">
+                    📖 {current.subject || "Chung"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Thẻ {qi + 1}/{queue.length} · ✅ {session.good} 😵 {session.again}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 rounded-full bg-secondary/80 p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setReviewMode("free")}
+                    className={`rounded-full px-2.5 py-1 font-medium transition ${
+                      reviewMode === "free"
+                        ? "bg-primary text-primary-foreground shadow"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    📖 Duyệt tự do
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewMode("srs")}
+                    className={`rounded-full px-2.5 py-1 font-medium transition ${
+                      reviewMode === "srs"
+                        ? "bg-primary text-primary-foreground shadow"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    🧠 Chấm điểm (SRS)
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${Math.round(((qi + 1) / queue.length) * 100)}%` }}
+                />
+              </div>
+
+              {/* 3D Flip Card */}
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Lật thẻ bài"
+                onClick={() => setRevealed((v) => !v)}
+                onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setRevealed((v) => !v)}
+                className="group relative mx-auto my-2 w-full max-w-xl cursor-pointer select-none [perspective:1000px] outline-none"
               >
-                Dừng lượt ôn này
-              </button>
+                <div
+                  className={`relative min-h-[200px] w-full rounded-2xl border p-6 text-center shadow-lg transition-all duration-500 [transform-style:preserve-3d] ${
+                    revealed
+                      ? "border-primary/60 bg-primary/10 shadow-primary/10"
+                      : "border-border/80 bg-background/90 hover:border-primary/50"
+                  }`}
+                >
+                  {!revealed ? (
+                    <div className="flex min-h-[150px] flex-col items-center justify-center space-y-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                        ❓ Câu hỏi (chạm để lật)
+                      </span>
+                      <p className="text-base font-semibold sm:text-lg text-foreground leading-relaxed">
+                        {current.question}
+                      </p>
+                      <span className="text-[11px] text-muted-foreground/75">
+                        Chạm vào thẻ hoặc bấm phím Cách để xem đáp án
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-[150px] flex-col items-center justify-center space-y-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-500">
+                        💡 Đáp án
+                      </span>
+                      <p className="text-base font-medium sm:text-lg text-foreground whitespace-pre-wrap leading-relaxed">
+                        {current.answer}
+                      </p>
+                      <span className="text-[11px] text-muted-foreground/75">
+                        Chạm lại để lật về mặt câu hỏi
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Controls */}
+              {reviewMode === "free" ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={qi === 0}
+                    onClick={() => {
+                      setQi((i) => Math.max(0, i - 1));
+                      setRevealed(false);
+                    }}
+                  >
+                    ◀ Thẻ trước
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setRevealed((v) => !v)}>
+                      {revealed ? "Ẩn đáp án" : "👀 Xem đáp án"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Đảo thứ tự ngẫu nhiên"
+                      onClick={() => {
+                        if (!queue) return;
+                        const shuffled = [...queue].sort(() => Math.random() - 0.5);
+                        setQueue(shuffled);
+                        setQi(0);
+                        setRevealed(false);
+                        toast("🔀 Đã xáo trộn thứ tự thẻ");
+                      }}
+                    >
+                      🔀 Trộn
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (qi + 1 < queue.length) {
+                        setQi((i) => i + 1);
+                        setRevealed(false);
+                      } else {
+                        setQueue(null);
+                        toast.success("🎉 Đã xem hết các thẻ trong bộ!");
+                      }
+                    }}
+                  >
+                    {qi + 1 < queue.length ? "Thẻ tiếp ▶" : "Xong lượt ôn ✔"}
+                  </Button>
+                </div>
+              ) : (
+                /* SRS rating buttons */
+                <div className="mt-4 space-y-3 border-t border-border/40 pt-3">
+                  {revealed ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {RATINGS.map((r) => (
+                        <Button
+                          key={r.rating}
+                          size="sm"
+                          variant="outline"
+                          className={r.className}
+                          onClick={() => rate(r.rating)}
+                        >
+                          {r.label}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <Button className="w-full" onClick={() => setRevealed(true)}>
+                      👀 Lộn thẻ để chấm điểm
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-2 text-center">
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setQueue(null)}
+                >
+                  Dừng lượt ôn này
+                </button>
+              </div>
             </div>
           ) : (
             stats.due > 0 && (
@@ -1133,265 +1338,390 @@ export function StudyTab() {
             )
           )}
 
-          {/* Thư viện: Thư mục → Môn → Học kỳ → Bộ thẻ (mỗi bộ là một bản ghi riêng) */}
-          <div className="mb-3 rounded-xl border border-primary/20 bg-secondary/30 p-3">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold">
-                🗂️ Thư viện · {library ? countDecks(library) : 0} bộ thẻ
-              </h3>
-              <Button size="sm" variant="secondary" onClick={doAddFolder}>
-                ➕ Thư mục
+          {/* Active Deck Selector Banner (when a deck is open, gives a spacious toggle) */}
+          {activeDeck && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-2.5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Bộ đang mở:
+                </span>
+                <span className="text-sm font-bold text-foreground">🃏 {deckTitle}</span>
+                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
+                  {deckCards.length} thẻ
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setLibOpen((o) => !o)}
+              >
+                {libOpen ? "Thu gọn thư viện ▴" : "🗂️ Đổi bộ thẻ / Mở thư viện ▾"}
               </Button>
             </div>
-            {library && !library.folders.length && (
-              <p className="text-xs text-muted-foreground">
-                Chưa có thư mục nào — bấm “➕ Thư mục” (vd: Năm lớp 9), rồi thêm môn → học kỳ → bộ
-                thẻ. Mỗi bộ là một “tệp” riêng, mở bộ nào nạp bộ đó.
-              </p>
-            )}
-            <div className="space-y-1">
-              {library?.folders.map((f) => (
-                <div key={f.id}>
-                  <div className="flex items-center gap-1 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => toggle(f.id)}
-                      className="min-w-0 flex-1 truncate text-left font-medium hover:text-primary"
-                    >
-                      {expanded.has(f.id) ? "▾" : "▸"} 📁 {f.name}
-                    </button>
-                    <button
-                      type="button"
-                      title="Đổi tên"
-                      aria-label="Đổi tên thư mục"
-                      onClick={() => doRename("folder", f.id, f.name)}
-                      className="px-1 text-xs opacity-60 hover:opacity-100"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      type="button"
-                      title="Thêm môn"
-                      aria-label="Thêm môn"
-                      onClick={() => doAddSubject(f.id)}
-                      className="px-1 text-xs opacity-60 hover:opacity-100"
-                    >
-                      ➕
-                    </button>
-                    <button
-                      type="button"
-                      title="Xoá thư mục"
-                      aria-label="Xoá thư mục"
-                      onClick={() => doRemove(f.id, f.name)}
-                      className="px-1 text-xs opacity-60 hover:opacity-100"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                  {expanded.has(f.id) && (
-                    <div className="ml-4 space-y-1 border-l border-border/40 pl-2">
-                      {f.subjects.map((sub) => (
-                        <div key={sub.id}>
-                          <div className="flex items-center gap-1 text-sm">
-                            <button
-                              type="button"
-                              onClick={() => toggle(sub.id)}
-                              className="min-w-0 flex-1 truncate text-left hover:text-primary"
+          )}
+
+          {/* Thư viện: Thư mục → Môn → Học kỳ → Bộ thẻ */}
+          {(!activeDeck || libOpen) && (
+            <div className="mb-4 rounded-2xl border border-primary/20 bg-secondary/30 p-4 shadow-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2.5">
+                <h3 className="text-sm font-bold flex items-center gap-1.5">
+                  <span>🗂️ Thư viện</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    · {library ? countDecks(library) : 0} bộ thẻ
+                  </span>
+                </h3>
+                <Button size="sm" variant="secondary" onClick={doAddFolder}>
+                  ➕ Thư mục mới
+                </Button>
+              </div>
+              {library && !library.folders.length && (
+                <p className="text-xs text-muted-foreground">
+                  Chưa có thư mục nào — bấm “➕ Thư mục mới” (vd: Năm lớp 9), rồi thêm Môn → Học kỳ
+                  (hoặc thêm trực tiếp Bộ thẻ). Mỗi bộ là một “tệp” riêng biệt.
+                </p>
+              )}
+              <div className="space-y-2">
+                {library?.folders.map((f) => (
+                  <div
+                    key={f.id}
+                    className="rounded-xl border border-border/60 bg-background/50 p-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                      <button
+                        type="button"
+                        onClick={() => toggle(f.id)}
+                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-primary"
+                      >
+                        <span className="text-muted-foreground">
+                          {expanded.has(f.id) ? "▾" : "▸"}
+                        </span>
+                        <span>📁</span>
+                        <span className="truncate">{f.name}</span>
+                        <span className="text-xs text-muted-foreground font-normal">
+                          ({f.subjects.length} môn)
+                        </span>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          title="Thêm môn học vào thư mục"
+                          onClick={() => doAddSubject(f.id)}
+                        >
+                          ➕ Môn
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          title="Đổi tên thư mục"
+                          onClick={() => doRename("folder", f.id, f.name)}
+                        >
+                          ✏️
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-1.5 text-xs text-destructive hover:bg-destructive/10"
+                          title="Xoá thư mục"
+                          onClick={() => doRemove(f.id, f.name)}
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    </div>
+
+                    {expanded.has(f.id) && (
+                      <div className="mt-2 ml-3 space-y-2 border-l border-border/60 pl-3">
+                        {f.subjects.map((sub) => {
+                          const totalSubDecks =
+                            sub.decks.length +
+                            sub.terms.reduce((acc, t) => acc + t.decks.length, 0);
+                          return (
+                            <div
+                              key={sub.id}
+                              className="rounded-lg border border-border/40 bg-secondary/20 p-2"
                             >
-                              {expanded.has(sub.id) ? "▾" : "▸"} 📚 {sub.name}
-                            </button>
-                            <button
-                              type="button"
-                              title="Đổi tên"
-                              aria-label="Đổi tên môn"
-                              onClick={() => doRename("subject", sub.id, sub.name)}
-                              className="px-1 text-xs opacity-60 hover:opacity-100"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              title="Thêm học kỳ"
-                              aria-label="Thêm học kỳ"
-                              onClick={() => doAddTerm(f.id, sub.id)}
-                              className="px-1 text-xs opacity-60 hover:opacity-100"
-                            >
-                              ➕
-                            </button>
-                            <button
-                              type="button"
-                              title="Thêm bộ thẻ"
-                              aria-label="Thêm bộ thẻ"
-                              onClick={() => doAddDeck(f.id, sub.id, null)}
-                              className="px-1 text-xs opacity-60 hover:opacity-100"
-                            >
-                              🃏
-                            </button>
-                            <button
-                              type="button"
-                              title="Xoá môn"
-                              aria-label="Xoá môn"
-                              onClick={() => doRemove(sub.id, sub.name)}
-                              className="px-1 text-xs opacity-60 hover:opacity-100"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                          {expanded.has(sub.id) && (
-                            <div className="ml-4 space-y-1 border-l border-border/40 pl-2">
-                              {sub.terms.map((t) => (
-                                <div key={t.id}>
-                                  <div className="flex items-center gap-1 text-sm">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggle(t.id)}
-                                      className="min-w-0 flex-1 truncate text-left hover:text-primary"
-                                    >
-                                      {expanded.has(t.id) ? "▾" : "▸"} 🗂️ {t.name}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Đổi tên"
-                                      aria-label="Đổi tên học kỳ"
-                                      onClick={() => doRename("term", t.id, t.name)}
-                                      className="px-1 text-xs opacity-60 hover:opacity-100"
-                                    >
-                                      ✏️
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Thêm bộ thẻ"
-                                      aria-label="Thêm bộ thẻ vào học kỳ"
-                                      onClick={() => doAddDeck(f.id, sub.id, t.id)}
-                                      className="px-1 text-xs opacity-60 hover:opacity-100"
-                                    >
-                                      🃏
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Xoá học kỳ"
-                                      aria-label="Xoá học kỳ"
-                                      onClick={() => doRemove(t.id, t.name)}
-                                      className="px-1 text-xs opacity-60 hover:opacity-100"
-                                    >
-                                      🗑️
-                                    </button>
-                                  </div>
-                                  {expanded.has(t.id) && (
-                                    <div className="ml-4 flex flex-wrap gap-1 border-l border-border/40 py-1 pl-2">
-                                      {t.decks.map((d) => (
-                                        <span key={d.id} className="flex items-center gap-0.5">
-                                          <button
-                                            type="button"
-                                            onClick={() => pickDeck(d.id)}
-                                            className={
-                                              activeDeck === d.id
-                                                ? "rounded-full px-2.5 py-1 text-xs font-semibold bg-primary text-primary-foreground"
-                                                : "rounded-full px-2.5 py-1 text-xs bg-secondary/60 hover:bg-secondary"
-                                            }
+                              <div className="flex items-center justify-between gap-2 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => toggle(sub.id)}
+                                  className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-medium hover:text-primary"
+                                >
+                                  <span className="text-muted-foreground">
+                                    {expanded.has(sub.id) ? "▾" : "▸"}
+                                  </span>
+                                  <span>📚</span>
+                                  <span className="truncate">{sub.name}</span>
+                                  <span className="text-xs text-muted-foreground font-normal">
+                                    ({totalSubDecks} bộ)
+                                  </span>
+                                </button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs font-semibold text-primary"
+                                    title="Thêm bộ thẻ trực tiếp dưới môn học này"
+                                    onClick={() => doAddDeck(f.id, sub.id, null)}
+                                  >
+                                    🃏 + Bộ thẻ
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs"
+                                    title="Thêm học kỳ"
+                                    onClick={() => doAddTerm(f.id, sub.id)}
+                                  >
+                                    ➕ Học kỳ
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                                    title="Đổi tên môn"
+                                    onClick={() => doRename("subject", sub.id, sub.name)}
+                                  >
+                                    ✏️
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-1.5 text-xs text-destructive hover:bg-destructive/10"
+                                    title="Xoá môn"
+                                    onClick={() => doRemove(sub.id, sub.name)}
+                                  >
+                                    🗑️
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {expanded.has(sub.id) && (
+                                <div className="mt-2 ml-2 space-y-2 border-l border-border/40 pl-2">
+                                  {/* Terms */}
+                                  {sub.terms.map((t) => (
+                                    <div key={t.id} className="rounded-md bg-background/40 p-1.5">
+                                      <div className="flex items-center justify-between gap-1 text-xs">
+                                        <button
+                                          type="button"
+                                          onClick={() => toggle(t.id)}
+                                          className="flex min-w-0 flex-1 items-center gap-1 text-left font-medium hover:text-primary"
+                                        >
+                                          <span className="text-muted-foreground">
+                                            {expanded.has(t.id) ? "▾" : "▸"}
+                                          </span>
+                                          <span>🗂️</span>
+                                          <span className="truncate">{t.name}</span>
+                                          <span className="text-muted-foreground font-normal">
+                                            ({t.decks.length} bộ)
+                                          </span>
+                                        </button>
+                                        <div className="flex items-center gap-0.5">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 px-1.5 text-[11px] font-semibold text-primary"
+                                            title="Thêm bộ thẻ vào học kỳ này"
+                                            onClick={() => doAddDeck(f.id, sub.id, t.id)}
                                           >
-                                            🃏 {d.name} (
-                                            {
-                                              cards.filter((c) => (c.deckId ?? c.subject) === d.id)
-                                                .length
-                                            }
-                                            )
-                                          </button>
+                                            🃏 + Bộ
+                                          </Button>
                                           <button
                                             type="button"
-                                            title="Đổi tên"
-                                            aria-label="Đổi tên bộ thẻ"
-                                            onClick={() => doRename("deck", d.id, d.name)}
-                                            className="text-xs opacity-60 hover:opacity-100"
+                                            title="Đổi tên học kỳ"
+                                            onClick={() => doRename("term", t.id, t.name)}
+                                            className="px-1 text-xs opacity-60 hover:opacity-100"
                                           >
                                             ✏️
                                           </button>
                                           <button
                                             type="button"
-                                            title="Xoá bộ"
-                                            aria-label="Xoá bộ thẻ"
+                                            title="Xoá học kỳ"
+                                            onClick={() => doRemove(t.id, t.name)}
+                                            className="px-1 text-xs text-destructive opacity-60 hover:opacity-100"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {expanded.has(t.id) && (
+                                        <div className="mt-1.5 ml-2 flex flex-wrap gap-1.5 border-l border-border/40 py-1 pl-2">
+                                          {t.decks.map((d) => {
+                                            const count = cards.filter(
+                                              (c) => (c.deckId ?? c.subject) === d.id,
+                                            ).length;
+                                            return (
+                                              <span
+                                                key={d.id}
+                                                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-secondary/50 py-0.5 pr-1.5 pl-2 text-xs"
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    pickDeck(d.id);
+                                                    setLibOpen(false);
+                                                  }}
+                                                  className={`font-medium ${
+                                                    activeDeck === d.id
+                                                      ? "text-primary font-bold"
+                                                      : "hover:text-primary"
+                                                  }`}
+                                                >
+                                                  🃏 {d.name} ({count})
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  title="Đổi tên bộ thẻ"
+                                                  onClick={() => doRename("deck", d.id, d.name)}
+                                                  className="text-[10px] opacity-60 hover:opacity-100"
+                                                >
+                                                  ✏️
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  title="Xoá bộ thẻ"
+                                                  onClick={() => doRemove(d.id, d.name)}
+                                                  className="text-[10px] text-destructive opacity-60 hover:opacity-100"
+                                                >
+                                                  🗑️
+                                                </button>
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+
+                                  {/* Direct subject decks */}
+                                  <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {sub.decks.map((d) => {
+                                      const count = cards.filter(
+                                        (c) => (c.deckId ?? c.subject) === d.id,
+                                      ).length;
+                                      return (
+                                        <span
+                                          key={d.id}
+                                          className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-secondary/50 py-0.5 pr-1.5 pl-2 text-xs"
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              pickDeck(d.id);
+                                              setLibOpen(false);
+                                            }}
+                                            className={`font-medium ${
+                                              activeDeck === d.id
+                                                ? "text-primary font-bold"
+                                                : "hover:text-primary"
+                                            }`}
+                                          >
+                                            🃏 {d.name} ({count})
+                                          </button>
+                                          <button
+                                            type="button"
+                                            title="Đổi tên bộ thẻ"
+                                            onClick={() => doRename("deck", d.id, d.name)}
+                                            className="text-[10px] opacity-60 hover:opacity-100"
+                                          >
+                                            ✏️
+                                          </button>
+                                          <button
+                                            type="button"
+                                            title="Xoá bộ thẻ"
                                             onClick={() => doRemove(d.id, d.name)}
-                                            className="text-xs opacity-60 hover:opacity-100"
+                                            className="text-[10px] text-destructive opacity-60 hover:opacity-100"
                                           >
                                             🗑️
                                           </button>
                                         </span>
-                                      ))}
-                                    </div>
-                                  )}
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                              ))}
-                              <div className="flex flex-wrap gap-1 border-l border-border/40 py-1 pl-2">
-                                {sub.decks.map((d) => (
-                                  <span key={d.id} className="flex items-center gap-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => pickDeck(d.id)}
-                                      className={
-                                        activeDeck === d.id
-                                          ? "rounded-full px-2.5 py-1 text-xs font-semibold bg-primary text-primary-foreground"
-                                          : "rounded-full px-2.5 py-1 text-xs bg-secondary/60 hover:bg-secondary"
-                                      }
-                                    >
-                                      🃏 {d.name} (
-                                      {cards.filter((c) => (c.deckId ?? c.subject) === d.id).length}
-                                      )
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Đổi tên"
-                                      aria-label="Đổi tên bộ thẻ"
-                                      onClick={() => doRename("deck", d.id, d.name)}
-                                      className="text-xs opacity-60 hover:opacity-100"
-                                    >
-                                      ✏️
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Xoá bộ"
-                                      aria-label="Xoá bộ thẻ"
-                                      onClick={() => doRemove(d.id, d.name)}
-                                      className="text-xs opacity-60 hover:opacity-100"
-                                    >
-                                      🗑️
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
+          {/* Active Deck Editor */}
           {activeDeck && (
-            <>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">
-                  📖 Bộ soạn: {deckTitle} · {deckCards.length} thẻ
-                </h3>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => setImportOpen((o) => !o)}>
-                    📥 Nhập nhanh
+            <div className="rounded-2xl border border-primary/20 bg-card/40 p-4 shadow-sm backdrop-blur-sm">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Đang soạn bộ thẻ:
+                  </span>
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <span>📖 {deckTitle}</span>
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-normal text-primary">
+                      {deckCards.length} thẻ
+                    </span>
+                  </h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    onClick={() => startReview(undefined, activeDeck, true)}
+                    disabled={!deckCards.length}
+                    title="Lật thẻ ôn tập bộ này ngay lập tức"
+                  >
+                    ▶️ Lật thẻ ôn ({deckCards.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!deckCards.length}
+                    onClick={() => startDeckGame("quiz")}
+                    title="Luyện trắc nghiệm với bộ thẻ này"
+                  >
+                    🎯 Trắc nghiệm
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!deckCards.length}
+                    onClick={() => startDeckGame("match")}
+                    title="Ghép cặp nhanh với bộ thẻ này"
+                  >
+                    🧩 Ghép cặp
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setImportOpen((o) => !o)}>
+                    📥 Nhập
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={doExport}
+                    disabled={!deckCards.length}
+                  >
+                    📤 Xuất
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-destructive"
+                    className="text-destructive hover:bg-destructive/10"
                     onClick={removeDeck}
+                    title="Xoá toàn bộ thẻ này"
                   >
-                    🗑️ Xoá bộ
+                    🗑️
                   </Button>
                 </div>
               </div>
 
               {importOpen && (
-                <div className="mb-3 grid gap-2 rounded-xl border border-primary/20 bg-secondary/30 p-3">
+                <div className="mb-4 grid gap-2 rounded-xl border border-primary/20 bg-secondary/30 p-3">
                   <Textarea
                     value={importText}
                     onChange={(e) => setImportText(e.target.value)}
@@ -1412,18 +1742,23 @@ export function StudyTab() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                {deckCards.map((card) => {
+              {/* Cards List */}
+              <div className="space-y-2.5">
+                {deckCards.map((card, idx) => {
                   const draft = drafts[card.id] ?? { q: card.question, a: card.answer };
                   const wd = wrongDrafts[card.id] ?? card.wrong ?? [];
                   return (
                     <div
                       key={card.id}
-                      className="rounded-lg border border-border/60 bg-secondary/20 p-2"
+                      className="rounded-xl border border-border/70 bg-secondary/20 p-3 transition hover:border-primary/40"
                     >
-                      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                      <div className="grid gap-2 sm:grid-cols-[auto_1fr_1fr_auto] items-center">
+                        <span className="w-8 text-center font-mono text-xs font-bold text-muted-foreground">
+                          #{idx + 1}
+                        </span>
                         <Input
                           value={draft.q}
+                          placeholder="Câu hỏi / Thuật ngữ"
                           onChange={(e) =>
                             setDrafts((m) => ({ ...m, [card.id]: { ...draft, q: e.target.value } }))
                           }
@@ -1435,6 +1770,7 @@ export function StudyTab() {
                         />
                         <Input
                           value={draft.a}
+                          placeholder="Đáp án / Định nghĩa"
                           onChange={(e) =>
                             setDrafts((m) => ({ ...m, [card.id]: { ...draft, a: e.target.value } }))
                           }
@@ -1444,11 +1780,33 @@ export function StudyTab() {
                           aria-label={`Đáp án thẻ ${card.id}`}
                           className="h-9 text-sm"
                         />
-                        <div className="flex gap-1">
+                        <div className="flex items-center gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-9 px-2"
+                            className="h-8 px-1.5 text-xs"
+                            disabled={idx === 0}
+                            title="Chuyển lên trên"
+                            aria-label="Chuyển thẻ lên"
+                            onClick={() => moveCard(idx, -1)}
+                          >
+                            ▲
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-1.5 text-xs"
+                            disabled={idx === deckCards.length - 1}
+                            title="Chuyển xuống dưới"
+                            aria-label="Chuyển thẻ xuống"
+                            onClick={() => moveCard(idx, 1)}
+                          >
+                            ▼
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
                             title="Đảo chiều hỏi ↔ đáp"
                             aria-label="Đảo chiều thẻ"
                             onClick={() => {
@@ -1460,10 +1818,16 @@ export function StudyTab() {
                           </Button>
                           <Button
                             size="sm"
-                            variant={wrongFor === card.id ? "secondary" : "ghost"}
-                            className="h-9 px-2"
-                            title="Đáp án sai để thành câu trắc nghiệm"
-                            aria-label="Đáp án sai"
+                            variant={
+                              wrongFor === card.id
+                                ? "default"
+                                : card.wrong && card.wrong.length > 0
+                                  ? "secondary"
+                                  : "ghost"
+                            }
+                            className="h-8 px-2 text-xs font-medium"
+                            title="Nhập đáp án sai để thẻ này biến thành câu trắc nghiệm"
+                            aria-label="Đáp án sai trắc nghiệm"
                             onClick={() => {
                               if (wrongFor === card.id) {
                                 commitWrong(card);
@@ -1477,12 +1841,14 @@ export function StudyTab() {
                               }
                             }}
                           >
-                            {card.wrong && card.wrong.length > 0 ? "⭐" : "☆"}
+                            {card.wrong && card.wrong.length > 0
+                              ? `🎯 ${card.wrong.length} đáp án sai`
+                              : "+ Lựa chọn sai"}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-9 px-2 text-destructive"
+                            className="h-8 px-2 text-destructive hover:bg-destructive/10"
                             aria-label={`Xoá thẻ ${card.id}`}
                             title="Xoá thẻ này"
                             onClick={() => {
@@ -1495,7 +1861,7 @@ export function StudyTab() {
                         </div>
                       </div>
                       {wrongFor === card.id && (
-                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                        <div className="mt-2.5 grid gap-2 sm:grid-cols-3 rounded-lg border border-primary/20 bg-background/60 p-2.5">
                           {[0, 1, 2].map((i) => (
                             <Input
                               key={i}
@@ -1507,25 +1873,55 @@ export function StudyTab() {
                               }}
                               onBlur={() => commitWrong(card)}
                               maxLength={80}
-                              placeholder={`Đáp án sai ${i + 1}`}
+                              placeholder={`Đáp án sai ${i + 1} (lựa chọn gây nhiễu)`}
                               aria-label={`Đáp án sai ${i + 1} thẻ ${card.id}`}
-                              className="h-8 text-sm"
+                              className="h-8 text-xs"
                             />
                           ))}
-                          <p className="text-xs text-muted-foreground sm:col-span-3">
-                            Thẻ có ⭐ (≥ 1 đáp án sai) sẽ vào trò Trắc nghiệm; thiếu thì app tự ghép
-                            đáp án của thẻ khác làm lựa chọn nhiễu.
+                          <p className="text-[11px] text-muted-foreground sm:col-span-3">
+                            💡 Thẻ có ít nhất 1 đáp án sai sẽ ưu tiên dùng làm câu hỏi Trắc nghiệm;
+                            nếu để trống, app sẽ tự lấy đáp án của thẻ khác trong bộ làm đáp án
+                            nhiễu.
                           </p>
                         </div>
                       )}
                     </div>
                   );
                 })}
-                <Button size="sm" variant="secondary" onClick={addRow}>
-                  ➕ Thêm thẻ
+                <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={addRow}>
+                  ➕ Thêm thẻ mới
                 </Button>
               </div>
-            </>
+            </div>
+          )}
+
+          {/* Export Dialog */}
+          {exportOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+              <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-5 shadow-2xl">
+                <h3 className="mb-2 text-base font-bold">📤 Xuất bộ thẻ dạng text</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Đã sao chép vào bộ nhớ tạm. Bạn có thể lưu lại hoặc chia sẻ cho bạn bè để họ nhập
+                  vào app.
+                </p>
+                <Textarea readOnly value={exportText} className="min-h-[160px] font-mono text-xs" />
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(exportText);
+                      toast.success("Đã sao chép lại!");
+                    }}
+                  >
+                    📋 Sao chép lại
+                  </Button>
+                  <Button size="sm" onClick={() => setExportOpen(false)}>
+                    Đóng
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}
@@ -1556,18 +1952,22 @@ export function StudyTab() {
               </button>
             ))}
           </div>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">Môn:</span>
+          {/* Môn filter */}
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Môn học:</span>
             <button
               type="button"
-              onClick={() => setGameSubject("")}
+              onClick={() => {
+                setGameSubject("");
+                setGameDeckId("");
+              }}
               className={
-                gameSubject === ""
-                  ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground"
-                  : "rounded-full px-3 py-1 text-xs bg-secondary/60 hover:bg-secondary"
+                gameSubject === "" && gameDeckId === ""
+                  ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground shadow-sm"
+                  : "rounded-full px-3 py-1 text-xs bg-secondary/70 hover:bg-secondary"
               }
             >
-              Tổng hợp
+              🌐 Tất cả môn
             </button>
             {subjects
               .filter((s) => cards.some((c) => (c.subject || "Chung") === s))
@@ -1575,30 +1975,85 @@ export function StudyTab() {
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setGameSubject(s)}
+                  onClick={() => {
+                    setGameSubject(s);
+                    setGameDeckId("");
+                  }}
                   className={
-                    gameSubject === s
-                      ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground"
-                      : "rounded-full px-3 py-1 text-xs bg-secondary/60 hover:bg-secondary"
+                    gameSubject === s && gameDeckId === ""
+                      ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground shadow-sm"
+                      : "rounded-full px-3 py-1 text-xs bg-secondary/70 hover:bg-secondary"
                   }
                 >
-                  {s}
+                  📚 {s}
                 </button>
               ))}
           </div>
 
-          {(!game || (!quiz && !tf && !match)) && (
-            <div className="rounded-xl border border-primary/20 bg-secondary/30 p-4 text-sm">
-              <p className="mb-2 text-muted-foreground">
-                {gameSubject === ""
-                  ? "Tổng hợp: trộn thẻ của tất cả các môn."
-                  : `Chỉ dùng thẻ của môn ${gameSubject}.`}{" "}
-                Mỗi lượt xong được thưởng +5 xu, tối đa 3 lượt thưởng mỗi ngày (còn {rewardsLeft}{" "}
-                hôm nay).
-              </p>
-              <Button onClick={() => startGame(game ?? "quiz")} disabled={!gamePool.length}>
-                ▶️ Bắt đầu {GAME_META[game ?? "quiz"].label}
+          {/* Bộ thẻ filter */}
+          <div className="mb-3.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Bộ thẻ:</span>
+            <button
+              type="button"
+              onClick={() => setGameDeckId("")}
+              className={
+                gameDeckId === ""
+                  ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground shadow-sm"
+                  : "rounded-full px-3 py-1 text-xs bg-secondary/70 hover:bg-secondary"
+              }
+            >
+              🃏 {gameSubject ? `Tất cả bộ trong môn ${gameSubject}` : "Tất cả bộ thẻ"}
+            </button>
+            {libraryDecks
+              .filter((d) => !gameSubject || d.subject === gameSubject)
+              .map((d) => {
+                const count = cards.filter((c) => (c.deckId ?? c.subject) === d.id).length;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setGameDeckId(d.id)}
+                    className={
+                      gameDeckId === d.id
+                        ? "rounded-full px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground shadow-sm"
+                        : "rounded-full px-3 py-1 text-xs bg-secondary/70 hover:bg-secondary"
+                    }
+                  >
+                    🃏 {d.name} ({count})
+                  </button>
+                );
+              })}
+          </div>
+
+          {(!game || (!quiz && !tf && !match && !blank && !mp && !fcGame)) && (
+            <div className="rounded-2xl border border-primary/20 bg-secondary/30 p-4 text-sm shadow-sm">
+              <div className="mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  {GAME_META[game ?? "quiz"].emoji} {GAME_META[game ?? "quiz"].label}
+                </span>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {gameDeckId && library
+                    ? `Đang chọn bộ: "${deckLabel(library, gameDeckId)}" (${gamePool.length} thẻ)`
+                    : gameSubject
+                      ? `Đang chọn môn: "${gameSubject}" (${gamePool.length} thẻ)`
+                      : `Tổng hợp tất cả bộ thẻ (${gamePool.length} thẻ)`}
+                  . Mỗi lượt hoàn thành được thưởng +5 xu, tối đa 3 lượt/ngày (còn {rewardsLeft} hôm
+                  nay).
+                </p>
+              </div>
+              <Button
+                onClick={() => startGame(game ?? "quiz")}
+                disabled={!gamePool.length}
+                className="w-full sm:w-auto"
+              >
+                ▶️ Bắt đầu chơi {GAME_META[game ?? "quiz"].label} ({gamePool.length} thẻ)
               </Button>
+              {!gamePool.length && (
+                <p className="mt-2 text-xs text-amber-500">
+                  ⚠️ Chưa có thẻ nào trong bộ/môn này — hãy chọn bộ khác hoặc soạn thêm thẻ ở mục
+                  Bài học nhé!
+                </p>
+              )}
             </div>
           )}
 

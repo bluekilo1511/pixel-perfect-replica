@@ -432,3 +432,40 @@ export function normalizeLibrary(raw: unknown): Library {
   }
   return lib;
 }
+
+export interface DeckSummary {
+  id: string;
+  name: string;
+  subject: string;
+  folder: string;
+  term?: string;
+}
+
+/** Flatten every deck in the library tree into a simple list with folder/subject/term context. */
+export function allDecks(library: Library): DeckSummary[] {
+  const result: DeckSummary[] = [];
+  for (const folder of library.folders) {
+    for (const subject of folder.subjects) {
+      for (const term of subject.terms) {
+        for (const deck of term.decks) {
+          result.push({
+            id: deck.id,
+            name: deck.name,
+            subject: subject.name,
+            folder: folder.name,
+            term: term.name,
+          });
+        }
+      }
+      for (const deck of subject.decks) {
+        result.push({
+          id: deck.id,
+          name: deck.name,
+          subject: subject.name,
+          folder: folder.name,
+        });
+      }
+    }
+  }
+  return result;
+}

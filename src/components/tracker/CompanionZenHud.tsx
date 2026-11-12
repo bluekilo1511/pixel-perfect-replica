@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { RAID_HP, raidStatus } from "@/lib/tracker/quests";
 import { logPetEvent } from "@/lib/tracker/petLog";
 import {
+  bumpStats,
   expeditionStatus,
   grantPetXp,
   petEmoji,
@@ -80,13 +81,20 @@ export function CompanionZenHud({ onSelectTask }: Props) {
         hunger: Math.min(100, p.hunger + 30),
         happiness: Math.min(100, p.happiness + 20),
       };
-      return {
+      const curToday = dateStr();
+      const updated = {
         ...d,
+        dailyStats: bumpStats(d.dailyStats, curToday, { treats: 1 }),
         game: { ...d.game, catCoins: d.game.catCoins - 10 },
         petState: grantPetXp(fed, 25).pet,
       };
+      return logPetEvent(
+        updated,
+        "feed",
+        `🍖 ${petEmoji(fed)} được thưởng bữa ngon — bụng no tròn, vui vẻ hơn!`,
+      );
     });
-    toast.success("Đã cho pet ăn no nê! 🍖 (+25 XP)");
+    toast.success("Đã cho pet ăn no nê! 🍖 (+25 XP, +1 nhiệm vụ ngày)");
   };
 
   return (

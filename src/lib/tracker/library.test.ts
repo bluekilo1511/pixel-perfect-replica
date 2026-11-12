@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { allDecks } from "./library";
 import {
   addDeck,
   addFolder,
@@ -102,5 +103,12 @@ describe("library tree", () => {
     expect(lib.folders[0]!.subjects[0]!.decks[0]!.id).toBe("d1");
     expect(normalizeLibrary(null).folders).toHaveLength(0);
     expect(normalizeLibrary("junk").folders).toHaveLength(0);
+  });
+  it("allDecks lists every deck with its folder and subject", () => {
+    const { base, folderId, subjectId } = libWithDeck();
+    const a = addDeck(base, folderId, subjectId, null, "Đại số")!;
+    const list = allDecks(a.library);
+    expect(list.length).toBeGreaterThanOrEqual(1);
+    expect(list.some((d) => d.name === "Đại số" && d.subject === "Toán")).toBe(true);
   });
 });
