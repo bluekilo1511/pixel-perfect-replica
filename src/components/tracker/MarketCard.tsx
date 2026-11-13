@@ -86,11 +86,14 @@ export function MarketCard() {
                         variant="outline"
                         className="h-8 px-2"
                         onClick={() => {
-                          const d1 = startHaggle(data, id, now);
-                          const d2 = resolveHaggle(d1, id, crate);
-                          update(() => d2);
-                          const h = d2.market?.haggle?.[id];
-                          const wonNow = !!h && h.picked === h.win;
+                          let wonNow = false;
+                          update((prev) => {
+                            const d1 = startHaggle(prev, id, now);
+                            const d2 = resolveHaggle(d1, id, crate);
+                            const h = d2.market?.haggle?.[id];
+                            wonNow = !!h && h.picked === h.win;
+                            return d2;
+                          });
                           toast[wonNow ? "success" : "info"](
                             wonNow
                               ? "🤝 Đàm phán thần thánh! Giảm 20% món này tuần này"
@@ -126,28 +129,40 @@ export function MarketCard() {
                   <Button
                     size="sm"
                     onClick={() => {
-                      const r = buyMarket(data, id, new Date());
-                      if (!r.ok) {
-                        toast.error(
-                          r.reason === "not-enough-coins"
-                            ? "Chưa đủ 😺 — làm nhiệm vụ thêm nào!"
-                            : r.reason === "owned"
-                              ? "Bạn đang sở hữu món decor này rồi ✨"
-                              : r.reason === "locked"
-                                ? `🔒 Cần Lv ${m.minLevel} mới mua được món này`
-                                : "Hiện không mua được món này",
-                        );
-                        return;
-                      }
-                      update(() => r.data);
-                      toast.success(r.message);
-                      if (r.petEvolved) {
-                        levelUpFx();
-                        showEvolution({
-                          from: petEmoji(data.petState),
-                          to: petEmoji(r.data.petState),
-                          title: petTitle(r.data.petState),
-                        });
+                      let successMsg = "";
+                      let errorMsg = "";
+                      let petEvo: { from: string; to: string; title: string } | null = null;
+                      update((prev) => {
+                        const r = buyMarket(prev, id, new Date());
+                        if (!r.ok) {
+                          errorMsg =
+                            r.reason === "not-enough-coins"
+                              ? "Chưa đủ 😺 — làm nhiệm vụ thêm nào!"
+                              : r.reason === "owned"
+                                ? "Bạn đang sở hữu món decor này rồi ✨"
+                                : r.reason === "locked"
+                                  ? `🔒 Cần Lv ${m.minLevel} mới mua được món này`
+                                  : "Hiện không mua được món này";
+                          return prev;
+                        }
+                        successMsg = r.message;
+                        if (r.petEvolved) {
+                          petEvo = {
+                            from: petEmoji(prev.petState),
+                            to: petEmoji(r.data.petState),
+                            title: petTitle(r.data.petState),
+                          };
+                        }
+                        return r.data;
+                      });
+                      if (errorMsg) {
+                        toast.error(errorMsg);
+                      } else if (successMsg) {
+                        toast.success(successMsg);
+                        if (petEvo) {
+                          levelUpFx();
+                          showEvolution(petEvo);
+                        }
                       }
                     }}
                   >

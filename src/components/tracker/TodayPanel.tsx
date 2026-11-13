@@ -326,13 +326,18 @@ function TaskRow({ task }: { task: Task }) {
         title="Ghim làm mục tiêu cho cả tuần — hiện trong bảng Mục tiêu tuần"
         className="opacity-50 hover:opacity-100"
         onClick={() => {
-          const r = pinTaskAsWeekGoal(data, task.id);
-          if (!r) {
+          let success = false;
+          update((prev) => {
+            const r = pinTaskAsWeekGoal(prev, task.id);
+            if (!r) return prev;
+            success = true;
+            return r;
+          });
+          if (success) {
+            toast.success("Đã ghim làm mục tiêu cả tuần 🎯");
+          } else {
             toast.error("Mục tiêu tuần đã đầy hoặc nhiệm vụ này đã được ghim rồi 🎯");
-            return;
           }
-          update(() => r);
-          toast.success("Đã ghim làm mục tiêu cả tuần 🎯");
         }}
       >
         🎯
@@ -1000,14 +1005,19 @@ export function WeekGoalsCard() {
   const done = goals.filter((g) => g.doneAt).length;
   const [draft, setDraft] = useState("");
   const add = () => {
-    const r = addWeekGoal(data, draft);
-    if (!r) {
+    let success = false;
+    update((prev) => {
+      const r = addWeekGoal(prev, draft);
+      if (!r) return prev;
+      success = true;
+      return r;
+    });
+    if (success) {
+      setDraft("");
+      toast.success("Đã thêm mục tiêu tuần 🎯");
+    } else {
       toast.error("Trùng mục tiêu hoặc đã đủ 6 mục tiêu cho tuần này 🎯");
-      return;
     }
-    update(() => r);
-    setDraft("");
-    toast.success("Đã thêm mục tiêu tuần 🎯");
   };
   return (
     <section className="glass p-5" aria-label="Mục tiêu tuần (từ việc cần làm)">

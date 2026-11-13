@@ -335,13 +335,18 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
             variant="ghost"
             className="h-8 px-2 text-xs"
             onClick={() => {
-              const res = pinTaskAsWeekGoal(data, task.id);
-              if (!res) {
+              let success = false;
+              update((prev) => {
+                const res = pinTaskAsWeekGoal(prev, task.id);
+                if (!res) return prev;
+                success = true;
+                return res;
+              });
+              if (success) {
+                toast.success("Đã ghim làm mục tiêu tuần 🎯");
+              } else {
                 toast.error("Mục tiêu tuần đã đầy hoặc đã có 🎯");
-                return;
               }
-              update(() => res);
-              toast.success("Đã ghim làm mục tiêu tuần 🎯");
             }}
           >
             🎯 Mục tiêu tuần

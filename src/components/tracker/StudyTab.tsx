@@ -649,16 +649,22 @@ export function StudyTab() {
   const finishRound = (g: StudyGame, correct: number, total: number) => {
     const seconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
     const result = { date: today, game: g, subject: gameSubject, correct, total, seconds };
-    const rw = grantStudyReward(data.studyRewards, today);
-    update((d) => ({
-      ...d,
-      studyRewards: rw.state,
-      studyHistory: recordStudy(d.studyHistory, result),
-      game: rw.coins > 0 ? { ...d.game, catCoins: d.game.catCoins + rw.coins } : d.game,
-    }));
-    if (rw.coins > 0) {
+    let coinsEarned = 0;
+    let remainingRewards = 0;
+    update((d) => {
+      const rw = grantStudyReward(d.studyRewards, today);
+      coinsEarned = rw.coins;
+      remainingRewards = STUDY_REWARD_MAX_DAY - rw.state.count;
+      return {
+        ...d,
+        studyRewards: rw.state,
+        studyHistory: recordStudy(d.studyHistory, result),
+        game: rw.coins > 0 ? { ...d.game, catCoins: d.game.catCoins + rw.coins } : d.game,
+      };
+    });
+    if (coinsEarned > 0) {
       toast.success(
-        `🎉 ${GAME_META[g].label}: ${correct}/${total} · +${rw.coins} xu (còn ${STUDY_REWARD_MAX_DAY - rw.state.count} lượt thưởng hôm nay)`,
+        `🎉 ${GAME_META[g].label}: ${correct}/${total} · +${coinsEarned} 😺 (còn ${remainingRewards} lượt thưởng hôm nay)`,
       );
     } else {
       toast(`🎉 ${GAME_META[g].label}: ${correct}/${total} — đã hết 3 lượt thưởng hôm nay`);

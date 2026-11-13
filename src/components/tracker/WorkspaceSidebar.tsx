@@ -138,9 +138,9 @@ export function WorkspaceSidebar({ currentTab, onTabChange, collapsed, onToggleC
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
                   <span title="Chuỗi ngày học liên tục">🔥 {streak}</span>
-                  <span title="Xu mèo">🪙 {coins}</span>
-                  <span title="Đá thằn lằn">💎 {gems}</span>
-                  <span title="Lượt quay">🎡 {tickets}</span>
+                  <span title="Xu mèo">😺 {coins}</span>
+                  <span title="Đá thằn lằn">🦎 {gems}</span>
+                  <span title="Lượt quay may mắn">🎟️ {tickets}</span>
                 </div>
               </div>
             </div>

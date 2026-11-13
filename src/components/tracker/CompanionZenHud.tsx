@@ -74,7 +74,10 @@ export function CompanionZenHud({ onSelectTask }: Props) {
       toast.error("Cần 10 😺 để cho pet ăn. Hãy làm thêm nhiệm vụ!");
       return;
     }
+    let success = false;
     update((d) => {
+      if (d.game.catCoins < 10) return d;
+      success = true;
       const p = d.petState;
       const fed = {
         ...p,
@@ -85,7 +88,7 @@ export function CompanionZenHud({ onSelectTask }: Props) {
       const updated = {
         ...d,
         dailyStats: bumpStats(d.dailyStats, curToday, { treats: 1 }),
-        game: { ...d.game, catCoins: d.game.catCoins - 10 },
+        game: { ...d.game, catCoins: Math.max(0, d.game.catCoins - 10) },
         petState: grantPetXp(fed, 25).pet,
       };
       return logPetEvent(
@@ -94,7 +97,11 @@ export function CompanionZenHud({ onSelectTask }: Props) {
         `🍖 ${petEmoji(fed)} được thưởng bữa ngon — bụng no tròn, vui vẻ hơn!`,
       );
     });
-    toast.success("Đã cho pet ăn no nê! 🍖 (+25 XP, +1 nhiệm vụ ngày)");
+    if (success) {
+      toast.success("Đã cho pet ăn no nê! 🍖 (-10 😺, +25 XP, +1 nhiệm vụ ngày)");
+    } else {
+      toast.error("Chưa đủ 10 😺 để cho pet ăn.");
+    }
   };
 
   return (
@@ -149,14 +156,21 @@ export function CompanionZenHud({ onSelectTask }: Props) {
               <span title="Độ no">🍖 {pet.hunger}%</span>
               <span title="Độ vui vẻ">💖 {pet.happiness}%</span>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-[11px] px-2"
-              onClick={handleFeedPet}
-            >
-              🍖 Cho ăn
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-amber-500" title="Số xu mèo hiện có">
+                😺 {game.catCoins}
+              </span>
+              <Button
+                size="sm"
+                variant={game.catCoins >= 10 ? "outline" : "ghost"}
+                className="h-7 text-[11px] px-2 font-medium"
+                onClick={handleFeedPet}
+                disabled={game.catCoins < 10}
+                title={game.catCoins >= 10 ? "Cho pet ăn (tốn 10 😺)" : "Cần ít nhất 10 😺"}
+              >
+                🍖 Cho ăn (-10)
+              </Button>
+            </div>
           </div>
         </div>
 

@@ -11,22 +11,38 @@ export function ConvenienceCard() {
   const { data, update, showEvolution } = useTracker();
 
   const buy = (id: ConvenienceId) => {
-    const r = buyConvenience(data, id);
-    if (!r.ok) {
-      toast.error("Chưa đủ 😺");
-      return;
-    }
-    update(() => r.data);
-    ting();
-    toast.success(r.message);
-    if (r.levelsGained > 0) levelUpFx();
-    if (r.petEvolved) {
-      levelUpFx();
-      showEvolution({
-        from: petEmoji(data.petState as PetState),
-        to: petEmoji(r.data.petState as PetState),
-        title: petTitle(r.data.petState as PetState),
-      });
+    let resultMsg = "";
+    let levelsGained = 0;
+    let petEvolved = false;
+    let evo: { from: string; to: string; title: string } | null = null;
+
+    update((prev) => {
+      const r = buyConvenience(prev, id);
+      if (!r.ok) {
+        toast.error("Chưa đủ 😺");
+        return prev;
+      }
+      resultMsg = r.message;
+      levelsGained = r.levelsGained;
+      petEvolved = r.petEvolved;
+      if (r.petEvolved) {
+        evo = {
+          from: petEmoji(prev.petState as PetState),
+          to: petEmoji(r.data.petState as PetState),
+          title: petTitle(r.data.petState as PetState),
+        };
+      }
+      return r.data;
+    });
+
+    if (resultMsg) {
+      ting();
+      toast.success(resultMsg);
+      if (levelsGained > 0) levelUpFx();
+      if (petEvolved && evo) {
+        levelUpFx();
+        showEvolution(evo);
+      }
     }
   };
 

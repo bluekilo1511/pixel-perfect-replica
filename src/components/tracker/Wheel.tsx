@@ -66,10 +66,14 @@ export function Wheel() {
   };
 
   const sellAll = () => {
-    const r = sellSpinTickets(data.game);
-    if (!r.sold) return;
-    update((d) => ({ ...d, game: r.game }));
-    toast.success(`💱 Đã bán ${r.sold} lượt quay, +${r.coins} 😺`);
+    let soldMsg = "";
+    update((d) => {
+      const r = sellSpinTickets(d.game);
+      if (!r.sold) return d;
+      soldMsg = `💱 Đã bán ${r.sold} lượt quay, +${r.coins} 😺`;
+      return { ...d, game: r.game };
+    });
+    if (soldMsg) toast.success(soldMsg);
   };
 
   const bg = `conic-gradient(${display

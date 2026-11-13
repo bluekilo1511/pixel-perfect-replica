@@ -75,12 +75,14 @@ export function WeeklyGoalCard() {
               size="sm"
               className="mt-2 w-full"
               onClick={() => {
-                const r = claimWeeklyGoal(data);
-                if (!r) return;
-                update(() => r.data);
-                toast.success(
-                  `Hoàn thành mục tiêu tuần! +5 🪙 và quà nguyên liệu ${r.reward.material ?? ""}`,
-                );
+                let rewardMsg = "";
+                update((prev) => {
+                  const r = claimWeeklyGoal(prev);
+                  if (!r) return prev;
+                  rewardMsg = `Hoàn thành mục tiêu tuần! +5 😺 và quà nguyên liệu ${r.reward.material ?? ""}`;
+                  return r.data;
+                });
+                if (rewardMsg) toast.success(rewardMsg);
               }}
             >
               🎁 Nhận quà tuần này

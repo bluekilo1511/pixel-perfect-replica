@@ -49,16 +49,25 @@ export function PetShop() {
       toast.error("Chưa đủ 😺");
       return;
     }
-    update((d) => ({
-      ...d,
-      game: { ...d.game, catCoins: d.game.catCoins - it.price },
-      inventory: {
-        ...d.inventory,
-        items: { ...d.inventory.items, [id]: (d.inventory.items[id] ?? 0) + 1 },
-      },
-    }));
-    ting();
-    toast.success(`Đã mua ${it.emoji} ${it.name}`);
+    let success = false;
+    update((d) => {
+      if (d.game.catCoins < it.price) return d;
+      success = true;
+      return {
+        ...d,
+        game: { ...d.game, catCoins: Math.max(0, d.game.catCoins - it.price) },
+        inventory: {
+          ...d.inventory,
+          items: { ...d.inventory.items, [id]: (d.inventory.items[id] ?? 0) + 1 },
+        },
+      };
+    });
+    if (success) {
+      ting();
+      toast.success(`Đã mua ${it.emoji} ${it.name}`);
+    } else {
+      toast.error("Chưa đủ 😺");
+    }
   };
   const applyItem = (id: string) => {
     const it = CONSUMABLES[id]!;
@@ -86,9 +95,18 @@ export function PetShop() {
       toast.error("Chưa đủ 😺");
       return;
     }
-    update((d) => apply({ ...d, game: { ...d.game, catCoins: d.game.catCoins - price } }));
-    ting();
-    toast.success(msg);
+    let success = false;
+    update((d) => {
+      if (d.game.catCoins < price) return d;
+      success = true;
+      return apply({ ...d, game: { ...d.game, catCoins: Math.max(0, d.game.catCoins - price) } });
+    });
+    if (success) {
+      ting();
+      toast.success(msg);
+    } else {
+      toast.error("Chưa đủ 😺");
+    }
   };
 
   const gem = (price: number, apply: (d: typeof data) => typeof data, msg: string) => {
@@ -96,9 +114,21 @@ export function PetShop() {
       toast.error("Chưa đủ 🦎");
       return;
     }
-    update((d) => apply({ ...d, game: { ...d.game, lizardGems: d.game.lizardGems - price } }));
-    ting();
-    toast.success(msg);
+    let success = false;
+    update((d) => {
+      if (d.game.lizardGems < price) return d;
+      success = true;
+      return apply({
+        ...d,
+        game: { ...d.game, lizardGems: Math.max(0, d.game.lizardGems - price) },
+      });
+    });
+    if (success) {
+      ting();
+      toast.success(msg);
+    } else {
+      toast.error("Chưa đủ 🦎");
+    }
   };
 
   const mats = inv.materials;

@@ -28,25 +28,35 @@ export function ExtraScheduleCard() {
   const [minutes, setMinutes] = useState(0);
 
   const add = () => {
-    const next = addExtraSchedule(data, { date, title, time: time || null, minutes });
-    if (!next) {
+    let success = false;
+    update((prev) => {
+      const next = addExtraSchedule(prev, { date, title, time: time || null, minutes });
+      if (!next) return prev;
+      success = true;
+      return next;
+    });
+    if (success) {
+      setTitle("");
+      setTime("");
+      toast.success("Đã lưu nhắc việc 📌");
+    } else {
       toast.error("Chưa thêm được — kiểm tra tiêu đề, ngày và giờ nhé");
-      return;
     }
-    update(() => next);
-    setTitle("");
-    setTime("");
-    toast.success("Đã lưu nhắc việc 📌");
   };
 
   const pushOne = (id: string) => {
-    const next = extraToTask(data, id, new Date());
-    if (!next) {
+    let success = false;
+    update((prev) => {
+      const next = extraToTask(prev, id, new Date());
+      if (!next) return prev;
+      success = true;
+      return next;
+    });
+    if (success) {
+      toast.success("Đã thêm vào việc cần làm ✅");
+    } else {
       toast("Mục này đã có trong việc cần làm rồi 👍");
-      return;
     }
-    update(() => next);
-    toast.success("Đã thêm vào việc cần làm ✅");
   };
 
   return (

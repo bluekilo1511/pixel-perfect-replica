@@ -38,16 +38,20 @@ export function SubjectsCard() {
       );
       return;
     }
-    update(() => r);
+    update((prev) => addSubject(prev, name.trim()) ?? prev);
     setName("");
   };
   const mark = (subject: string, topic: string, m: TopicMark | null) => {
-    const r = setTopicMark(data, subject, topic, m);
-    if (!r) {
+    let success = false;
+    update((prev) => {
+      const r = setTopicMark(prev, subject, topic, m);
+      if (!r) return prev;
+      success = true;
+      return r;
+    });
+    if (!success) {
       toast.error(`Tối đa ${TOPICS_MAX} chủ điểm cho một môn thôi nhé`);
-      return;
     }
-    update(() => r);
   };
   return (
     <section className="glass p-5" aria-label="Môn học">
@@ -147,7 +151,7 @@ export function SubjectsCard() {
                       size="sm"
                       variant="ghost"
                       className="h-6 px-2 text-xs"
-                      onClick={() => update(() => clearSubjectCombo(data, openSubject))}
+                      onClick={() => update((prev) => clearSubjectCombo(prev, openSubject))}
                     >
                       Gỡ tổ hợp
                     </Button>
@@ -171,14 +175,19 @@ export function SubjectsCard() {
                       : p,
                 );
               const save = () => {
-                const r = setSubjectCombo(data, openSubject, comboPicks);
-                if (!r) {
+                let success = false;
+                update((prev) => {
+                  const r = setSubjectCombo(prev, openSubject, comboPicks);
+                  if (!r) return prev;
+                  success = true;
+                  return r;
+                });
+                if (!success) {
                   toast.error(
                     `Chọn ${COMBO_MEMBERS_MIN}–${COMBO_MEMBERS_MAX} môn khác để ghép nhé 🧩`,
                   );
                   return;
                 }
-                update(() => r);
                 setComboPicks([]);
                 toast.success("Đã ghép môn tổ hợp 🧩");
               };
@@ -232,8 +241,8 @@ export function SubjectsCard() {
             value={data.subjectNotes[openSubject]?.note ?? ""}
             maxLength={300}
             onChange={(e) => {
-              const r = setSubjectNote(data, openSubject, e.target.value);
-              if (r) update(() => r);
+              const val = e.target.value;
+              update((prev) => setSubjectNote(prev, openSubject, val) ?? prev);
             }}
             aria-label={`Ghi chú môn ${openSubject}`}
           />

@@ -576,9 +576,12 @@ function DataHealth() {
         size="sm"
         title="Xoá nhiệm vụ quá hạn, cắt nhật ký phiên và ngày thống kê cũ — không đụng điểm, flashcard hay ghi chú"
         onClick={() => {
-          const r = cleanupData(data);
-          const n = removedTotal(r);
-          update(() => r.data);
+          let n = 0;
+          update((prev) => {
+            const r = cleanupData(prev);
+            n = removedTotal(r);
+            return r.data;
+          });
           toast.success(n ? `Đã dọn ${n} mục cũ 🧹` : "Dữ liệu đã gọn rồi, không cần dọn 👍");
         }}
       >

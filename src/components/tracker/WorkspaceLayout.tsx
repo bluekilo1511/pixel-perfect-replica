@@ -210,6 +210,34 @@ export function WorkspaceLayout() {
               </div>
             )}
 
+            {/* Real-time Synced Currency HUD */}
+            <div
+              className="flex items-center gap-2 rounded-xl border border-border/70 bg-card/60 px-2.5 py-1 text-xs font-semibold backdrop-blur-sm shadow-xs"
+              title="Tài sản & Chuỗi học tập"
+            >
+              <span title="Chuỗi ngày học liên tục" className="flex items-center gap-1">
+                🔥 {data.streak.count}
+              </span>
+              <span className="text-border/80">·</span>
+              <span title="Xu mèo" className="flex items-center gap-1 text-amber-500 font-bold">
+                😺 {data.game.catCoins}
+              </span>
+              <span className="text-border/80">·</span>
+              <span
+                title="Đá thằn lằn"
+                className="flex items-center gap-1 text-emerald-500 font-bold"
+              >
+                🦎 {data.game.lizardGems}
+              </span>
+              <span className="text-border/80">·</span>
+              <span
+                title="Lượt quay may mắn"
+                className="flex items-center gap-1 text-purple-400 font-bold"
+              >
+                🎟️ {data.game.spinTickets}
+              </span>
+            </div>
+
             {/* Quick Add trigger button */}
             <Button
               size="sm"

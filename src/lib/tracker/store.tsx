@@ -287,27 +287,36 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     setData((d) => ({ ...d, settings: { ...d.settings, admin: true } }));
   };
   const adminBoost = (kind: AdminBoostKind, amount: number) => {
-    const prev = dataRef.current;
-    const next = applyAdminBoost(prev, kind, amount);
-    setData(next);
-    // Test-mode pet XP now follows the same announcement path as real XP:
-    // full evolution cutscene on a tier change, a toast on a plain level-up.
+    let prevTier = 1;
+    let nextTier = 1;
+    let prevEmoji = "";
+    let nextEmoji = "";
+    let nextTitle = "";
+    let nextPetLevel = 1;
+    let prevPetLevel = 1;
+    setData((prev) => {
+      prevTier = tierOf(prev.petState.petLevel || 1);
+      prevEmoji = petEmoji(prev.petState);
+      prevPetLevel = prev.petState.petLevel || 1;
+      const next = applyAdminBoost(prev, kind, amount);
+      nextTier = tierOf(next.petState.petLevel || 1);
+      nextEmoji = petEmoji(next.petState);
+      nextTitle = petTitle(next.petState);
+      nextPetLevel = next.petState.petLevel || 1;
+      return next;
+    });
     if (kind === "petXp") {
-      const prevTier = tierOf(prev.petState.petLevel || 1);
-      const nextTier = tierOf(next.petState.petLevel || 1);
       if (nextTier > prevTier) {
         levelUpFx();
         setEvolution({
-          from: petEmoji(prev.petState),
-          to: petEmoji(next.petState),
-          title: petTitle(next.petState),
+          from: prevEmoji,
+          to: nextEmoji,
+          title: nextTitle,
         });
-        toast.success(
-          `${TIER_BADGE[nextTier]} Thú cưng tiến hóa thành ${petTitle(next.petState)}!`,
-        );
-      } else if (next.petState.petLevel > prev.petState.petLevel) {
+        toast.success(`${TIER_BADGE[nextTier]} Thú cưng tiến hóa thành ${nextTitle}!`);
+      } else if (nextPetLevel > prevPetLevel) {
         levelUpFx();
-        toast(`🐾 Thú cưng lên cấp ${next.petState.petLevel}!`);
+        toast(`🐾 Thú cưng lên cấp ${nextPetLevel}!`);
       }
     }
   };
@@ -332,85 +341,132 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     }));
 
   const claimQuest = (id: string) => {
-    const r = claimQuestRule(dataRef.current, id);
-    if (!r.ok) return false;
-    setData(r.data);
-    ting();
-    toast.success("🎯 Hoàn thành nhiệm vụ ngày! Đã nhận thưởng.");
-    return true;
+    let ok = false;
+    setData((d) => {
+      const r = claimQuestRule(d, id);
+      if (!r.ok) return d;
+      ok = true;
+      return r.data;
+    });
+    if (ok) {
+      ting();
+      toast.success("🎯 Hoàn thành nhiệm vụ ngày! Đã nhận thưởng.");
+    }
+    return ok;
   };
   const claimRaid = () => {
-    const r = claimRaidRule(dataRef.current);
-    if (!r.ok) return false;
-    setData(logPetEvent(r.data, "raid", "🐲 Hạ gục Boss tuần! Phần thưởng lớn đã về tay."));
-    celebrate();
-    toast.success("⚔️ Hạ Boss tuần! +40 😺 +8 🦎", { duration: 6000 });
-    r.drops.forEach(announceDrop);
-    return true;
+    let ok = false;
+    let drops: MaterialId[] = [];
+    setData((d) => {
+      const r = claimRaidRule(d);
+      if (!r.ok) return d;
+      ok = true;
+      drops = r.drops;
+      return logPetEvent(r.data, "raid", "🐲 Hạ gục Boss tuần! Phần thưởng lớn đã về tay.");
+    });
+    if (ok) {
+      celebrate();
+      toast.success("⚔️ Hạ Boss tuần! +40 😺 +8 🦎", { duration: 6000 });
+      drops.forEach(announceDrop);
+    }
+    return ok;
   };
 
   const claimChallenge = () => {
-    const r = claimChallengeRule(dataRef.current);
-    if (!r.ok) return false;
-    setData(r.data);
-    ting();
-    toast.success("🌟 Thử thách hôm nay hoàn thành! +6 😺 +1 🦎");
-    return true;
+    let ok = false;
+    setData((d) => {
+      const r = claimChallengeRule(d);
+      if (!r.ok) return d;
+      ok = true;
+      return r.data;
+    });
+    if (ok) {
+      ting();
+      toast.success("🌟 Thử thách hôm nay hoàn thành! +6 😺 +1 🦎");
+    }
+    return ok;
   };
 
   const finish = useCallback(
     (id: string, fromTimer = false) => {
-      const prev = dataRef.current;
-      const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
-      const prevFormEmoji = petEmoji(dataRef.current.petState);
-      const r = completeTask(dataRef.current, id, new Date(), Math.random, xpMult);
-      if (!r.rewarded) return; // anti-spam
-      setData(r.data);
-      void saveSnapshot(r.data);
+      let rewarded = false;
+      let rData: AppData | null = null;
+      let levelsGained = 0;
+      let newLevel = 1;
+      let dropItem: MaterialId | null = null;
+      let freshAchievements: AchievementId[] = [];
+      let evolved = false;
+      let evoData: { from: string; to: string; title: string } | null = null;
+      let petLvs = 0;
+      let prevTask: AppData["tasks"][number] | null = null;
+      let shouldAutoBreak = false;
+
+      setData((prev) => {
+        const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
+        const prevFormEmoji = petEmoji(prev.petState);
+        const r = completeTask(prev, id, new Date(), Math.random, xpMult);
+        if (!r.rewarded) return prev; // anti-spam
+        rewarded = true;
+        rData = r.data;
+        levelsGained = r.levelsGained;
+        newLevel = r.data.game.level;
+        dropItem = r.drop;
+        freshAchievements = r.fresh;
+        evolved = r.petEvolved;
+        if (evolved) {
+          evoData = {
+            from: prevFormEmoji,
+            to: petEmoji(r.data.petState),
+            title: petTitle(r.data.petState),
+          };
+        }
+        petLvs = r.petLevels;
+        prevTask = prev.tasks.find((t) => t.id === id) ?? null;
+        shouldAutoBreak =
+          fromTimer && r.data.settings.autoBreak && r.data.settings.breakMinutes > 0;
+        void saveSnapshot(r.data);
+        return r.data;
+      });
+
+      if (!rewarded || !rData) return;
       setTimer((t) => (t?.taskId === id ? null : t));
       celebrate();
-      // A timed task finished by the clock (not the manual ✔ button) starts the
-      // same auto-break a pet Pomodoro gets — PetWidget listens for this event.
-      if (fromTimer && r.data.settings.autoBreak && r.data.settings.breakMinutes > 0) {
+      if (shouldAutoBreak) {
         window.dispatchEvent(new CustomEvent("pp-auto-break"));
       }
-      // Targeted undo: put back just this task record. Restoring the whole old
-      // snapshot would also roll back everything done since (other tasks, salary,
-      // spins…). Rewards stay granted — no accidental data loss.
-      const prevTask = prev.tasks.find((t) => t.id === id) ?? null;
+      const undoTask = prevTask;
       toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
         action: {
           label: "Hoàn tác",
           onClick: () => {
-            if (!prevTask) return;
+            if (!undoTask) return;
             setData((d) => ({
               ...d,
               tasks: d.tasks.some((t) => t.id === id)
-                ? d.tasks.map((t) => (t.id === id ? prevTask : t))
-                : [...d.tasks, prevTask],
+                ? d.tasks.map((t) => (t.id === id ? undoTask : t))
+                : [...d.tasks, undoTask],
             }));
             toast("↩️ Đã trả lại nhiệm vụ (phần thưởng giữ nguyên)");
           },
         },
       });
-      onLevels(r.levelsGained, r.data.game.level);
-      announceDrop(r.drop);
-      announceAchievements(r.fresh);
-      if (r.petEvolved) {
+      onLevels(levelsGained, newLevel);
+      announceDrop(dropItem);
+      announceAchievements(freshAchievements);
+      if (evolved && evoData && rData) {
         levelUpFx();
         evolutionFx();
-        setEvolution({
-          from: prevFormEmoji,
-          to: petEmoji(r.data.petState),
-          title: petTitle(r.data.petState),
-        });
+        setEvolution(evoData);
+        const curPet: AppData["petState"] = (rData as AppData).petState;
         toast.success(
-          `${TIER_BADGE[tierOf(r.data.petState.petLevel)]} Thú cưng tiến hóa thành ${petTitle(r.data.petState)}!`,
+          `${TIER_BADGE[tierOf(curPet.petLevel)]} Thú cưng tiến hóa thành ${petTitle(curPet)}!`,
           { className: "glass-toast", duration: 6000 },
         );
-      } else if (r.petLevels > 0) toast(`🐾 Thú cưng lên cấp ${r.data.petState.petLevel}!`);
+      } else if (petLvs > 0 && rData) {
+        toast(`🐾 Thú cưng lên cấp ${(rData as AppData).petState.petLevel}!`);
+      }
     },
-    [setData],
+    [onLevels, setData],
   );
 
   // Timer tick based on wall clock → reaches 00:00 reliably even if tab was throttled.
@@ -460,79 +516,112 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     const check = () => {
-      const d0 = ensureDailyPins(dataRef.current, dateStr());
-      const sal = claimDailySalary(d0, dateStr());
-      if (sal.coins > 0) {
+      let salaryNotice: { coins: number; level: number } | null = null;
+      let freezeNotice = false;
+      let extraNotice: string[] = [];
+      let expeditionNotice: { title: string; count: number; drops: MaterialId[] } | null = null;
+      let freshAchievements: AchievementId[] = [];
+      let dueSlotNotices: string[] = [];
+
+      setData((cur) => {
+        const today = dateStr();
+        const d0 = ensureDailyPins(cur, today);
+        const sal = claimDailySalary(d0, today);
+        if (sal.coins > 0) {
+          salaryNotice = { coins: sal.coins, level: sal.data.game.level };
+        }
+        const { data: dp, pushed } = pushDueSlots(sal.data);
+        const pet = decayPet(
+          dp.petState,
+          new Date(),
+          weatherEffect(weatherFromData(dp)).petDecayMult,
+        );
+        let d1 = pet === dp.petState ? dp : { ...dp, petState: pet };
+        if (
+          d0.streak.lastQualifiedDate !== cur.streak.lastQualifiedDate &&
+          d0.inventory.freezes < cur.inventory.freezes
+        ) {
+          freezeNotice = true;
+        }
+        const now = new Date();
+        const ex = pushDueExtras(d1, now);
+        if (ex.data !== d1) d1 = ex.data;
+        if (ex.pushed.length) {
+          extraNotice = ex.pushed.map((x) => x.title);
+        }
+
+        // Smart Reminder: 5 minutes before each class.
+        upcomingSlots(d1, now).forEach((s) => {
+          const key = `${dateStr(now)}:${s.id}`;
+          if (reminded.current.has(key)) return;
+          reminded.current.add(key);
+          ting();
+          toast(`🔔 5 phút nữa: ${s.title}`, {
+            description: `${s.start} - ${s.end}`,
+          });
+          try {
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification(`🔔 5 phút nữa: ${s.title}`, {
+                body: `${s.start} - ${s.end}`,
+              });
+            }
+          } catch {
+            /* ignore */
+          }
+        });
+
+        const expedition = resolveExpedition(d1.expedition, now);
+        if (expedition) {
+          let next = { ...d1, expedition: expedition.expedition };
+          expedition.drops.forEach((drop) => {
+            next = addMaterial(next, drop);
+          });
+          d1 = logPetEvent(
+            next,
+            "expedition",
+            `🧭 ${petTitle(next.petState)} thám hiểm về với ${expedition.drops.length} chiến lợi phẩm!`,
+          );
+          expeditionNotice = {
+            title: petTitle(d1.petState),
+            count: expedition.drops.length,
+            drops: expedition.drops,
+          };
+        }
+
+        const ach = applyAchievements(d1, {});
+        freshAchievements = ach.fresh;
+        dueSlotNotices = pushed.map((s) => s.title);
+        return ach.data;
+      });
+
+      const sn = salaryNotice as { coins: number; level: number } | null;
+      if (sn) {
         ting();
-        toast.success(`💰 Lương ngày mới: +${sal.coins} 😺 (Lv ${sal.data.game.level})`);
+        toast.success(`💰 Lương ngày mới: +${sn.coins} 😺 (Lv ${sn.level})`);
       }
-      const { data: dp, pushed } = pushDueSlots(sal.data); // chain salary result so lastSalaryDate persists
-      const pet = decayPet(
-        dp.petState,
-        new Date(),
-        weatherEffect(weatherFromData(dp)).petDecayMult,
-      );
-      let d1 = pet === dp.petState ? dp : { ...dp, petState: pet };
-      // Only speak up when a freeze was actually consumed — grace days and
-      // marked rest days also move lastQualifiedDate, without touching 🧊.
-      if (
-        d0.streak.lastQualifiedDate !== dataRef.current.streak.lastQualifiedDate &&
-        d0.inventory.freezes < dataRef.current.inventory.freezes
-      ) {
+      if (freezeNotice) {
         toast("🧊 Bình đóng băng đã cứu chuỗi streak của bạn!");
       }
-      // One-off reminders due today land in the task list once each.
-      const now = new Date();
-      const ex = pushDueExtras(d1, now);
-      if (ex.data !== d1) d1 = ex.data;
-      if (ex.pushed.length) {
+      if (extraNotice.length) {
         toast("📌 Nhắc việc hôm nay", {
-          description: ex.pushed.map((x) => x.title).join(", "),
+          description: extraNotice.join(", "),
         });
       }
-      // Smart Reminder: 5 minutes before each class.
-      upcomingSlots(d1, now).forEach((s) => {
-        const key = `${dateStr(now)}:${s.id}`;
-        if (reminded.current.has(key)) return;
-        reminded.current.add(key);
+      const en = expeditionNotice as { title: string; count: number; drops: MaterialId[] } | null;
+      if (en) {
         ting();
-        toast(`🔔 5 phút nữa: ${s.title}`, {
-          description: `${s.start} - ${s.end}`,
-        });
-        try {
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(`🔔 5 phút nữa: ${s.title}`, {
-              body: `${s.start} - ${s.end}`,
-            });
-          }
-        } catch {
-          /* ignore */
-        }
-      });
-      const expedition = resolveExpedition(d1.expedition, now);
-      if (expedition) {
-        let next = { ...d1, expedition: expedition.expedition };
-        expedition.drops.forEach((drop) => {
-          next = addMaterial(next, drop);
-        });
-        d1 = logPetEvent(
-          next,
-          "expedition",
-          `🧭 ${petTitle(next.petState)} thám hiểm về với ${expedition.drops.length} chiến lợi phẩm!`,
-        );
-        ting();
-        toast.success(`🧭 ${petTitle(d1.petState)} đã trở về từ chuyến thám hiểm!`);
-        expedition.drops.forEach(announceDrop);
+        toast.success(`🧭 ${en.title} đã trở về từ chuyến thám hiểm!`);
+        en.drops.forEach(announceDrop);
       }
-      const ach = applyAchievements(d1, {});
-      announceAchievements(ach.fresh);
-      if (ach.data !== dataRef.current) setData(ach.data);
-      pushed.forEach((s) => {
-        toast(`⏰ Đến giờ: ${s.title}`, {
-          description: "Đã thêm vào việc hôm nay",
+      announceAchievements(freshAchievements);
+      if (dueSlotNotices.length) {
+        dueSlotNotices.forEach((title) => {
+          toast(`⏰ Đến giờ: ${title}`, {
+            description: "Đã thêm vào việc hôm nay",
+          });
         });
-      });
-      if (pushed.length) ting();
+        ting();
+      }
     };
     check();
     const iv = setInterval(check, 20000);
@@ -564,30 +653,36 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   // ⚡ Auto-spin: quay giùm mình khi mở app (tuỳ chọn trong vòng quay).
   // Miễn phí trước, cuối tuần ưu tiên MEGA; ngày thường giữ 2 lượt cho MEGA.
   const autoSpin = () => {
-    const d = dataRef.current;
-    if (d.settings.autoSpin !== true) return;
-    const now = new Date();
-    const weekend = isWeekend(now);
     const prizes: string[] = [];
-    let g = d.game;
-    let next = d;
     let levels = 0;
-    for (let guard = 60; guard > 0; guard -= 1) {
-      const mode = autoSpinModes(g, weekend, now)[0];
-      if (!mode) break;
-      const begun = beginSpin(g, mode, now);
-      const r = recordSpin(begun.game, begun.prize, begun.jackpot, mode, now.toISOString());
-      const drop = rollDrop();
-      next = addMaterial({ ...next, game: r.game }, drop);
-      g = r.game;
-      levels += r.levelsGained;
-      prizes.push(begun.prize);
+    let endLevel = 1;
+
+    setData((d) => {
+      if (d.settings.autoSpin !== true) return d;
+      const now = new Date();
+      const weekend = isWeekend(now);
+      let g = d.game;
+      let next = d;
+      for (let guard = 60; guard > 0; guard -= 1) {
+        const mode = autoSpinModes(g, weekend, now)[0];
+        if (!mode) break;
+        const begun = beginSpin(g, mode, now);
+        const r = recordSpin(begun.game, begun.prize, begun.jackpot, mode, now.toISOString());
+        const drop = rollDrop();
+        next = addMaterial({ ...next, game: r.game }, drop);
+        g = r.game;
+        levels += r.levelsGained;
+        prizes.push(begun.prize);
+      }
+      endLevel = g.level;
+      return next;
+    });
+
+    if (prizes.length) {
+      ting();
+      toast.success(`⚡ Quay giùm mình: ${prizes.join(" · ")}`);
+      onLevels(levels, endLevel);
     }
-    if (!prizes.length) return;
-    setData(next);
-    ting();
-    toast.success(`⚡ Quay giùm mình: ${prizes.join(" · ")}`);
-    onLevels(levels, g.level);
   };
 
   useEffect(() => {
@@ -611,72 +706,111 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     kind?: "pomodoro" | "warmup",
     interruptions?: number,
   ) => {
-    const cur = dataRef.current;
-    const today = dateStr(new Date());
-    // One daily-boss reward per day: tasks may already have defeated it.
-    const bossDue = boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
-    const game = bossDue
-      ? defeatBoss(cur.game)
-      : { ...cur.game, catCoins: cur.game.catCoins + POMODORO_REWARD };
-    const dailyBoss: DailyBossState = boss ? { date: today, defeated: true } : cur.dailyBoss;
+    let bossDue = false;
+    let freshAchievements: AchievementId[] = [];
+    let nudgeWater = false;
     const pauses = interruptions ?? runPauses.current;
     runPauses.current = 0;
-    const r = completePomodoroSession(
-      { ...cur, game, petState: bumpPet(cur.petState, 0, 10), dailyBoss },
-      minutes,
-      undefined,
-      kind,
-      pauses,
-    );
-    if (shouldNudgeWater(r.data)) {
-      setData(markWaterNudged(r.data));
+
+    setData((cur) => {
+      const today = dateStr(new Date());
+      bossDue = boss && !(cur.dailyBoss.date === today && cur.dailyBoss.defeated);
+      const game = bossDue
+        ? defeatBoss(cur.game)
+        : { ...cur.game, catCoins: cur.game.catCoins + POMODORO_REWARD };
+      const dailyBoss: DailyBossState = boss ? { date: today, defeated: true } : cur.dailyBoss;
+      const r = completePomodoroSession(
+        { ...cur, game, petState: bumpPet(cur.petState, 0, 10), dailyBoss },
+        minutes,
+        undefined,
+        kind,
+        pauses,
+      );
+      freshAchievements = r.fresh;
+      if (shouldNudgeWater(r.data)) {
+        nudgeWater = true;
+        return markWaterNudged(r.data);
+      }
+      return r.data;
+    });
+
+    if (nudgeWater) {
       toast("💧 Uống một ly nước nhé!", {
         description: "Hai phiên tập trung liên tiếp rồi đó 🍅🍅",
       });
-    } else setData(r.data);
-    announceAchievements(r.fresh);
+    }
+    announceAchievements(freshAchievements);
     return { bossDue };
   };
   const bossCancel = () => setData((d) => ({ ...d, petState: bossCounterAttack(d.petState) }));
   const claimAchievement = (id: AchievementId) => {
-    const next = claimAchievementReward(dataRef.current, id);
-    if (!next) return false;
-    setData(next);
-    ting();
-    toast.success(`🏆 Đã nhận thưởng +${ACHIEVEMENT_REWARD} 🦎`);
-    return true;
+    let ok = false;
+    setData((d) => {
+      const next = claimAchievementReward(d, id);
+      if (!next) return d;
+      ok = true;
+      return next;
+    });
+    if (ok) {
+      ting();
+      toast.success(`🏆 Đã nhận thưởng +${ACHIEVEMENT_REWARD} 🦎`);
+    }
+    return ok;
   };
 
   const drinkWater = () => {
-    const r = addWaterCup(dataRef.current);
-    if (r.data === dataRef.current) return;
-    setData(r.data);
-    if (r.goalReached) {
+    let goalReached = false;
+    let freshAchievements: AchievementId[] = [];
+    let levelsGained = 0;
+    let newLevel = 1;
+
+    setData((d) => {
+      const r = addWaterCup(d);
+      if (r.data === d) return d;
+      goalReached = r.goalReached;
+      freshAchievements = r.fresh;
+      levelsGained = r.levelsGained;
+      newLevel = r.data.game.level;
+      return r.data;
+    });
+
+    if (goalReached) {
       celebrate();
-      toast.success("Đủ 8 ly nước hôm nay! 🎉");
+      toast.success("Đủ 8 ly nước hôm nay! 🎉 (+1 lượt quay)");
     }
-    announceAchievements(r.fresh);
-    onLevels(r.levelsGained, r.data.game.level);
+    announceAchievements(freshAchievements);
+    onLevels(levelsGained, newLevel);
   };
 
   const spin = (mode: SpinMode = "normal") => {
-    const d = dataRef.current;
-    if (!canSpin(d.game, mode)) return null;
-    const begun = beginSpin(d.game, mode);
-    const { prize, jackpot } = begun;
-    // Grant the prize immediately — closing the tab mid-animation must not eat the reward.
-    const spun = recordSpin(begun.game, prize, jackpot, mode);
-    const drop = rollDrop();
-    setData(addMaterial({ ...d, game: spun.game }, drop));
-    // ...the animation, sound and reveal just catch up 2.6s later.
-    setTimeout(() => {
-      announceDrop(drop);
-      ting();
-      toast.success(
-        jackpot ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!` : `🎡 Bạn nhận được ${prize}`,
-      );
-      onLevels(spun.levelsGained, spun.game.level);
-    }, 2600);
+    let prize: string | null = null;
+    let jackpot = false;
+    let drop: MaterialId | null = null;
+    let levelsGained = 0;
+    let newLevel = 1;
+
+    setData((d) => {
+      if (!canSpin(d.game, mode)) return d;
+      const begun = beginSpin(d.game, mode);
+      prize = begun.prize;
+      jackpot = begun.jackpot;
+      const spun = recordSpin(begun.game, prize, jackpot, mode);
+      drop = rollDrop();
+      levelsGained = spun.levelsGained;
+      newLevel = spun.game.level;
+      return addMaterial({ ...d, game: spun.game }, drop);
+    });
+
+    if (prize) {
+      setTimeout(() => {
+        if (drop) announceDrop(drop);
+        ting();
+        toast.success(
+          jackpot ? `🎰 JACKPOT! +${JACKPOT_TICKETS} lượt quay!` : `🎡 Bạn nhận được ${prize}`,
+        );
+        onLevels(levelsGained, newLevel);
+      }, 2600);
+    }
     return prize;
   };
 
