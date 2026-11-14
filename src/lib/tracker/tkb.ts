@@ -12,7 +12,7 @@ import {
   type Task,
 } from "./model";
 import { shiftDate } from "./gamify";
-import { type ExamEvent } from "./exams";
+import { daysUntil, type ExamEvent } from "./exams";
 
 export interface TkbDefaults {
   morningStart: string; // "HH:MM" — first morning period
@@ -390,6 +390,9 @@ export function addExamPrepTasks(
   today = dateStr(),
   perDay = EXAM_PREP_PER_DAY,
 ): { data: AppData; added: number } {
+  if (daysUntil(exam.date, today) < 0) {
+    return { data, added: 0 };
+  }
   const mins = Math.max(5, data.settings.pomodoroMinutes || 25);
   const count = Math.min(4, Math.max(1, Math.round(perDay)));
   const subject = exam.mon

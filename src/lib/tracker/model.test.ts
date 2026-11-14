@@ -77,6 +77,36 @@ describe("tracker rules", () => {
     expect(d.tasks.filter((t) => t.kind === "exercise" && t.minutes === 5)).toHaveLength(3);
   });
 
+  it("does not resurrect an unpinned task on today even if yesterday was pinned", () => {
+    let d = defaultData();
+    d = {
+      ...d,
+      tasks: [
+        makeTask("Chạy bộ", "custom", 15, "2026-10-18", { pinned: true }),
+        makeTask("Chạy bộ", "custom", 15, "2026-10-19", { pinned: false }),
+      ],
+      game: { ...d.game, lastDailyPinDate: "2026-10-18" },
+    };
+    const next = ensureDailyPins(d, "2026-10-19");
+    const tasks = next.tasks.filter((t) => t.title === "Chạy bộ" && t.date === "2026-10-19");
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]!.pinned).toBe(false);
+  });
+
+  it("does not re-spawn exercise tasks on subsequent days once initialized and unpinned", () => {
+    let d = defaultData();
+    d = ensureDailyPins(d, "2026-10-18");
+    expect(d.tasks.filter((t) => t.kind === "exercise")).toHaveLength(3);
+
+    d = {
+      ...d,
+      tasks: d.tasks.filter((t) => t.kind !== "exercise"),
+    };
+
+    const next = ensureDailyPins(d, "2026-10-19");
+    expect(next.tasks.filter((t) => t.kind === "exercise")).toHaveLength(0);
+  });
+
   it("school TKB slots never auto-become tasks (even tracked ones)", () => {
     let d = defaultData();
     d.timetable.days[0]!.slots.push({

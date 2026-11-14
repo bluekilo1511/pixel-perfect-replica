@@ -71,7 +71,9 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
   const handleDelete = () => {
     update((d) => ({
       ...d,
-      tasks: d.tasks.filter((t) => t.id !== task.id),
+      tasks: d.tasks.filter(
+        (t) => t.id !== task.id && !(t.pinned && t.title === task.title && t.kind === task.kind),
+      ),
     }));
     toast.success("Đã xóa nhiệm vụ");
     onClose();
@@ -320,12 +322,19 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
             size="sm"
             variant={task.pinned ? "secondary" : "ghost"}
             className="h-8 px-2 text-xs"
-            onClick={() =>
+            onClick={() => {
+              const nextPinned = !task.pinned;
               update((d) => ({
                 ...d,
-                tasks: d.tasks.map((t) => (t.id === task.id ? { ...t, pinned: !t.pinned } : t)),
-              }))
-            }
+                tasks: d.tasks.map((t) =>
+                  t.id === task.id ||
+                  (!nextPinned && t.title === task.title && t.kind === task.kind)
+                    ? { ...t, pinned: nextPinned }
+                    : t,
+                ),
+              }));
+              toast.success(nextPinned ? "Đã ghim lặp lại mỗi ngày 📌" : "Đã bỏ ghim 📌");
+            }}
           >
             📌 {task.pinned ? "Đã ghim" : "Ghim"}
           </Button>

@@ -28,7 +28,9 @@ describe("currency synchronization & consistency", () => {
     data.game.catCoins = Math.max(0, itemPrice - 10);
     const failMarket = buyMarket(data, itemInStock, now);
     expect(failMarket.ok).toBe(false);
-    expect(failMarket.reason).toBe("not-enough-coins");
+    if (!failMarket.ok) {
+      expect(failMarket.reason).toBe("not-enough-coins");
+    }
   });
 
   it("handles sequential rewards without losing coin increments", () => {
@@ -76,11 +78,10 @@ describe("currency synchronization & consistency", () => {
 
   it("sells spin tickets accurately and syncs to wallet", () => {
     const game = {
+      ...defaultData().game,
       catCoins: 50,
       lizardGems: 10,
       spinTickets: 7,
-      userXp: 100,
-      userLevel: 2,
     };
 
     // Sells 5 tickets @ 8 coins = 40 coins
@@ -109,15 +110,20 @@ describe("currency synchronization & consistency", () => {
     const originalPrice = MARKET_ITEMS[item]!.price;
 
     const d1 = startHaggle(data, item, now);
-    const h = d1.market!.haggle![item];
-    // Simulate winning pick
-    const d2 = resolveHaggle(d1, item, h.win);
-    expect(d2.market!.haggle![item].picked).toBe(h.win);
+    const h = d1.market?.haggle?.[item];
+    expect(h).toBeDefined();
+    if (h) {
+      // Simulate winning pick
+      const d2 = resolveHaggle(d1, item, h.win);
+      expect(d2.market?.haggle?.[item]?.picked).toBe(h.win);
 
-    // Now buying with 20% discount
-    const expectedDiscounted = Math.max(1, Math.floor(originalPrice * 0.8));
-    const buyRes = buyMarket(d2, item, now);
-    expect(buyRes.ok).toBe(true);
-    expect(buyRes.data.game.catCoins).toBe(100 - expectedDiscounted);
+      // Now buying with 20% discount
+      const expectedDiscounted = Math.max(1, Math.floor(originalPrice * 0.8));
+      const buyRes = buyMarket(d2, item, now);
+      expect(buyRes.ok).toBe(true);
+      if (buyRes.ok) {
+        expect(buyRes.data.game.catCoins).toBe(100 - expectedDiscounted);
+      }
+    }
   });
 });

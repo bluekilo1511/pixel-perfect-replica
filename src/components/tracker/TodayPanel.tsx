@@ -310,12 +310,18 @@ function TaskRow({ task }: { task: Task }) {
         aria-label={task.pinned ? "Bỏ ghim" : "Ghim"}
         title={task.pinned ? "Bỏ ghim" : "Ghim – tự lặp lại mỗi ngày"}
         className={task.pinned ? "" : "opacity-50 hover:opacity-100"}
-        onClick={() =>
+        onClick={() => {
+          const nextPinned = !task.pinned;
           update((d) => ({
             ...d,
-            tasks: d.tasks.map((t) => (t.id === task.id ? { ...t, pinned: !t.pinned } : t)),
-          }))
-        }
+            tasks: d.tasks.map((t) =>
+              t.id === task.id || (!nextPinned && t.title === task.title && t.kind === task.kind)
+                ? { ...t, pinned: nextPinned }
+                : t,
+            ),
+          }));
+          toast.success(nextPinned ? "Đã ghim lặp lại mỗi ngày 📌" : "Đã bỏ ghim 📌");
+        }}
       >
         📌
       </Button>
@@ -412,7 +418,14 @@ function TaskRow({ task }: { task: Task }) {
               variant="ghost"
               aria-label="Xóa"
               onClick={() =>
-                update((d) => ({ ...d, tasks: d.tasks.filter((t) => t.id !== task.id) }))
+                update((d) => ({
+                  ...d,
+                  tasks: d.tasks.filter(
+                    (t) =>
+                      t.id !== task.id &&
+                      !(t.pinned && t.title === task.title && t.kind === task.kind),
+                  ),
+                }))
               }
             >
               ✕
@@ -852,6 +865,8 @@ function AddTask() {
   const [examId, setExamId] = useState<string>("");
   const [subjectSel, setSubjectSel] = useState<string>("");
   const [remind, setRemind] = useState("");
+  const today = dateStr();
+  const upcoming = upcomingExams(data.exams, today);
   // Emoji picked from a saved template; cleared whenever the user switches back to a plain kind.
   const [tplEmoji, setTplEmoji] = useState<string | null>(null);
   // What the select itself shows (a kind or "tpl:<id>") so a template choice doesn't snap back.
@@ -897,6 +912,8 @@ function AddTask() {
     setTitle("");
     setRemind("");
     setTplEmoji(null);
+    setExamId("");
+    setSubjectSel("");
   };
   return (
     <div className="flex flex-wrap gap-2">
@@ -959,17 +976,18 @@ function AddTask() {
           ))}
         </select>
       )}
-      {data.exams.length > 0 && (
+      {upcoming.length > 0 && (
         <select
           className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
           value={examId}
           onChange={(e) => setExamId(e.target.value)}
           aria-label="Gắn kỳ thi"
+          title="Gắn nhiệm vụ vào kỳ thi sắp tới (tuỳ chọn)"
         >
           <option value="">Không gắn thi</option>
-          {data.exams.map((e) => (
+          {upcoming.map((e) => (
             <option key={e.id} value={e.id}>
-              📝 {e.name}
+              📝 {e.name} ({examLabel(e.daysLeft)})
             </option>
           ))}
         </select>

@@ -1741,18 +1741,19 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
     };
   }
   // Pinned tasks from earlier days move to today with completed = false (dedupe by title+kind, keep newest).
+  // CRITICAL FIX: If today already has this task (pinned or unpinned), do not resurrect an old pinned duplicate.
+  const todayExisting = new Set(
+    next.tasks.filter((t) => t.date === today).map((t) => `${t.kind}|${t.title}`),
+  );
   const old = next.tasks.filter((t) => t.pinned && t.date < today);
   if (old.length) {
-    const keys = new Set(
-      next.tasks.filter((t) => t.pinned && t.date === today).map((t) => `${t.kind}|${t.title}`),
-    );
     const keep = new Set<string>();
     [...old]
       .sort((a, b) => b.date.localeCompare(a.date))
       .forEach((t) => {
         const k = `${t.kind}|${t.title}`;
-        if (!keys.has(k)) {
-          keys.add(k);
+        if (!todayExisting.has(k)) {
+          todayExisting.add(k);
           keep.add(t.id);
         }
       });
@@ -1792,7 +1793,9 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
     }
     next = { ...next, lastDiaryDate: today };
   }
-  if (next.game.lastDailyPinDate !== today) {
+  // Only pin default exercise sessions on initial fresh data (lastDailyPinDate === null).
+  // Once initialized, never auto-generate exercise sessions again if the user unpinned or deleted them.
+  if (next.game.lastDailyPinDate === null) {
     const hasExercise = next.tasks.some(
       (t) => t.pinned && t.kind === "exercise" && t.date === today,
     );
@@ -1808,7 +1811,12 @@ export function ensureDailyPins(data: AppData, today = dateStr()): AppData {
       tasks: [...next.tasks, ...pins],
       game: { ...next.game, lastDailyPinDate: today },
     };
-    // Same daily sweep prunes stale task records so the file stays small.
+    next = pruneTasks(next, today);
+  } else if (next.game.lastDailyPinDate !== today) {
+    next = {
+      ...next,
+      game: { ...next.game, lastDailyPinDate: today },
+    };
     next = pruneTasks(next, today);
   }
   return next;

@@ -263,6 +263,15 @@ describe("exam prep & tonight suggestion", () => {
     expect(r2.data.tasks.filter((t) => t.date === today && t.examId === exam.id).length).toBe(4);
   });
 
+  it("never adds prep tasks for past exams", () => {
+    let d = defaultData();
+    d = addExam(d, "Kỳ thi đã qua", "2026-10-10");
+    const exam = d.exams[0]!;
+    const today = "2026-10-22";
+    const r = addExamPrepTasks(d, exam, today);
+    expect(r.added).toBe(0);
+  });
+
   it("suggests the earliest tracked slot tomorrow without a prep task", () => {
     let d = defaultData();
     d = applyTimetableImport(
