@@ -23,6 +23,8 @@ import {
   addSubtask,
   toggleSubtask,
   removeSubtask,
+  deleteSubjectCompletely,
+  mergeSubjects,
   setTaskPriority,
   setTaskEisenhower,
   deduceEisenhower,
@@ -612,5 +614,118 @@ describe("priority, subtasks & eisenhower", () => {
     const next = editTask(d, task.id, { priority: "p1", notes: "Nhớ dẫn nguồn" });
     expect(next?.tasks[0]?.priority).toBe("p1");
     expect(next?.tasks[0]?.notes).toBe("Nhớ dẫn nguồn");
+  });
+
+  it("deleteSubjectCompletely purges subject across grades, extras, notes, combos, and tasks", () => {
+    let d = defaultData();
+    d = {
+      ...d,
+      subjects: ["Toán", "N.Văn", "Tiếng Anh"],
+      gradeBook: [
+        {
+          id: "g1",
+          subject: "N.Văn",
+          semester: 1,
+          type: "tx",
+          score: 8,
+          max: 10,
+          createdAt: "2026-11-08",
+        },
+        {
+          id: "g2",
+          subject: "Toán",
+          semester: 1,
+          type: "tx",
+          score: 9,
+          max: 10,
+          createdAt: "2026-11-08",
+        },
+      ],
+      gradeExtras: [
+        {
+          id: "e1",
+          subject: "N.Văn",
+          semester: 1,
+          label: "Miệng",
+          score: 8,
+          max: 10,
+          createdAt: "2026-11-08",
+        },
+      ],
+      gradeTargets: { "N.Văn": 8.5, Toán: 9 },
+      subjectNotes: { "N.Văn": { good: ["Văn học dân gian"], weak: [], review: [] } },
+      subjectCombos: { KHTN: ["Toán", "N.Văn"] },
+      tasks: [
+        makeTask("Soạn bài N.Văn", "pomodoro", 25, "2026-11-08", { subject: "N.Văn" }),
+        makeTask("Giải Toán", "pomodoro", 25, "2026-11-08", { subject: "Toán" }),
+      ],
+    };
+
+    const cleaned = deleteSubjectCompletely(d, "N.Văn");
+    expect(cleaned.subjects).toEqual(["Toán", "Tiếng Anh"]);
+    expect(cleaned.gradeBook.some((g) => g.subject === "N.Văn")).toBe(false);
+    expect(cleaned.gradeExtras.some((e) => e.subject === "N.Văn")).toBe(false);
+    expect(cleaned.gradeTargets["N.Văn"]).toBeUndefined();
+    expect(cleaned.subjectNotes["N.Văn"]).toBeUndefined();
+    expect(cleaned.subjectCombos["KHTN"]).toBeUndefined();
+    expect(cleaned.tasks[0]?.subject).toBeUndefined();
+    expect(cleaned.tasks[1]?.subject).toBe("Toán");
+  });
+
+  it("mergeSubjects renames grades, extras, and tasks from alias to target subject", () => {
+    let d = defaultData();
+    d = {
+      ...d,
+      subjects: ["Toán", "N.Văn", "Ngữ Văn"],
+      gradeBook: [
+        {
+          id: "g1",
+          subject: "N.Văn",
+          semester: 1,
+          type: "tx",
+          score: 8,
+          max: 10,
+          createdAt: "2026-11-08",
+        },
+        {
+          id: "g2",
+          subject: "Ngữ Văn",
+          semester: 1,
+          type: "gk",
+          score: 8.5,
+          max: 10,
+          createdAt: "2026-11-08",
+        },
+      ],
+      gradeExtras: [
+        {
+          id: "e1",
+          subject: "N.Văn",
+          semester: 1,
+          label: "Miệng",
+          score: 8,
+          max: 10,
+          createdAt: "2026-11-08",
+        },
+      ],
+      tasks: [makeTask("Học N.Văn", "pomodoro", 25, "2026-11-08", { subject: "N.Văn" })],
+    };
+
+    const merged = mergeSubjects(d, "N.Văn", "Ngữ Văn");
+    expect(merged.subjects).toEqual(["Toán", "Ngữ Văn"]);
+    expect(merged.gradeBook.every((g) => g.subject === "Ngữ Văn")).toBe(true);
+    expect(merged.gradeExtras[0]?.subject).toBe("Ngữ Văn");
+    expect(merged.tasks[0]?.subject).toBe("Ngữ Văn");
+  });
+
+  it("deduces eisenhower quadrant from keywords when not explicitly set", () => {
+    const urgentTask = makeTask("Làm bài tập gấp mai nộp", "custom", 20, "2026-11-08");
+    expect(deduceEisenhower(urgentTask)).toBe("do_first");
+
+    const gameTask = makeTask("Lướt mạng giải trí cuối tuần", "custom", 30, "2026-11-08");
+    expect(deduceEisenhower(gameTask)).toBe("dont_do");
+
+    const quickChore = makeTask("Tưới cây", "custom", 0, "2026-11-08");
+    expect(deduceEisenhower(quickChore)).toBe("delegate");
   });
 });

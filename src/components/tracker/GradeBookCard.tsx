@@ -3,7 +3,14 @@ import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addSubject, dateStr, SUBJECTS_MAX } from "@/lib/tracker/model";
+import {
+  addSubject,
+  dateStr,
+  deleteSubjectCompletely,
+  mergeSubjects,
+  SUBJECTS_MAX,
+} from "@/lib/tracker/model";
+import { clearSubjectCombo, comboGrade, comboMembers } from "@/lib/tracker/combos";
 import {
   absorbGradeExtra,
   addGradeEntry,
@@ -23,7 +30,6 @@ import {
   type GradeType,
   type Semester,
 } from "@/lib/tracker/grades";
-import { comboGrade, comboMembers } from "@/lib/tracker/combos";
 
 const TYPE_BUTTONS: { type: GradeType; label: string }[] = [
   { type: "tx", label: "+ TX" },
@@ -63,7 +69,10 @@ export function GradeBookCard() {
   const extras = active
     ? data.gradeExtras.filter((e) => e.subject === active && e.semester === semester)
     : [];
-  const grade = active ? subjectGrade(data.gradeBook, active, semester) : null;
+  const directGrade = active ? subjectGrade(data.gradeBook, active, semester) : null;
+  const comboMembersList = active ? comboMembers(data, active) : undefined;
+  const comboAvg = comboMembersList ? comboGrade(data.gradeBook, comboMembersList, semester) : null;
+  const grade = directGrade !== null ? directGrade : comboAvg;
   const targetNum = active ? gradeTarget(data.gradeTargets, active) : 8;
   const advice = active ? gradeAdvice(data.gradeBook, active, semester, targetNum) : null;
   const legacyCount = data.examScores.length;
@@ -213,6 +222,21 @@ export function GradeBookCard() {
     return null;
   })();
 
+  const DUPLICATE_PAIRS: [string, string][] = [
+    ["N.Văn", "Ngữ Văn"],
+    ["N.văn", "Ngữ Văn"],
+    ["Văn", "Ngữ Văn"],
+    ["Sử", "Lịch sử"],
+    ["Địa", "Địa lý"],
+    ["GDCD", "Giáo dục công dân"],
+  ];
+  const detectedDups = DUPLICATE_PAIRS.filter(
+    ([shortName, fullName]) =>
+      chips.some((c) => c.toLowerCase() === shortName.toLowerCase()) &&
+      chips.some((c) => c.toLowerCase() === fullName.toLowerCase()) &&
+      shortName.toLowerCase() !== fullName.toLowerCase(),
+  );
+
   return (
     <section className="glass p-5" aria-label="Sổ điểm">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -236,6 +260,39 @@ export function GradeBookCard() {
         chắc.
       </p>
 
+      {detectedDups.map(([shortName, fullName]) => {
+        const actualShort =
+          chips.find((c) => c.toLowerCase() === shortName.toLowerCase()) || shortName;
+        const actualFull =
+          chips.find((c) => c.toLowerCase() === fullName.toLowerCase()) || fullName;
+        return (
+          <div
+            key={`${actualShort}-${actualFull}`}
+            className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-800 dark:text-amber-200"
+          >
+            <div className="flex items-center gap-2">
+              <span>💡</span>
+              <span>
+                Phát hiện 2 tên của cùng một môn: <strong>{actualShort}</strong> và{" "}
+                <strong>{actualFull}</strong>.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-amber-500/50 bg-background hover:bg-amber-500/20"
+              onClick={() => {
+                update((d) => mergeSubjects(d, actualShort, actualFull));
+                setSel(actualFull);
+                toast.success(`Đã gộp "${actualShort}" vào "${actualFull}" 📚`);
+              }}
+            >
+              Gộp {actualShort} vào {actualFull}
+            </Button>
+          </div>
+        );
+      })}
+
       {legacyCount > 0 && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
           <p className="text-sm">
@@ -250,9 +307,13 @@ export function GradeBookCard() {
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {chips.map((c) => {
           const members = comboMembers(data, c);
-          const g = members
-            ? comboGrade(data.gradeBook, members, semester)
-            : subjectGrade(data.gradeBook, c, semester);
+          const directG = subjectGrade(data.gradeBook, c, semester);
+          const g =
+            directG !== null
+              ? directG
+              : members
+                ? comboGrade(data.gradeBook, members, semester)
+                : null;
           return (
             <button key={c} type="button" onClick={() => setSel(c)} className={chipCls(c)}>
               {members && <span title="Môn tổ hợp">🧩</span>}
@@ -286,28 +347,40 @@ export function GradeBookCard() {
         const members = active ? comboMembers(data, active) : undefined;
         if (!members) return null;
         const avg = comboGrade(data.gradeBook, members, semester);
+        const hasDirectMarks = tx.length + gk.length + ck.length > 0;
         return (
-          <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
-            <p className="mb-2 text-sm font-medium">
-              🧩 {active} là môn tổ hợp — mỗi môn thành viên có sổ điểm riêng của nó.
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {members.map((m) => {
-                const g = subjectGrade(data.gradeBook, m, semester);
-                return (
-                  <button key={m} type="button" onClick={() => setSel(m)} className={chipCls(m)}>
-                    {m}
-                    {g !== null && <span className="ml-1 tabular-nums opacity-75">{g}</span>}
-                  </button>
-                );
-              })}
-              <span className="ml-1 text-sm">
-                Điểm tổ hợp: <strong className="tabular-nums">{avg !== null ? avg : "—"}</strong>{" "}
-                <span className="text-xs text-muted-foreground">
-                  (trung bình các môn đã có điểm)
-                </span>
-              </span>
+          <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold">
+                🧩 {active} đang được gán phân môn: {members.join(", ")}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs font-medium"
+                onClick={() => {
+                  update((d) => clearSubjectCombo(d, active));
+                  toast.success(`Đã gỡ tổ hợp. ${active} nay được tính là 1 môn độc lập!`);
+                }}
+              >
+                Gỡ tổ hợp (Tính là 1 môn riêng Cấp 2)
+              </Button>
             </div>
+            {hasDirectMarks ? (
+              <p className="text-xs text-primary font-medium">
+                ✓ Đang tính theo điểm kiểm tra riêng của môn {active}.
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                <span>
+                  Điểm trung bình các phân môn:{" "}
+                  <strong className="text-foreground tabular-nums">
+                    {avg !== null ? avg : "—"}
+                  </strong>
+                </span>
+                <span>· Hoặc nhập điểm TX/GK/CK bên dưới để tính trực tiếp cho {active}.</span>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -338,46 +411,58 @@ export function GradeBookCard() {
                 ))}
               </div>
             ) : (
-              <div className={`${colCls} min-w-40 border-primary/40`}>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                  Cột mới · {GRADE_TYPE_META[adding].label}
-                </p>
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    step="0.25"
-                    min={0}
-                    placeholder="Điểm"
-                    aria-label="Điểm"
-                    value={score}
-                    onChange={(e) => setScore(e.target.value)}
-                    className="h-7 w-16 text-xs"
-                  />
-                  <Input
-                    type="number"
-                    min={1}
-                    aria-label="Thang điểm"
-                    value={max}
-                    onChange={(e) => setMax(e.target.value)}
-                    className="h-7 w-12 text-xs"
-                  />
+              <div className="rounded-xl border border-primary/50 bg-card p-3 shadow-md w-64 space-y-2">
+                <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                    + Cột mới: {GRADE_TYPE_META[adding].label}
+                  </p>
+                  <span className="text-[11px] text-muted-foreground">Thang 10</span>
+                </div>
+                <div>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min={0}
+                      max={10}
+                      placeholder="Nhập điểm (0 - 10)"
+                      aria-label="Điểm số"
+                      value={score}
+                      onChange={(e) => setScore(e.target.value)}
+                      className="h-8 text-sm pr-12 font-medium"
+                      autoFocus
+                      onKeyDown={(e) => e.key === "Enter" && add(adding)}
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground select-none font-medium">
+                      / 10
+                    </span>
+                  </div>
                 </div>
                 <Input
-                  placeholder="Ghi chú (tuỳ chọn)"
+                  placeholder="Ghi chú (tuỳ chọn, vd: KT 15p, Miệng)"
                   value={title}
-                  maxLength={24}
+                  maxLength={30}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="mt-1 h-7 text-xs"
+                  className="h-7 text-xs"
+                  onKeyDown={(e) => e.key === "Enter" && add(adding)}
                 />
-                <div className="mt-1 flex gap-1">
-                  <Button size="sm" className="h-7 flex-1 text-xs" onClick={() => add(adding)}>
-                    Lưu
+                <div className="flex gap-1.5 pt-1">
+                  <Button
+                    size="sm"
+                    className="h-7 flex-1 text-xs font-semibold"
+                    onClick={() => add(adding)}
+                  >
+                    Lưu điểm
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="h-7 text-xs"
-                    onClick={() => setAdding(null)}
+                    onClick={() => {
+                      setAdding(null);
+                      setScore("");
+                      setTitle("");
+                    }}
                   >
                     Hủy
                   </Button>
@@ -399,25 +484,48 @@ export function GradeBookCard() {
                 <>Cần ít nhất 1 cột TX và 1 cột CK để tính điểm môn.</>
               )}
             </span>
-            <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-              Mục tiêu {active && <span className="text-foreground/80">{active}</span>}
-              <Input
-                type="number"
-                step="0.5"
-                min={1}
-                max={10}
-                value={active ? String(gradeTarget(data.gradeTargets, active)) : ""}
-                onChange={(e) =>
-                  active &&
-                  update((d) => ({
-                    ...d,
-                    gradeTargets: setGradeTarget(d.gradeTargets, active, Number(e.target.value)),
-                  }))
-                }
-                aria-label={`Điểm mục tiêu ${active}`}
-                className="h-7 w-14 text-xs tabular-nums"
-              />
-            </span>
+            <div className="ml-auto flex items-center gap-2">
+              {active && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Bạn có chắc muốn xoá môn "${active}" và toàn bộ điểm số của môn này không?`,
+                      )
+                    ) {
+                      update((d) => deleteSubjectCompletely(d, active));
+                      setSel("");
+                      toast.success(`Đã xoá môn ${active} khỏi sổ điểm 🗑️`);
+                    }
+                  }}
+                  title={`Xoá môn ${active} và toàn bộ điểm`}
+                >
+                  🗑️ Xoá môn
+                </Button>
+              )}
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                Mục tiêu {active && <span className="text-foreground/80">{active}</span>}
+                <Input
+                  type="number"
+                  step="0.5"
+                  min={1}
+                  max={10}
+                  value={active ? String(gradeTarget(data.gradeTargets, active)) : ""}
+                  onChange={(e) =>
+                    active &&
+                    update((d) => ({
+                      ...d,
+                      gradeTargets: setGradeTarget(d.gradeTargets, active, Number(e.target.value)),
+                    }))
+                  }
+                  aria-label={`Điểm mục tiêu ${active}`}
+                  className="h-7 w-14 text-xs tabular-nums"
+                />
+              </span>
+            </div>
             {adviceLine && <p className="w-full text-sm text-foreground/90">{adviceLine}</p>}
           </div>
 

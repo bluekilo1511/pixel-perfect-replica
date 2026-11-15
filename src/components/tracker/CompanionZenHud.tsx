@@ -16,6 +16,7 @@ import {
 import { moodOf, MOOD_META } from "@/lib/tracker/gamify";
 import { WATER_GOAL, dateStr } from "@/lib/tracker/model";
 import { requestTimerFullscreen } from "./TimerFullscreen";
+import { matchSubject } from "@/lib/tracker/tkb";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -23,7 +24,8 @@ interface Props {
 }
 
 export function CompanionZenHud({ onSelectTask }: Props) {
-  const { data, update, timer, startTimer, pauseTimer, drinkWater } = useTracker();
+  const { data, update, timer, startTimer, pauseTimer, resetTimer, finish, drinkWater } =
+    useTracker();
   const activeTaskId = timer?.taskId ?? null;
   const today = dateStr();
   const focusToday = data.dailyStats[today]?.focusMin ?? 0;
@@ -186,51 +188,110 @@ export function CompanionZenHud({ onSelectTask }: Props) {
           </div>
 
           {nextTask ? (
-            <div className="space-y-2">
-              <div
-                className="rounded-xl border border-border/60 bg-background/80 p-2 text-xs cursor-pointer hover:border-primary transition"
-                onClick={() => onSelectTask?.(nextTask.id)}
-              >
-                <p className="font-semibold truncate">{nextTask.title}</p>
-                <div className="flex justify-between text-[11px] text-muted-foreground mt-0.5">
-                  <span>{nextTask.subject ? `📚 ${nextTask.subject}` : "Tự do"}</span>
-                  <span className="font-mono font-bold text-foreground">
-                    {Math.floor(nextSecs / 60)}:{String(nextSecs % 60).padStart(2, "0")}
-                  </span>
-                </div>
-              </div>
+            (() => {
+              const detectedSub = nextTask.subject || matchSubject(data, nextTask.title);
+              const isRunning = activeTaskId === nextTask.id;
+              const isPaused =
+                !isRunning &&
+                nextTask.remainingSeconds > 0 &&
+                nextTask.remainingSeconds < nextTask.minutes * 60;
 
-              <div className="flex gap-1.5">
-                {activeTaskId === nextTask.id ? (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="flex-1 h-8 text-xs"
-                      onClick={pauseTimer}
-                    >
-                      ⏸ Dừng
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs px-2.5"
-                      onClick={requestTimerFullscreen}
-                    >
-                      ⛶ Toàn màn
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="flex-1 h-8 text-xs"
-                    onClick={() => startTimer(nextTask.id)}
+              return (
+                <div className="space-y-2">
+                  <div
+                    className="rounded-xl border border-border/60 bg-background/80 p-2 text-xs cursor-pointer hover:border-primary transition"
+                    onClick={() => onSelectTask?.(nextTask.id)}
+                    title="Bấm để xem chi tiết hoặc chỉnh sửa nhiệm vụ này"
                   >
-                    ▶ Bắt đầu ({nextTask.minutes}p)
-                  </Button>
-                )}
-              </div>
-            </div>
+                    <p className="font-semibold truncate">{nextTask.title}</p>
+                    <div className="flex justify-between text-[11px] text-muted-foreground mt-0.5">
+                      <span>{detectedSub ? `📚 ${detectedSub}` : "📝 Việc chung"}</span>
+                      <span className="font-mono font-bold text-foreground">
+                        {Math.floor(nextSecs / 60)}:{String(nextSecs % 60).padStart(2, "0")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {isRunning ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="flex-1 h-8 text-xs font-semibold"
+                          onClick={pauseTimer}
+                          title="Tạm dừng phiên"
+                        >
+                          ⏸ Dừng
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs font-semibold px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          onClick={() => finish(nextTask.id, true)}
+                          title="Hoàn thành nhiệm vụ sớm & nhận thưởng"
+                        >
+                          ✓ Xong
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs px-2"
+                          onClick={requestTimerFullscreen}
+                          title="Toàn màn hình tập trung"
+                        >
+                          ⛶
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs px-2 text-muted-foreground hover:text-destructive"
+                          onClick={() => resetTimer(nextTask.id)}
+                          title="Hủy phiên tập trung này"
+                        >
+                          ✕
+                        </Button>
+                      </>
+                    ) : isPaused ? (
+                      <>
+                        <Button
+                          size="sm"
+                          className="flex-1 h-8 text-xs font-semibold"
+                          onClick={() => startTimer(nextTask.id)}
+                        >
+                          ▶ Tiếp tục ({Math.ceil(nextSecs / 60)}p)
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs px-2.5"
+                          onClick={() => finish(nextTask.id, false)}
+                          title="Đánh dấu hoàn thành"
+                        >
+                          ✓ Xong
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs px-2 text-muted-foreground hover:text-destructive"
+                          onClick={() => resetTimer(nextTask.id)}
+                          title="Đặt lại thời gian ban đầu"
+                        >
+                          ↺
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="flex-1 h-8 text-xs font-semibold"
+                        onClick={() => startTimer(nextTask.id)}
+                      >
+                        ▶ Bắt đầu ({nextTask.minutes}p)
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <p className="text-xs text-muted-foreground py-1 text-center">
               Chưa có nhiệm vụ hẹn giờ nào hôm nay.

@@ -109,6 +109,7 @@ interface Store {
   download: () => void;
   startTimer: (id: string) => void;
   pauseTimer: () => void;
+  resetTimer: (id?: string) => void;
   finish: (id: string, fromTimer?: boolean) => void;
   drinkWater: () => void;
   spin: (mode?: SpinMode) => string | null;
@@ -389,6 +390,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
 
   const finish = useCallback(
     (id: string, fromTimer = false) => {
+      setTimer((t) => (t?.taskId === id ? null : t));
       let rewarded = false;
       let rData: AppData | null = null;
       let levelsGained = 0;
@@ -476,6 +478,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       const remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
       if (remaining <= 0) {
         clearInterval(iv);
+        setTimer(null);
         finish(timer.taskId, true);
         return;
       }
@@ -501,6 +504,21 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       };
     });
     setTimer(null);
+  };
+
+  const resetTimer = (id?: string) => {
+    const targetId = id ?? timer?.taskId;
+    if (timer && (!id || timer.taskId === id)) {
+      setTimer(null);
+    }
+    if (targetId) {
+      setData((d) => ({
+        ...d,
+        tasks: d.tasks.map((t) =>
+          t.id === targetId ? { ...t, remainingSeconds: t.minutes * 60 } : t,
+        ),
+      }));
+    }
   };
 
   const startTimer = (id: string) => {
@@ -834,6 +852,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         download,
         startTimer,
         pauseTimer,
+        resetTimer,
         finish,
         drinkWater,
         spin,

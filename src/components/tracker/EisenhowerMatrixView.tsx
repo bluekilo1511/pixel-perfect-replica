@@ -150,9 +150,46 @@ export function EisenhowerMatrixView({ onSelectTask, selectedTaskId }: Props) {
                           </div>
                         </div>
 
-                        <span className="text-[11px] opacity-0 group-hover:opacity-100 text-muted-foreground transition">
-                          ✎
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <select
+                            value={q}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const nextQ = e.target.value as EisenhowerQuadrant;
+                              const prio =
+                                nextQ === "do_first"
+                                  ? "p1"
+                                  : nextQ === "schedule"
+                                    ? "p2"
+                                    : nextQ === "delegate"
+                                      ? "p3"
+                                      : "p4";
+                              update((d) => ({
+                                ...d,
+                                tasks: d.tasks.map((task) =>
+                                  task.id === t.id
+                                    ? { ...task, eisenhower: nextQ, priority: prio }
+                                    : task,
+                                ),
+                              }));
+                              toast.success(`Đã chuyển sang ${EISENHOWER_META[nextQ].badge}`);
+                            }}
+                            className="h-6 rounded border border-border/60 bg-background/90 px-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+                            title="Đổi sang ô khác"
+                          >
+                            <option value="do_first">🔴 Q1 Làm ngay</option>
+                            <option value="schedule">🟡 Q2 Lên lịch</option>
+                            <option value="delegate">🔵 Q3 Giao việc</option>
+                            <option value="dont_do">⚪ Q4 Cắt giảm</option>
+                          </select>
+                          <span
+                            className="text-[11px] opacity-0 group-hover:opacity-100 text-muted-foreground transition"
+                            title="Chi tiết nhiệm vụ"
+                          >
+                            ✎
+                          </span>
+                        </div>
                       </div>
                     );
                   })

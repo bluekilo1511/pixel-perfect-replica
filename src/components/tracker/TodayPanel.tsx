@@ -25,6 +25,9 @@ import {
   saveTaskAsTemplate,
   setTaskMood,
   syncTodaySlots,
+  EISENHOWER_META,
+  deduceEisenhower,
+  type EisenhowerQuadrant,
   taskFromTemplate,
   updateExam,
   WATER_GOAL,
@@ -263,6 +266,39 @@ function TaskRow({ task }: { task: Task }) {
           {PRIORITY_META[task.priority].short}
         </span>
       )}
+      {(() => {
+        const q = deduceEisenhower(task, data.exams);
+        const meta = EISENHOWER_META[q];
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const order: EisenhowerQuadrant[] = ["do_first", "schedule", "delegate", "dont_do"];
+              const nextQ = order[(order.indexOf(q) + 1) % order.length]!;
+              const prio =
+                nextQ === "do_first"
+                  ? "p1"
+                  : nextQ === "schedule"
+                    ? "p2"
+                    : nextQ === "delegate"
+                      ? "p3"
+                      : "p4";
+              update((d) => ({
+                ...d,
+                tasks: d.tasks.map((t) =>
+                  t.id === task.id ? { ...t, eisenhower: nextQ, priority: prio } : t,
+                ),
+              }));
+              toast.success(`Đã đổi ô: ${EISENHOWER_META[nextQ].badge}`);
+            }}
+            className={`rounded-full border border-border/50 px-2 py-0.5 text-[11px] font-bold transition hover:scale-105 ${meta.colorClass}`}
+            title={`Ma trận Eisenhower: ${meta.badge} · Bấm để đổi ô`}
+          >
+            🧭 {meta.badge}
+          </button>
+        );
+      })()}
       {task.subject && (
         <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
           📚 {task.subject}
@@ -865,6 +901,7 @@ function AddTask() {
   const [examId, setExamId] = useState<string>("");
   const [subjectSel, setSubjectSel] = useState<string>("");
   const [remind, setRemind] = useState("");
+  const [eisenhower, setEisenhower] = useState<EisenhowerQuadrant | "">("");
   const today = dateStr();
   const upcoming = upcomingExams(data.exams, today);
   // Emoji picked from a saved template; cleared whenever the user switches back to a plain kind.
@@ -905,6 +942,19 @@ function AddTask() {
             ...(subject ? { subject } : {}),
             ...(remind ? { remindAt: remind } : {}),
             ...(tplEmoji ? { emoji: tplEmoji } : {}),
+            ...(eisenhower
+              ? {
+                  eisenhower,
+                  priority:
+                    eisenhower === "do_first"
+                      ? "p1"
+                      : eisenhower === "schedule"
+                        ? "p2"
+                        : eisenhower === "delegate"
+                          ? "p3"
+                          : "p4",
+                }
+              : {}),
           }),
         ],
       };
@@ -913,6 +963,7 @@ function AddTask() {
     setRemind("");
     setTplEmoji(null);
     setExamId("");
+    setEisenhower("");
     setSubjectSel("");
   };
   return (
@@ -992,6 +1043,19 @@ function AddTask() {
           ))}
         </select>
       )}
+      <select
+        className="h-9 rounded-md border border-input bg-popover px-2 text-sm"
+        value={eisenhower}
+        onChange={(e) => setEisenhower(e.target.value as EisenhowerQuadrant | "")}
+        aria-label="Ô Eisenhower"
+        title="Phân loại vào ô ma trận Eisenhower (tuỳ chọn)"
+      >
+        <option value="">🧭 Ô: Tự động xếp</option>
+        <option value="do_first">🔴 Q1: Làm ngay</option>
+        <option value="schedule">🟡 Q2: Lên lịch</option>
+        <option value="delegate">🔵 Q3: Giao việc</option>
+        <option value="dont_do">⚪ Q4: Cắt giảm</option>
+      </select>
       <Input
         type="time"
         className="w-28"

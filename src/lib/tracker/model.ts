@@ -2165,6 +2165,84 @@ export function removeSubject(data: AppData, name: string): AppData {
   return removeSubjectNote(withoutSubject, name);
 }
 
+/**
+ * Completely purges a subject from the app, including gradeBook, gradeExtras,
+ * gradeTargets, subjectNotes, subjectCombos, and un-tags it from tasks.
+ */
+export function deleteSubjectCompletely(data: AppData, name: string): AppData {
+  const cleanName = name.trim();
+  const lower = cleanName.toLowerCase();
+  const withoutCombos = removeSubjectFromCombos(data, cleanName);
+  const nextTargets = { ...data.gradeTargets };
+  delete nextTargets[cleanName];
+
+  return {
+    ...data,
+    subjects: data.subjects.filter((s) => s.toLowerCase() !== lower),
+    subjectCombos: withoutCombos,
+    gradeBook: data.gradeBook.filter((e) => e.subject.toLowerCase() !== lower),
+    gradeExtras: data.gradeExtras.filter((e) => e.subject.toLowerCase() !== lower),
+    gradeTargets: nextTargets,
+    subjectNotes: removeSubjectNote(data, cleanName).subjectNotes,
+    tasks: data.tasks.map((t) => {
+      if (t.subject?.toLowerCase() !== lower) return t;
+      const { subject: _drop, ...rest } = t;
+      return rest as Task;
+    }),
+  };
+}
+
+/**
+ * Merges fromName into toName: migrates all grades, extras, and task tags,
+ * then completely removes fromName.
+ */
+export function mergeSubjects(data: AppData, fromName: string, toName: string): AppData {
+  const fromClean = fromName.trim();
+  const toClean = toName.trim();
+  const fromLower = fromClean.toLowerCase();
+  const toLower = toClean.toLowerCase();
+  if (!fromClean || !toClean || fromLower === toLower) return data;
+
+  const withToSubject = data.subjects.some((s) => s.toLowerCase() === toLower)
+    ? data.subjects.filter((s) => s.toLowerCase() !== fromLower)
+    : [...data.subjects.filter((s) => s.toLowerCase() !== fromLower), toClean];
+
+  const nextGradeBook = data.gradeBook.map((e) =>
+    e.subject.toLowerCase() === fromLower ? { ...e, subject: toClean } : e,
+  );
+  const nextGradeExtras = data.gradeExtras.map((e) =>
+    e.subject.toLowerCase() === fromLower ? { ...e, subject: toClean } : e,
+  );
+  const nextTasks = data.tasks.map((t) =>
+    t.subject?.toLowerCase() === fromLower ? { ...t, subject: toClean } : t,
+  );
+
+  const nextTargets = { ...data.gradeTargets };
+  if (nextTargets[fromClean] !== undefined && nextTargets[toClean] === undefined) {
+    nextTargets[toClean] = nextTargets[fromClean]!;
+  }
+  delete nextTargets[fromClean];
+
+  const nextNotes = { ...data.subjectNotes };
+  if (nextNotes[fromClean] && !nextNotes[toClean]) {
+    nextNotes[toClean] = nextNotes[fromClean]!;
+  }
+  delete nextNotes[fromClean];
+
+  const withoutCombos = removeSubjectFromCombos(data, fromClean);
+
+  return {
+    ...data,
+    subjects: withToSubject,
+    gradeBook: nextGradeBook,
+    gradeExtras: nextGradeExtras,
+    gradeTargets: nextTargets,
+    subjectNotes: nextNotes,
+    subjectCombos: withoutCombos,
+    tasks: nextTasks,
+  };
+}
+
 /** Tags (or untags with null) an unfinished task with a study subject. */
 export function setTaskSubject(
   data: AppData,
@@ -2239,7 +2317,28 @@ export function deduceEisenhower(
   if (task.priority === "p4") return "dont_do";
   if (task.priority === "p3") return "delegate";
   if (task.examId) return "do_first";
-  if (task.kind === "pomodoro" || task.minutes >= 30) return "schedule";
+
+  const lower = task.title.toLowerCase();
+  if (
+    lower.includes("gấp") ||
+    lower.includes("khẩn") ||
+    lower.includes("thi") ||
+    lower.includes("kiểm tra") ||
+    lower.includes("hạn chót") ||
+    lower.includes("deadline")
+  ) {
+    return "do_first";
+  }
+  if (
+    lower.includes("chơi") ||
+    lower.includes("lướt") ||
+    lower.includes("game") ||
+    lower.includes("giải trí")
+  ) {
+    return "dont_do";
+  }
+  if (task.kind === "custom" && task.minutes === 0) return "delegate";
+  if (task.kind === "pomodoro" || task.minutes >= 15) return "schedule";
   return "schedule";
 }
 
