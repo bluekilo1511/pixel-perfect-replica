@@ -13,6 +13,7 @@ import { grantStudyReward } from "../lib/tracker/study";
 describe("currency synchronization & consistency", () => {
   it("never produces negative currencies during purchases", () => {
     const data = defaultData();
+    data.game.level = 10;
     data.game.catCoins = 5;
 
     // Buying convenience costing 30 coins should fail and keep balance intact

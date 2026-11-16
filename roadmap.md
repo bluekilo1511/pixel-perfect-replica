@@ -8,10 +8,10 @@
 
 # V4 mega-upgrade
 
-- [ ] Data Vault: telemetry, equippedAccessory, frosted vault UI + neon seal
-- [ ] Alchemy Forge 3x3 grid with 3 recipes + golden blast
-- [ ] Pet Expeditions (>50 min focus) with parallax + loot on completion
-- [ ] Void Market stale-task sacrifice
-- [ ] Constellation Map of achievements (claim by click)
-- [ ] Astral Observatory + dynamic weather (sparks / rain / snow)
-- [ ] Tests for new rules
+- [x] Data Vault: telemetry, equippedAccessory, frosted vault UI + neon seal
+- [x] Alchemy Forge 3x3 grid with 3 recipes + golden blast
+- [x] Pet Expeditions (>50 min focus) with parallax + loot on completion
+- [x] Void Market stale-task sacrifice
+- [x] Constellation Map of achievements (claim by click)
+- [x] Astral Observatory + dynamic weather (sparks / rain / snow)
+- [x] Tests for new rules

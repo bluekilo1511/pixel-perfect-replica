@@ -8,9 +8,28 @@ const toMin = (hm: string) => {
   return (h ?? 0) * 60 + (m ?? 0);
 };
 
+export const WEATHER_CHANGE_EVENT = "tt-weather-change";
+
 export function useWeather(): Weather {
   const { data } = useTracker();
   const [nowMin, setNowMin] = useState<number | null>(null);
+  const [override, setOverride] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("tt-weather-override");
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const onWeatherChange = (e: Event) => {
+      const custom = e as CustomEvent<{ weather: string }>;
+      setOverride(custom.detail?.weather ?? null);
+    };
+    window.addEventListener(WEATHER_CHANGE_EVENT, onWeatherChange);
+    return () => window.removeEventListener(WEATHER_CHANGE_EVENT, onWeatherChange);
+  }, []);
+
   useEffect(() => {
     const tick = () => {
       const n = new Date();
@@ -20,6 +39,13 @@ export function useWeather(): Weather {
     const iv = setInterval(tick, 60000);
     return () => clearInterval(iv);
   }, []);
+
+  if (override && override !== "auto") {
+    if (["sunny", "rainy", "snowy", "foggy"].includes(override)) {
+      return override as Weather;
+    }
+  }
+
   const today = dateStr();
   const todayDone = data.tasks.filter((t) => t.date === today && t.completed).length;
   const overdue =
@@ -31,6 +57,7 @@ export function useWeather(): Weather {
           const end = t.timeRange?.split(" - ")[1];
           return t.date === today && !!end && toMin(end) < nowMin;
         }).length;
+
   return weatherOf({
     todayDone,
     pomodorosToday: data.dailyStats[today]?.pomodoros ?? 0,

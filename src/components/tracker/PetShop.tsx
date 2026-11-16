@@ -33,6 +33,8 @@ import {
 } from "@/lib/tracker/extras";
 import { dateStr } from "@/lib/tracker/model";
 import { MarketCard } from "./MarketCard";
+import { AlchemyForge } from "./AlchemyForge";
+import { VoidMarket } from "./VoidMarket";
 import { ConvenienceCard } from "./ConvenienceCard";
 import { celebrate } from "@/lib/tracker/effects";
 import { logPetEvent } from "@/lib/tracker/petLog";
@@ -163,46 +165,10 @@ export function PetShop() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-2" data-pet-interactions>
-      <section className="glass p-5 lg:col-span-2">
-        <h2 className="mb-1 text-lg font-semibold">⚗️ Lò Giả Kim</h2>
-        <p className="mb-3 text-sm text-muted-foreground">
-          Hoàn thành task hoặc quay thưởng có 20% cơ hội rơi nguyên liệu. Kết hợp chúng để rèn đồ
-          siêu hiếm — không tốn 🦎.
-        </p>
-        <div className="mb-4 flex flex-wrap gap-2">
-          {MATERIAL_IDS.map((id) => (
-            <span key={id} className="rounded-full bg-secondary px-3 py-1.5 text-sm">
-              {MATERIALS[id].emoji} {MATERIALS[id].name} ×{mats[id] ?? 0}
-            </span>
-          ))}
-        </div>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {RECIPES.map((r) => {
-            const ok = canCraft(mats, r);
-            const owned =
-              "accessory" in r.result && pet.ownedAccessories.includes(r.result.accessory);
-            return (
-              <li
-                key={r.id}
-                className={`flex items-center gap-3 rounded-xl p-3 ${ok && !owned ? "bg-secondary glass-glow" : "bg-muted"}`}
-              >
-                <span className="text-4xl">{r.emoji}</span>
-                <div className="flex-1 text-sm">
-                  <p className="font-medium">{r.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {MATERIAL_IDS.filter((id) => r.cost[id])
-                      .map((id) => `${MATERIALS[id].emoji}×${r.cost[id]}`)
-                      .join(" + ")}
-                  </p>
-                </div>
-                <Button size="sm" disabled={!ok || owned} onClick={() => craft(r)}>
-                  {owned ? "Đã có" : "Rèn"}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <div className="lg:col-span-2 space-y-5">
+        <AlchemyForge />
+        <VoidMarket />
+      </div>
       <section className="glass p-5">
         <h2 className="mb-1 text-lg font-semibold">🛒 Cửa hàng 😺</h2>
         <p className="mb-4 text-sm text-muted-foreground">

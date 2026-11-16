@@ -25,6 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AmbientControl } from "./AmbientControl";
+import { AstralObservatory } from "./AstralObservatory";
+import { DataVault } from "./DataVault";
 import { TimeCapsuleButton } from "./TimeCapsule";
 import { OriginButton } from "./OriginOverlay";
 import { cleanupData, dataHealth, removedTotal } from "@/lib/tracker/dataHealth";
@@ -150,6 +152,10 @@ export function SettingsPanel() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
+      <div className="lg:col-span-2 space-y-5">
+        <AstralObservatory />
+        <DataVault />
+      </div>
       <section className="glass p-5">
         <h2 className="mb-1 text-lg font-semibold">⚙️ Cài đặt</h2>
         <p className="mb-4 text-xs text-muted-foreground">
