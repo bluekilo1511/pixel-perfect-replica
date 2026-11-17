@@ -11,6 +11,9 @@ import { PetAura } from "./PetAura";
 import { accessoryClass, petEmoji } from "@/lib/tracker/extras";
 import { Button } from "@/components/ui/button";
 import { BreathWidget } from "@/components/tracker/BreathWidget";
+import { SecretManifestoModal } from "./SecretManifestoModal";
+import { PetHoldRing } from "./PetHoldRing";
+import { usePetHoldTrigger } from "@/lib/tracker/usePetHoldTrigger";
 import { AmbientControl } from "./AmbientControl";
 import { X, Maximize2, Minimize2, Sparkles, Coffee, AlertTriangle, ShieldAlert } from "lucide-react";
 
@@ -44,6 +47,13 @@ export function FocusMode({
   onClose,
 }: FocusModeProps) {
   const [isFs, setIsFs] = useState(false);
+  const [manifestoOpen, setManifestoOpen] = useState(false);
+  const { isHolding, holdProgress, handlers: petHoldHandlers } = usePetHoldTrigger({
+    onHoldComplete: () => {
+      setManifestoOpen(true);
+    },
+    holdDurationMs: 3000,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -150,7 +160,14 @@ export function FocusMode({
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-4 text-center">
         <div className="flex max-w-xl flex-col items-center">
           {/* Companion Pedestal */}
-          <div className="mb-6 flex flex-col items-center gap-3">
+          <div
+            {...petHoldHandlers}
+            className="mb-6 flex flex-col items-center gap-3 relative cursor-pointer select-none touch-none"
+            title="Chạm để trò chuyện • Giữ 3 giây để mở Thư Bí Mật 📜"
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <PetHoldRing isHolding={isHolding} progress={holdProgress} size={140} />
+            </div>
             <span
               className={`relative block text-7xl sm:text-8xl leading-none ${
                 running ? "animate-pet-idle" : "animate-pet-dance"
@@ -220,6 +237,12 @@ export function FocusMode({
           Thu nhỏ (Esc)
         </Button>
       </footer>
+
+      <SecretManifestoModal
+        open={manifestoOpen}
+        onClose={() => setManifestoOpen(false)}
+        petName={pet.petName || SPECIES[pet.species].name}
+      />
     </div>
   );
 }

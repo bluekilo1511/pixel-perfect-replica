@@ -23,6 +23,9 @@ import { PetAura } from "./PetAura";
 import { StudyRoom3D } from "./StudyRoom3D";
 import { ExpeditionScene } from "./ExpeditionScene";
 import { JournalModal } from "./JournalModal";
+import { SecretManifestoModal } from "./SecretManifestoModal";
+import { PetHoldRing } from "./PetHoldRing";
+import { usePetHoldTrigger } from "@/lib/tracker/usePetHoldTrigger";
 import { onPomodoroRequest } from "@/lib/tracker/pomodoroBus";
 import { loadSession, saveSession } from "@/lib/tracker/sessionPersist";
 import { celebrate } from "@/lib/tracker/effects";
@@ -160,6 +163,14 @@ export function PetWidget() {
     setCustomMin("");
     toast.success(`Đã lưu phiên học ${m} phút 🍅`);
   };
+  const [manifestoOpen, setManifestoOpen] = useState(false);
+  const { isHolding, holdProgress, handlers: petHoldHandlers } = usePetHoldTrigger({
+    onHoldComplete: () => {
+      setManifestoOpen(true);
+    },
+    onClick: () => say(randomLine(pet)),
+    holdDurationMs: 3000,
+  });
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const say = (text: string) => {
@@ -392,15 +403,22 @@ export function PetWidget() {
   return (
     <section className="glass glass-glow p-5" data-pet-interactions>
       <JournalModal open={journalOpen} onClose={() => setJournalOpen(false)} />
+      <SecretManifestoModal
+        open={manifestoOpen}
+        onClose={() => setManifestoOpen(false)}
+        petName={petTitle(pet)}
+      />
       <div className="grid gap-5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-[auto_1fr_auto] items-center">
         <div className="mx-auto w-fit">
           <Button
             type="button"
             variant="ghost"
-            onClick={() => say(randomLine(pet))}
-            className="relative mx-auto grid size-32 shrink-0 place-items-center rounded-full bg-pet-halo p-0"
-            aria-label="Chạm vào thú cưng"
+            {...petHoldHandlers}
+            className="relative mx-auto grid size-32 shrink-0 place-items-center rounded-full bg-pet-halo p-0 cursor-pointer select-none touch-none"
+            aria-label="Chạm để trò chuyện, giữ 3 giây để mở Thư Bí Mật"
+            title="Chạm để trò chuyện • Giữ 3 giây để mở Thư Bí Mật 📜"
           >
+            <PetHoldRing isHolding={isHolding} progress={holdProgress} size={128} />
             {bubble && (
               <span className="animate-pop absolute -top-10 left-1/2 z-10 w-48 -translate-x-1/2 rounded-2xl bg-popover px-3 py-2 text-xs font-medium text-popover-foreground shadow-lg">
                 {bubble}

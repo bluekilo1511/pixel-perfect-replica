@@ -24,6 +24,9 @@ import { addScratch, promoteScratch, removeScratch } from "@/lib/tracker/scratch
 import { dateStr } from "@/lib/tracker/model";
 import { Button } from "@/components/ui/button";
 import { AmbientControl } from "./AmbientControl";
+import { SecretManifestoModal } from "./SecretManifestoModal";
+import { PetHoldRing } from "./PetHoldRing";
+import { usePetHoldTrigger } from "@/lib/tracker/usePetHoldTrigger";
 
 /** Fired by the ⛶ button on a running task row (and nothing else — keep it user-initiated). */
 export const TIMER_FS_EVENT = "tt-timer-fullscreen";
@@ -45,6 +48,16 @@ export function TimerFullscreen() {
   const { data, timer, pauseTimer, startTimer, update, finish } = useTracker();
   const [open, setOpen] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
+  const [manifestoOpen, setManifestoOpen] = useState(false);
+  const { isHolding, holdProgress, handlers: petHoldHandlers } = usePetHoldTrigger({
+    onHoldComplete: () => {
+      setManifestoOpen(true);
+    },
+    onClick: () => {
+      toast(petR.say, { icon: petR.face });
+    },
+    holdDurationMs: 3000,
+  });
   const [note, setNote] = useState("");
   const [isFs, setIsFs] = useState(false);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
@@ -381,7 +394,14 @@ export function TimerFullscreen() {
           </div>
 
           {/* Companion Pedestal */}
-          <div className="mt-4 flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 backdrop-blur-md shadow-lg transition-transform hover:scale-[1.02]">
+          <div
+            {...petHoldHandlers}
+            className="mt-4 flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 backdrop-blur-md shadow-lg transition-transform hover:scale-[1.02] cursor-pointer relative select-none touch-none"
+            title="Chạm để trò chuyện • Giữ 3 giây để mở Thư Bí Mật 📜"
+          >
+            <div className="absolute -left-1.5 -top-1.5 pointer-events-none">
+              <PetHoldRing isHolding={isHolding} progress={holdProgress} size={56} />
+            </div>
             <span
               className={`relative block text-4xl leading-none ${
                 petR.anim === "dance" ? "animate-pet-dance" : "animate-pet-idle"
@@ -535,6 +555,12 @@ export function TimerFullscreen() {
           </div>
         </aside>
       )}
+
+      <SecretManifestoModal
+        open={manifestoOpen}
+        onClose={() => setManifestoOpen(false)}
+        petName={pet.petName || SPECIES[pet.species].name}
+      />
     </div>
   );
 }
