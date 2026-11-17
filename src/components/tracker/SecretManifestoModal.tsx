@@ -42,7 +42,7 @@ const LINE_SPACING_MAP: Record<LineSpacing, { label: string; cls: string }> = {
 };
 
 const FONT_MAP: Record<FontStyle, { label: string; cls: string }> = {
-  serif: { label: "Cổ điển", cls: "font-serif tracking-wide" },
+  serif: { label: "Cổ điển", cls: "font-serif" },
   sans: { label: "Hiện đại", cls: "font-sans" },
   mono: { label: "Đánh máy", cls: "font-mono" },
 };

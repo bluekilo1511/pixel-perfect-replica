@@ -55,6 +55,8 @@ export function loadSecretManifesto(): SecretManifesto {
     return {
       ...defaultSecretManifesto(),
       ...parsed,
+      title: typeof parsed.title === "string" ? parsed.title.normalize("NFC") : defaultSecretManifesto().title,
+      content: typeof parsed.content === "string" ? parsed.content.normalize("NFC") : defaultSecretManifesto().content,
     };
   } catch {
     return defaultSecretManifesto();
@@ -66,6 +68,8 @@ export function saveSecretManifesto(data: SecretManifesto): void {
   try {
     const payload = {
       ...data,
+      title: data.title.normalize("NFC"),
+      content: data.content.normalize("NFC"),
       updatedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));

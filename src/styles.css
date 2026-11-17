@@ -46,6 +46,7 @@
   --color-success: var(--success);
   --font-display: var(--font-display);
   --font-sans: var(--font-body);
+  --font-serif: var(--font-serif);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
@@ -121,6 +122,7 @@
   --weather-fog: oklch(0.98 0.01 230);
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-body: "Be Vietnam Pro", system-ui, sans-serif;
+  --font-serif: "Lora", "Merriweather", ui-serif, Georgia, serif;
   --chart-1: oklch(0.66 0.13 235);
   --chart-2: oklch(0.7 0.14 160);
   --chart-3: oklch(0.82 0.12 75);
