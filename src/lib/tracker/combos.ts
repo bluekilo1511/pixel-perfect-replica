@@ -1,7 +1,7 @@
 // Pure rules for "môn tổ hợp" — combination subjects like KHTN (Vật lí + Hoá học +
-// Sinh học) or LSĐL (Lịch sử + Địa lí). A combo subject is a normal subject in
-// data.subjects whose name also maps to 2–3 member subjects. Each member keeps
-// its own grades, notes and stats; the combo shows their combined picture.
+// Sinh học) or LSĐL (Lịch sử + Địa lí).
+// In Cấp 2 (THCS, Thông tư 22): KHTN and LS&ĐL are integrated subjects containing
+// 4 formative assessment columns (TX) covering the subdisciplines together, plus GK & CK.
 import type { AppData } from "./model";
 import { subjectGrade, type GradeEntry } from "./grades";
 
@@ -107,4 +107,330 @@ export function normalizeSubjectCombos(raw: unknown, subjects: string[]): Record
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Secondary School (Cấp 2 / THCS - Thông tư 22) Integrated Combo Definitions
+// ---------------------------------------------------------------------------
+
+export interface SubDisciplineConfig {
+  name: string;
+  short: string;
+  aliases: string[];
+  badge: string;
+  color: "blue" | "emerald" | "amber" | "purple" | "orange" | "teal";
+}
+
+export interface Cap2SubjectConfig {
+  key: "KHTN" | "LSDL";
+  name: string;
+  aliases: string[];
+  subDisciplines: SubDisciplineConfig[];
+  targetTxCount: number;
+  defaultColumns: {
+    title: string;
+    sub: string;
+  }[];
+}
+
+export const CAP2_SUBJECT_CONFIGS: Record<"KHTN" | "LSDL", Cap2SubjectConfig> = {
+  KHTN: {
+    key: "KHTN",
+    name: "KHTN",
+    aliases: [
+      "khtn",
+      "khoa học tự nhiên",
+      "khoa hoc tu nhien",
+      "khtn cấp 2",
+      "khoa học tn",
+      "khoa hoc tn",
+    ],
+    targetTxCount: 4,
+    subDisciplines: [
+      {
+        name: "Vật lí",
+        short: "Lí",
+        aliases: ["lí", "lý", "vật lí", "vật lý", "vat li", "vat ly", "phy", "physics"],
+        badge: "🔵 Lí",
+        color: "blue",
+      },
+      {
+        name: "Hoá học",
+        short: "Hóa",
+        aliases: ["hóa", "hoá", "hóa học", "hoá học", "hoa", "hoa hoc", "chem", "chemistry"],
+        badge: "🟢 Hóa",
+        color: "emerald",
+      },
+      {
+        name: "Sinh học",
+        short: "Sinh",
+        aliases: ["sinh", "sinh học", "sinh hoc", "bio", "biology"],
+        badge: "🟡 Sinh",
+        color: "amber",
+      },
+      {
+        name: "Đánh giá chung",
+        short: "Chung",
+        aliases: ["chung", "thực hành", "thuc hanh", "tổng hợp", "tong hop", "đề án", "de an"],
+        badge: "🟣 Chung",
+        color: "purple",
+      },
+    ],
+    defaultColumns: [
+      { title: "Vật lí", sub: "Lí" },
+      { title: "Hoá học", sub: "Hóa" },
+      { title: "Sinh học", sub: "Sinh" },
+      { title: "Đánh giá chung", sub: "Chung" },
+    ],
+  },
+  LSDL: {
+    key: "LSDL",
+    name: "LS&ĐL",
+    aliases: [
+      "ls&đl",
+      "lsđl",
+      "ls&dl",
+      "lsdl",
+      "lịch sử và địa lí",
+      "lịch sử và địa lý",
+      "lịch sử & địa lí",
+      "lịch sử & địa lý",
+      "lich su va dia li",
+      "lich su va dia ly",
+      "sử địa",
+      "su dia",
+      "sử & địa",
+      "su & dia",
+    ],
+    targetTxCount: 4,
+    subDisciplines: [
+      {
+        name: "Lịch sử",
+        short: "Sử",
+        aliases: ["sử", "lịch sử", "su", "lich su", "history"],
+        badge: "🟠 Sử",
+        color: "orange",
+      },
+      {
+        name: "Địa lí",
+        short: "Địa",
+        aliases: ["địa", "địa lý", "địa lí", "dia", "dia ly", "dia li", "geography"],
+        badge: "🌐 Địa",
+        color: "teal",
+      },
+    ],
+    defaultColumns: [
+      { title: "Lịch sử (TX1)", sub: "Sử" },
+      { title: "Lịch sử (TX2)", sub: "Sử" },
+      { title: "Địa lí (TX1)", sub: "Địa" },
+      { title: "Địa lí (TX2)", sub: "Địa" },
+    ],
+  },
+};
+
+/** Checks if a subject name corresponds to a Cấp 2 integrated combo subject (KHTN or LS&ĐL). */
+export function matchCap2Config(subjectName: string): Cap2SubjectConfig | null {
+  if (!subjectName) return null;
+  const s = subjectName.trim().toLowerCase();
+  for (const cfg of Object.values(CAP2_SUBJECT_CONFIGS)) {
+    if (cfg.aliases.some((a) => a.toLowerCase() === s)) return cfg;
+  }
+  return null;
+}
+
+/** Detects which subdiscipline a text label (column title or note) refers to. */
+export function detectSubDiscipline(
+  cfg: Cap2SubjectConfig,
+  text: string,
+): SubDisciplineConfig | null {
+  if (!text) return null;
+  const t = text.trim().toLowerCase();
+  for (const sub of cfg.subDisciplines) {
+    if (sub.aliases.some((a) => t === a.toLowerCase() || t.includes(a.toLowerCase()))) {
+      return sub;
+    }
+  }
+  return null;
+}
+
+export interface DetectedCap2Merge {
+  targetSubject: string;
+  config: Cap2SubjectConfig;
+  orphanSubjects: string[];
+}
+
+/** Detects if the user has standalone subdiscipline subjects alongside KHTN or LS&ĐL. */
+export function detectCap2Merges(
+  data: Pick<AppData, "subjects">,
+  allSubjectNames: string[] = [],
+): DetectedCap2Merge[] {
+  const allNames = Array.from(
+    new Set([...data.subjects, ...allSubjectNames.map((s) => s.trim())]),
+  ).filter(Boolean);
+  const results: DetectedCap2Merge[] = [];
+
+  for (const cfg of Object.values(CAP2_SUBJECT_CONFIGS)) {
+    const target = allNames.find((n) =>
+      cfg.aliases.some((a) => a.toLowerCase() === n.trim().toLowerCase()),
+    );
+    if (!target) continue;
+
+    const orphans = allNames.filter((n) => {
+      const lower = n.trim().toLowerCase();
+      if (lower === target.trim().toLowerCase()) return false;
+      return cfg.subDisciplines.some((sub) =>
+        sub.aliases.some((a) => a.toLowerCase() === lower),
+      );
+    });
+
+    if (orphans.length > 0) {
+      results.push({
+        targetSubject: target,
+        config: cfg,
+        orphanSubjects: orphans,
+      });
+    }
+  }
+
+  return results;
+}
+
+/** Merges orphan sub-discipline subjects into their Cấp 2 integrated target subject. */
+export function mergeCap2Integrated(data: AppData, merge: DetectedCap2Merge): AppData {
+  const { targetSubject, config, orphanSubjects } = merge;
+  const orphanLowers = orphanSubjects.map((s) => s.trim().toLowerCase());
+  const targetLower = targetSubject.trim().toLowerCase();
+
+  // Ensure target is in subjects, remove orphans
+  const nextSubjects = data.subjects
+    .filter((s) => !orphanLowers.includes(s.trim().toLowerCase()))
+    .concat(
+      data.subjects.some((s) => s.trim().toLowerCase() === targetLower) ? [] : [targetSubject],
+    );
+
+  // Migrate gradeBook entries
+  const nextGradeBook = data.gradeBook.map((entry) => {
+    const entrySubLower = entry.subject.trim().toLowerCase();
+    if (!orphanLowers.includes(entrySubLower)) return entry;
+
+    const matchedOrphan = orphanSubjects.find(
+      (o) => o.trim().toLowerCase() === entrySubLower,
+    );
+    const subMeta = matchedOrphan
+      ? detectSubDiscipline(config, matchedOrphan)
+      : null;
+    const tag = subMeta ? subMeta.short : matchedOrphan || "";
+
+    const existingTitle = (entry.title || "").trim();
+    const hasTagAlready = tag && existingTitle.toLowerCase().includes(tag.toLowerCase());
+    const nextTitle = hasTagAlready
+      ? existingTitle
+      : existingTitle
+        ? `${existingTitle} (${tag})`
+        : tag;
+
+    return {
+      ...entry,
+      subject: targetSubject,
+      title: nextTitle.slice(0, 30),
+    };
+  });
+
+  // Migrate gradeExtras
+  const nextGradeExtras = data.gradeExtras.map((extra) => {
+    const extraSubLower = extra.subject.trim().toLowerCase();
+    if (!orphanLowers.includes(extraSubLower)) return extra;
+    const matchedOrphan = orphanSubjects.find(
+      (o) => o.trim().toLowerCase() === extraSubLower,
+    );
+    const label = (extra.label || "").trim();
+    const nextLabel = matchedOrphan && !label.toLowerCase().includes(matchedOrphan.toLowerCase())
+      ? `${label} (${matchedOrphan})`
+      : label;
+
+    return {
+      ...extra,
+      subject: targetSubject,
+      label: nextLabel.slice(0, 60),
+    };
+  });
+
+  // Migrate tasks
+  const nextTasks = data.tasks.map((task) => {
+    if (!task.subject) return task;
+    if (orphanLowers.includes(task.subject.trim().toLowerCase())) {
+      return { ...task, subject: targetSubject };
+    }
+    return task;
+  });
+
+  // Clean subjectCombos: remove orphan subjects, and remove target from combos if it was one
+  const nextCombos = { ...(data.subjectCombos ?? {}) };
+  delete nextCombos[targetSubject];
+  for (const orphan of orphanSubjects) {
+    delete nextCombos[orphan];
+  }
+  for (const [key, members] of Object.entries(nextCombos)) {
+    nextCombos[key] = members.filter((m) => !orphanLowers.includes(m.trim().toLowerCase()));
+    if (nextCombos[key].length < COMBO_MEMBERS_MIN) {
+      delete nextCombos[key];
+    }
+  }
+
+  // Migrate targets
+  const nextTargets = { ...data.gradeTargets };
+  if (nextTargets[targetSubject] === undefined) {
+    for (const orphan of orphanSubjects) {
+      if (nextTargets[orphan] !== undefined) {
+        nextTargets[targetSubject] = nextTargets[orphan];
+        break;
+      }
+    }
+  }
+  for (const orphan of orphanSubjects) {
+    delete nextTargets[orphan];
+  }
+
+  // Migrate notes
+  const nextNotes = { ...data.subjectNotes };
+  const targetNote = nextNotes[targetSubject] ?? { note: "", topics: [] };
+  const combinedTopics = [...(targetNote.topics ?? [])];
+  for (const orphan of orphanSubjects) {
+    const orphanNote = nextNotes[orphan];
+    if (orphanNote) {
+      for (const t of orphanNote.topics ?? []) {
+        if (!combinedTopics.some((x) => x.name.toLowerCase() === t.name.toLowerCase())) {
+          combinedTopics.push(t);
+        }
+      }
+      delete nextNotes[orphan];
+    }
+  }
+  if (nextNotes[targetSubject] || combinedTopics.length > 0) {
+    nextNotes[targetSubject] = {
+      note: targetNote.note || "",
+      topics: combinedTopics.slice(0, 16),
+    };
+  }
+
+  return {
+    ...data,
+    subjects: nextSubjects,
+    gradeBook: nextGradeBook,
+    gradeExtras: nextGradeExtras,
+    tasks: nextTasks,
+    subjectCombos: nextCombos,
+    gradeTargets: nextTargets,
+    subjectNotes: nextNotes,
+  };
+}
+
+/** Merges all detected Cấp 2 combination subjects in one step. */
+export function mergeAllCap2(data: AppData, allSubjectNames: string[] = []): AppData {
+  let current = data;
+  const merges = detectCap2Merges(current, allSubjectNames);
+  for (const m of merges) {
+    current = mergeCap2Integrated(current, m);
+  }
+  return current;
 }

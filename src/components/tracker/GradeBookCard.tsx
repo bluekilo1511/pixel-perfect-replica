@@ -10,7 +10,15 @@ import {
   mergeSubjects,
   SUBJECTS_MAX,
 } from "@/lib/tracker/model";
-import { clearSubjectCombo, comboGrade, comboMembers } from "@/lib/tracker/combos";
+import {
+  clearSubjectCombo,
+  comboGrade,
+  comboMembers,
+  detectCap2Merges,
+  detectSubDiscipline,
+  matchCap2Config,
+  mergeAllCap2,
+} from "@/lib/tracker/combos";
 import {
   absorbGradeExtra,
   addGradeEntry,
@@ -36,8 +44,6 @@ const TYPE_BUTTONS: { type: GradeType; label: string }[] = [
   { type: "gk", label: "+ Giữa kỳ" },
   { type: "ck", label: "+ Cuối kỳ" },
 ];
-
-const pct = (s: { score: number; max: number }) => s.score / s.max;
 
 /** Sổ điểm kiểu giáo viên: cột TX / giữa kỳ / cuối kỳ theo từng môn, kỳ 1 – kỳ 2 riêng, cộng "điểm dư" ở bên. */
 export function GradeBookCard() {
@@ -82,6 +88,9 @@ export function GradeBookCard() {
         ck: simCk.trim() === "" ? undefined : Number(simCk),
       })
     : null;
+
+  const cap2Config = matchCap2Config(active);
+  const cap2Merges = detectCap2Merges(data, chips);
 
   const addSubjectChip = () => {
     const name = newSubject.trim().slice(0, 24);
@@ -185,29 +194,41 @@ export function GradeBookCard() {
 
   const colCls = "rounded-xl border border-border bg-card p-2 text-center";
 
-  const columnBox = (e: (typeof entries)[number], idx: number) => (
-    <div
-      key={e.id}
-      className={`${colCls} group relative min-w-16`}
-      title={`${e.title || GRADE_TYPE_META[e.type].short}${e.date ? ` · ${e.date}` : ""}: ${e.score}/${e.max}`}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {GRADE_TYPE_META[e.type].short}
-        {e.type === "tx" ? idx + 1 : ""}
-        {e.title ? ` · ${e.title}` : ""}
-      </p>
-      <p className="font-display text-xl tabular-nums">{e.score}</p>
-      <p className="text-[10px] text-muted-foreground">/{e.max}</p>
-      <button
-        type="button"
-        aria-label={`Xoá cột ${e.score}/${e.max}`}
-        className="absolute right-1 top-1 text-[10px] text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-        onClick={() => update((d) => ({ ...d, gradeBook: removeGradeEntry(d.gradeBook, e.id) }))}
+  const columnBox = (e: (typeof entries)[number], idx: number) => {
+    const subDiscipline = cap2Config ? detectSubDiscipline(cap2Config, e.title) : null;
+    return (
+      <div
+        key={e.id}
+        className={`${colCls} group relative min-w-16`}
+        title={`${e.title || GRADE_TYPE_META[e.type].short}${e.date ? ` · ${e.date}` : ""}: ${e.score}/${e.max}`}
       >
-        ✕
-      </button>
-    </div>
-  );
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center justify-center gap-1">
+          <span>
+            {GRADE_TYPE_META[e.type].short}
+            {e.type === "tx" ? idx + 1 : ""}
+          </span>
+          {subDiscipline && (
+            <span className="rounded bg-primary/15 px-1 py-0.2 text-[9px] font-semibold text-primary">
+              {subDiscipline.badge}
+            </span>
+          )}
+          {e.title && !subDiscipline && (
+            <span className="truncate max-w-[50px]">· {e.title}</span>
+          )}
+        </p>
+        <p className="font-display text-xl tabular-nums">{e.score}</p>
+        <p className="text-[10px] text-muted-foreground">/{e.max}</p>
+        <button
+          type="button"
+          aria-label={`Xoá cột ${e.score}/${e.max}`}
+          className="absolute right-1 top-1 text-[10px] text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+          onClick={() => update((d) => ({ ...d, gradeBook: removeGradeEntry(d.gradeBook, e.id) }))}
+        >
+          ✕
+        </button>
+      </div>
+    );
+  };
 
   const adviceLine = (() => {
     if (!active) return null;
@@ -255,10 +276,43 @@ export function GradeBookCard() {
         </div>
       </div>
       <p className="mb-3 text-sm text-muted-foreground">
-        Cột điểm như sổ của giáo viên: Thường xuyên (TX, thêm tuỳ ý) · Giữa kỳ (GK) · Cuối kỳ (CK).
+        Cột điểm như sổ của giáo viên: Thường xuyên (TX) · Giữa kỳ (GK) · Cuối kỳ (CK).
         Điểm môn = trung bình các cột, làm tròn 0.1. Điểm dư ghi bên phải, chỉ nhét vào cột khi
         chắc.
       </p>
+
+      {cap2Merges.length > 0 && (
+        <div className="mb-3 rounded-xl border border-sky-500/40 bg-sky-500/10 p-3 text-xs text-sky-900 dark:text-sky-200">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-0.5">
+              <p className="font-semibold flex items-center gap-1.5 text-sm">
+                <span>🏫</span> Cấu trúc môn Cấp 2 (THCS — Thông tư 22)
+              </p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Phát hiện phân môn lẻ:{" "}
+                {cap2Merges.map((m) => (
+                  <span key={m.targetSubject} className="font-semibold text-foreground">
+                    [{m.orphanSubjects.join(", ")} → {m.targetSubject}]{" "}
+                  </span>
+                ))}
+                . Ở Cấp 2, <strong>KHTN</strong> và <strong>LS&ĐL</strong> là môn tích hợp có 4 cột TX cho các phân môn gộp chung trong 1 môn duy nhất.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="h-8 text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
+              onClick={() => {
+                update((d) => mergeAllCap2(d, chips));
+                const firstTarget = cap2Merges[0]?.targetSubject;
+                if (firstTarget) setSel(firstTarget);
+                toast.success("Đã gộp toàn bộ điểm vào 4 cột môn tích hợp Cấp 2 và dọn dẹp các môn con! 🎉");
+              }}
+            >
+              ⚡ Gộp chuẩn Cấp 2 & dọn môn lẻ
+            </Button>
+          </div>
+        </div>
+      )}
 
       {detectedDups.map(([shortName, fullName]) => {
         const actualShort =
@@ -306,6 +360,7 @@ export function GradeBookCard() {
 
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {chips.map((c) => {
+          const isCap2 = matchCap2Config(c) !== null;
           const members = comboMembers(data, c);
           const directG = subjectGrade(data.gradeBook, c, semester);
           const g =
@@ -316,7 +371,11 @@ export function GradeBookCard() {
                 : null;
           return (
             <button key={c} type="button" onClick={() => setSel(c)} className={chipCls(c)}>
-              {members && <span title="Môn tổ hợp">🧩</span>}
+              {isCap2 ? (
+                <span title="Môn tích hợp Cấp 2">🧬</span>
+              ) : members ? (
+                <span title="Môn tổ hợp">🧩</span>
+              ) : null}
               {c}
               {g !== null && <span className="ml-1 tabular-nums opacity-75">{g}</span>}
             </button>
@@ -343,7 +402,44 @@ export function GradeBookCard() {
         </span>
       </div>
 
-      {(() => {
+      {cap2Config ? (
+        <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🧬</span>
+              <div>
+                <p className="text-sm font-semibold">
+                  Môn tích hợp Cấp 2: {active}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Thông tư 22: Môn có 4 cột ĐĐG Thường xuyên (gộp {cap2Config.subDisciplines.map((s) => s.name).join(", ")}), 1 Giữa kỳ và 1 Cuối kỳ.
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium">
+              {tx.length}/4 cột TX · {gk.length}/1 GK · {ck.length}/1 CK
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[11px] text-muted-foreground font-medium">Phân môn đã có điểm:</span>
+            {cap2Config.subDisciplines.map((sub) => {
+              const count = tx.filter((e) => detectSubDiscipline(cap2Config, e.title)?.short === sub.short).length;
+              return (
+                <span
+                  key={sub.short}
+                  className={`rounded-md px-2 py-0.5 text-xs flex items-center gap-1 border transition ${
+                    count > 0
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 font-medium"
+                      : "border-border bg-card text-muted-foreground opacity-80"
+                  }`}
+                >
+                  {sub.badge}: {count > 0 ? `${count} cột` : "chưa có"}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ) : (() => {
         const members = active ? comboMembers(data, active) : undefined;
         if (!members) return null;
         const avg = comboGrade(data.gradeBook, members, semester);
@@ -363,7 +459,7 @@ export function GradeBookCard() {
                   toast.success(`Đã gỡ tổ hợp. ${active} nay được tính là 1 môn độc lập!`);
                 }}
               >
-                Gỡ tổ hợp (Tính là 1 môn riêng Cấp 2)
+                Gỡ tổ hợp (Tính là 1 môn riêng)
               </Button>
             </div>
             {hasDirectMarks ? (
@@ -397,19 +493,61 @@ export function GradeBookCard() {
             {gk.map((e) => columnBox(e, 0))}
             {ck.map((e) => columnBox(e, 0))}
             {adding === null ? (
-              <div className="flex flex-col justify-center gap-1">
-                {TYPE_BUTTONS.map((b) => (
-                  <Button
-                    key={b.type}
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 justify-start px-2 text-xs"
-                    onClick={() => setAdding(b.type)}
-                  >
-                    {b.label}
-                  </Button>
-                ))}
-              </div>
+              cap2Config ? (
+                <div className="flex flex-col gap-1 rounded-xl border border-border/50 bg-muted/40 p-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+                    Thêm cột ({active}):
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {cap2Config.subDisciplines.map((sub) => (
+                      <Button
+                        key={sub.short}
+                        size="sm"
+                        variant="outline"
+                        className="h-6 justify-start px-2 text-[11px] font-medium border-border/60 hover:border-primary/50"
+                        onClick={() => {
+                          setAdding("tx");
+                          setTitle(sub.name);
+                        }}
+                      >
+                        + TX {sub.short}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1 pt-0.5">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 flex-1 px-1 text-xs"
+                      onClick={() => setAdding("gk")}
+                    >
+                      + Giữa kỳ
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 flex-1 px-1 text-xs"
+                      onClick={() => setAdding("ck")}
+                    >
+                      + Cuối kỳ
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col justify-center gap-1">
+                  {TYPE_BUTTONS.map((b) => (
+                    <Button
+                      key={b.type}
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 justify-start px-2 text-xs"
+                      onClick={() => setAdding(b.type)}
+                    >
+                      {b.label}
+                    </Button>
+                  ))}
+                </div>
+              )
             ) : (
               <div className="rounded-xl border border-primary/50 bg-card p-3 shadow-md w-64 space-y-2">
                 <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
@@ -446,6 +584,31 @@ export function GradeBookCard() {
                   className="h-7 text-xs"
                   onKeyDown={(e) => e.key === "Enter" && add(adding)}
                 />
+
+                {cap2Config && adding === "tx" && (
+                  <div className="space-y-1 pt-1 border-t border-border/50">
+                    <p className="text-[11px] text-muted-foreground font-medium">Gắn phân môn:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {cap2Config.subDisciplines.map((sub) => (
+                        <button
+                          key={sub.short}
+                          type="button"
+                          className={`rounded-full px-2 py-0.5 text-xs border transition ${
+                            title.includes(sub.short) || title.includes(sub.name)
+                              ? "border-primary bg-primary text-primary-foreground font-semibold"
+                              : "border-border bg-muted/60 text-foreground hover:bg-muted"
+                          }`}
+                          onClick={() => {
+                            setTitle(sub.name);
+                          }}
+                        >
+                          {sub.badge}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-1.5 pt-1">
                   <Button
                     size="sm"

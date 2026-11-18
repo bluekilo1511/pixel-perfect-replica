@@ -5,7 +5,7 @@ import {
   comboMembers,
   normalizeSubjectCombos,
   removeSubjectFromCombos,
-  setSubjectCombo,
+  setSubjectCombo, matchCap2Config, detectSubDiscipline, detectCap2Merges, mergeAllCap2,
 } from "./combos";
 import { addGradeEntry, subjectGrade, type GradeEntry } from "./grades";
 import { addSubject, migrate, removeSubject } from "./model";
@@ -113,5 +113,112 @@ describe("model integration", () => {
     const back = migrate(JSON.parse(JSON.stringify(d)));
     expect(back.subjectCombos).toEqual({ LSĐL: ["Sử", "Địa"] });
     expect(migrate({}).subjectCombos).toEqual({});
+  });
+});
+
+describe("Cấp 2 (THCS) combination subjects", () => {
+  it("matches KHTN and LS&ĐL config and detects subdisciplines", () => {
+    const khtnCfg = matchCap2Config("KHTN");
+    expect(khtnCfg).not.toBeNull();
+    expect(khtnCfg?.name).toBe("KHTN");
+    expect(khtnCfg?.targetTxCount).toBe(4);
+
+    const lsdlCfg = matchCap2Config("LS&ĐL");
+    expect(lsdlCfg).not.toBeNull();
+    expect(lsdlCfg?.name).toBe("LS&ĐL");
+
+    const subLy = detectSubDiscipline(khtnCfg!, "15p Vật lí");
+    expect(subLy?.short).toBe("Lí");
+
+    const subHoa = detectSubDiscipline(khtnCfg!, "Kiểm tra Hóa");
+    expect(subHoa?.short).toBe("Hóa");
+
+    const subSu = detectSubDiscipline(lsdlCfg!, "Lịch sử bài 1");
+    expect(subSu?.short).toBe("Sử");
+  });
+
+  it("detects orphan subdisciplines and merges them into integrated subjects", () => {
+    let d = migrate({});
+    // Setup exact situation from user screenshot:
+    for (const s of ["Toán", "Địa lý", "GDCD", "Tin", "Tiếng Anh", "KHTN", "Lí", "Hóa", "Sinh", "LS&ĐL", "Ngữ Văn", "Lịch sử"]) {
+      d = addSubject(d, s)!;
+    }
+    // Add sample grades for orphans
+    d = {
+      ...d,
+      gradeBook: [
+        ...d.gradeBook,
+        {
+          id: "g1",
+          subject: "Lí",
+          semester: 1,
+          type: "tx",
+          title: "15p",
+          date: "2026-11-01",
+          score: 8.5,
+          max: 10,
+          createdAt: "2026-11-01T00:00:00Z",
+        },
+        {
+          id: "g2",
+          subject: "Hóa",
+          semester: 1,
+          type: "tx",
+          title: "",
+          date: "2026-11-02",
+          score: 9.0,
+          max: 10,
+          createdAt: "2026-11-02T00:00:00Z",
+        },
+        {
+          id: "g3",
+          subject: "Lịch sử",
+          semester: 1,
+          type: "tx",
+          title: "Miệng",
+          date: "2026-11-03",
+          score: 10,
+          max: 10,
+          createdAt: "2026-11-03T00:00:00Z",
+        },
+      ],
+    };
+
+    const detected = detectCap2Merges(d);
+    expect(detected.length).toBe(2);
+    const khtnMerge = detected.find((m) => m.targetSubject === "KHTN");
+    expect(khtnMerge?.orphanSubjects).toContain("Lí");
+    expect(khtnMerge?.orphanSubjects).toContain("Hóa");
+    expect(khtnMerge?.orphanSubjects).toContain("Sinh");
+
+    const lsdlMerge = detected.find((m) => m.targetSubject === "LS&ĐL");
+    expect(lsdlMerge?.orphanSubjects).toContain("Địa lý");
+    expect(lsdlMerge?.orphanSubjects).toContain("Lịch sử");
+
+    // Perform mergeAllCap2
+    const merged = mergeAllCap2(d);
+
+    // Standalone orphan subjects must be removed
+    expect(merged.subjects).not.toContain("Lí");
+    expect(merged.subjects).not.toContain("Hóa");
+    expect(merged.subjects).not.toContain("Sinh");
+    expect(merged.subjects).not.toContain("Địa lý");
+    expect(merged.subjects).not.toContain("Lịch sử");
+
+    // Target subjects must be preserved
+    expect(merged.subjects).toContain("KHTN");
+    expect(merged.subjects).toContain("LS&ĐL");
+    expect(merged.subjects).toContain("Toán");
+    expect(merged.subjects).toContain("Ngữ Văn");
+
+    // Grades migrated to KHTN and LS&ĐL with appropriate sub tags
+    const khtnGrades = merged.gradeBook.filter((g) => g.subject === "KHTN");
+    expect(khtnGrades.length).toBe(2);
+    expect(khtnGrades[0]?.title).toBe("15p (Lí)");
+    expect(khtnGrades[1]?.title).toBe("Hóa");
+
+    const lsdlGrades = merged.gradeBook.filter((g) => g.subject === "LS&ĐL");
+    expect(lsdlGrades.length).toBe(1);
+    expect(lsdlGrades[0]?.title).toBe("Miệng (Sử)");
   });
 });

@@ -7,6 +7,9 @@ import {
   comboMembers,
   COMBO_MEMBERS_MAX,
   COMBO_MEMBERS_MIN,
+  detectCap2Merges,
+  matchCap2Config,
+  mergeAllCap2,
   setSubjectCombo,
 } from "@/lib/tracker/combos";
 import {
@@ -26,6 +29,9 @@ export function SubjectsCard() {
   const [openSubject, setOpenSubject] = useState<string | null>(null);
   const [topicDraft, setTopicDraft] = useState("");
   const [comboPicks, setComboPicks] = useState<string[]>([]);
+
+  const cap2Merges = detectCap2Merges(data, data.subjects);
+
   const add = () => {
     const n = name.trim();
     if (!n) return;
@@ -41,6 +47,7 @@ export function SubjectsCard() {
     update((prev) => addSubject(prev, name.trim()) ?? prev);
     setName("");
   };
+
   const mark = (subject: string, topic: string, m: TopicMark | null) => {
     let success = false;
     update((prev) => {
@@ -53,16 +60,43 @@ export function SubjectsCard() {
       toast.error(`Tối đa ${TOPICS_MAX} chủ điểm cho một môn thôi nhé`);
     }
   };
+
   return (
     <section className="glass p-5" aria-label="Môn học">
       <h2 className="mb-2 text-sm font-semibold">📚 Môn học</h2>
       <p className="mb-2 text-xs text-muted-foreground">
-        Bấm vào một môn để ghi chú, đánh dấu chủ điểm cần học lại / yếu / tốt, hoặc ghép 🧩 môn tổ
-        hợp (vd: KHTN = Lý + Hóa + Sinh).
+        Bấm vào một môn để ghi chú, đánh dấu chủ điểm cần học lại / yếu / tốt. Đối với Cấp 2, các môn tích hợp như KHTN hay LS&ĐL đã tích hợp sẵn 4 cột Thường xuyên trong Sổ điểm.
       </p>
+
+      {cap2Merges.length > 0 && (
+        <div className="mb-3 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-900 dark:text-sky-200">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold flex items-center gap-1.5">
+                <span>🏫</span> Phát hiện môn Cấp 2 chưa gộp chuẩn
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Các phân môn lẻ ({cap2Merges.flatMap((m) => m.orphanSubjects).join(", ")}) nên được gộp vào KHTN / LS&ĐL.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="h-7 text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
+              onClick={() => {
+                update((d) => mergeAllCap2(d, d.subjects));
+                toast.success("Đã gộp vào môn tích hợp Cấp 2 và dọn dẹp các môn con! 🎉");
+              }}
+            >
+              ⚡ Gộp chuẩn Cấp 2
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-2 flex flex-wrap gap-1.5">
         {data.subjects.map((s) => {
           const note = data.subjectNotes[s];
+          const isCap2 = matchCap2Config(s) !== null;
           const weakCount = (note?.topics ?? []).filter(
             (t) => t.mark === "weak" || t.mark === "redo",
           ).length;
@@ -84,7 +118,11 @@ export function SubjectsCard() {
                     : "bg-secondary"
               }`}
             >
-              {comboMembers(data, s) && <span title="Môn tổ hợp">🧩</span>}
+              {isCap2 ? (
+                <span title="Môn tích hợp Cấp 2">🧬</span>
+              ) : comboMembers(data, s) ? (
+                <span title="Môn tổ hợp">🧩</span>
+              ) : null}
               {s}
               {weakCount > 0 && <span title={`${weakCount} chủ điểm cần ôn`}>🔻{weakCount}</span>}
             </button>
@@ -94,6 +132,7 @@ export function SubjectsCard() {
           <span className="text-xs text-muted-foreground">Chưa có môn nào — thêm bên dưới.</span>
         )}
       </div>
+
       {Object.keys(data.subjectCombos ?? {}).length > 0 && (
         <div className="mb-2 rounded-lg border border-border bg-background/50 p-2">
           <p className="mb-1 text-[11px] font-semibold">🧩 Tổ hợp đang ghép</p>
@@ -118,6 +157,7 @@ export function SubjectsCard() {
           </p>
         </div>
       )}
+
       {openSubject && (
         <div className="mb-3 rounded-xl border border-border bg-muted p-3">
           <div className="mb-2 flex items-center justify-between">
@@ -134,9 +174,28 @@ export function SubjectsCard() {
               Xoá môn
             </Button>
           </div>
+
           <div className="mb-3 rounded-lg border border-border bg-background/50 p-2.5">
-            <p className="mb-1 text-xs font-semibold">🧩 Môn tổ hợp</p>
+            <p className="mb-1 text-xs font-semibold">🧩 Phân môn / Môn tổ hợp</p>
             {(() => {
+              const cap2 = matchCap2Config(openSubject);
+              if (cap2) {
+                return (
+                  <div className="space-y-1 text-xs">
+                    <p className="text-primary font-medium flex items-center gap-1">
+                      <span>🧬</span> Môn học tích hợp Cấp 2 (Thông tư 22)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Môn {openSubject} bao gồm các phân môn:{" "}
+                      <strong>{cap2.subDisciplines.map((s) => s.name).join(", ")}</strong>.
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Trong Sổ điểm, môn này có sẵn cấu trúc 4 cột Thường xuyên tương ứng với các phân môn gộp chung. Bạn không cần tạo thêm các môn riêng lẻ bên ngoài.
+                    </p>
+                  </div>
+                );
+              }
+
               const members = comboMembers(data, openSubject);
               if (members) {
                 return (
@@ -158,6 +217,7 @@ export function SubjectsCard() {
                   </div>
                 );
               }
+
               const taken = new Set<string>();
               for (const [name, ms] of Object.entries(data.subjectCombos ?? {})) {
                 if (name !== openSubject) {
@@ -194,7 +254,7 @@ export function SubjectsCard() {
               return (
                 <>
                   <p className="mb-1.5 text-[11px] text-muted-foreground">
-                    Ghép 2–3 môn thành một, vd: KHTN = Lý + Hóa + Sinh. TKB, thi và học trước bài
+                    Ghép 2–3 môn thành một (dành cho Cấp 3 hoặc ghép tuỳ ý). TKB, thi và học trước bài
                     mai vẫn dùng tên tổ hợp; sổ điểm giữ riêng từng môn thành viên.
                   </p>
                   {candidates.length >= COMBO_MEMBERS_MIN ? (
@@ -235,6 +295,7 @@ export function SubjectsCard() {
               );
             })()}
           </div>
+
           <textarea
             className="mb-2 min-h-16 w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-xs"
             placeholder="Ghi chú cho môn này, vd: cần luyện đề nhiều, hay thi cuối trọng số cao…"
@@ -310,6 +371,7 @@ export function SubjectsCard() {
           </p>
         </div>
       )}
+
       <div className="flex gap-2">
         <Input
           className="h-8"
