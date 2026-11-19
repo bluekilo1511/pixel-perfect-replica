@@ -312,6 +312,8 @@ export function GradeBookCard() {
               size="sm"
               className="h-8 text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
               onClick={() => {
+                const orphanNames = cap2Merges.flatMap((merge) => merge.orphanSubjects);
+                if (!window.confirm(`Gộp ${orphanNames.join(", ")} vào môn tích hợp? Các môn con sẽ bị gỡ khỏi danh sách, nhưng điểm và ghi chú sẽ được giữ và chuyển sang môn tích hợp.`)) return;
                 update((d) => mergeAllCap2(d, chips));
                 const firstTarget = cap2Merges[0]?.targetSubject;
                 if (firstTarget) setSel(firstTarget);

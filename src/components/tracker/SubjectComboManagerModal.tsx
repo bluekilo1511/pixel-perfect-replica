@@ -50,8 +50,16 @@ export function SubjectComboManagerModal({
       toast.error("Danh sách đã đủ 12 môn hoặc đã có bộ môn Cấp 2 rồi.");
       return;
     }
+    const addedCount = next.subjects.length - data.subjects.length;
+    const missingCount = STANDARD_CAP2_SUBJECTS.filter(
+      (name) => !data.subjects.some((existing) => existing.toLowerCase() === name.toLowerCase()),
+    ).length;
     update(() => next);
-    toast.success("Đã thêm bộ môn THCS chuẩn. 📚");
+    if (addedCount < missingCount) {
+      toast.success(`Đã thêm ${addedCount} môn; danh sách đạt giới hạn 12 môn nên chưa thêm được hết.`);
+    } else {
+      toast.success("Đã thêm bộ môn THCS chuẩn. 📚");
+    }
   };
 
   const handleMergeAll = () => {
