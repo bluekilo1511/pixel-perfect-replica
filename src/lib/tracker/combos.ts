@@ -2,7 +2,7 @@
 // Sinh học) or LSĐL (Lịch sử + Địa lí).
 // In Cấp 2 (THCS, Thông tư 22): KHTN and LS&ĐL are integrated subjects containing
 // 4 formative assessment columns (TX) covering the subdisciplines together, plus GK & CK.
-import type { AppData } from "./model";
+import { type AppData, SUBJECTS_MAX } from "./model";
 import { subjectGrade, type GradeEntry } from "./grades";
 
 export const COMBO_MEMBERS_MIN = 2;
@@ -260,6 +260,28 @@ export interface DetectedCap2Merge {
 }
 
 /** Detects if the user has standalone subdiscipline subjects alongside KHTN or LS&ĐL. */
+export const STANDARD_CAP2_SUBJECTS = [
+  "Toán",
+  "Ngữ văn",
+  "Tiếng Anh",
+  "KHTN",
+  "LS&ĐL",
+  "GDCD",
+  "Tin học",
+  "Công nghệ",
+];
+
+export function seedCap2Subjects(data: AppData): AppData {
+  const existingLower = data.subjects.map((s) => s.trim().toLowerCase());
+  const toAdd = STANDARD_CAP2_SUBJECTS.filter((s) => !existingLower.includes(s.toLowerCase()));
+  if (toAdd.length === 0) return data;
+  return {
+    ...data,
+    subjects: [...data.subjects, ...toAdd].slice(0, SUBJECTS_MAX),
+  };
+}
+
+/** Detects if the user has standalone subdiscipline subjects alongside KHTN or LS&ĐL. */
 export function detectCap2Merges(
   data: Pick<AppData, "subjects">,
   allSubjectNames: string[] = [],
@@ -270,14 +292,15 @@ export function detectCap2Merges(
   const results: DetectedCap2Merge[] = [];
 
   for (const cfg of Object.values(CAP2_SUBJECT_CONFIGS)) {
-    const target = allNames.find((n) =>
+    const existingTarget = allNames.find((n) =>
       cfg.aliases.some((a) => a.toLowerCase() === n.trim().toLowerCase()),
     );
-    if (!target) continue;
+    const target = existingTarget || cfg.name;
 
     const orphans = allNames.filter((n) => {
       const lower = n.trim().toLowerCase();
       if (lower === target.trim().toLowerCase()) return false;
+      if (existingTarget && lower === existingTarget.trim().toLowerCase()) return false;
       return cfg.subDisciplines.some((sub) =>
         sub.aliases.some((a) => a.toLowerCase() === lower),
       );

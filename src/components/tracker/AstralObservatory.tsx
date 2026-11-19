@@ -93,7 +93,7 @@ export function AstralObservatory() {
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-b from-[#0b0c22] via-[#070817] to-[#04040d] p-6 text-white shadow-2xl">
+    <section className="relative overflow-hidden astral-observatory-shell rounded-3xl border border-indigo-500/30 bg-gradient-to-b from-[#0b0c22] via-[#070817] to-[#04040d] p-6 text-white shadow-2xl">
       {/* Glow Effects */}
       <div
         aria-hidden

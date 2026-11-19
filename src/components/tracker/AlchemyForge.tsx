@@ -123,7 +123,7 @@ export function AlchemyForge() {
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-b from-[#1c1305] via-[#120b02] to-[#0a0601] p-6 text-white shadow-2xl">
+    <section className="relative overflow-hidden alchemy-forge-shell rounded-3xl border border-amber-500/30 bg-gradient-to-b from-[#1c1305] via-[#120b02] to-[#0a0601] p-6 text-white shadow-2xl">
       {/* Golden Blast Ambient Glow */}
       <div
         aria-hidden

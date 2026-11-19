@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SubjectComboManagerModal } from "./SubjectComboManagerModal";
 import { Input } from "@/components/ui/input";
 import {
   addSubject,
@@ -67,6 +68,7 @@ export function GradeBookCard() {
   const [extraScore, setExtraScore] = useState("");
   const [simGk, setSimGk] = useState("");
   const [simCk, setSimCk] = useState("");
+  const [comboManagerOpen, setComboManagerOpen] = useState(false);
 
   const entries = active ? semesterEntries(data.gradeBook, active, semester) : [];
   const tx = entries.filter((e) => e.type === "tx");
@@ -263,6 +265,14 @@ export function GradeBookCard() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">🧮 Sổ điểm</h2>
         <div className="flex items-center gap-1" role="group" aria-label="Học kỳ">
+          <Button
+            size="sm"
+            variant="outline"
+            className="mr-1 h-8 text-xs"
+            onClick={() => setComboManagerOpen(true)}
+          >
+            🧩 Môn tổ hợp
+          </Button>
           {([1, 2] as Semester[]).map((s) => (
             <Button
               key={s}
@@ -482,10 +492,15 @@ export function GradeBookCard() {
       })()}
 
       {!active ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          Chưa có môn nào. Thêm môn ở phần 📚 Môn học (tab Hôm nay) hoặc gõ vào ô "+ môn mới" phía
-          trên nhé!
-        </p>
+        <div className="space-y-3 py-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            Chưa có môn nào. Thêm môn ở phần 📚 Môn học (tab Hôm nay) hoặc gõ vào ô "+ môn mới" phía
+            trên nhé!
+          </p>
+          <Button size="sm" variant="outline" onClick={() => setComboManagerOpen(true)}>
+            🧩 Cài đặt môn tích hợp Cấp 2 / môn tổ hợp
+          </Button>
+        </div>
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-stretch gap-2">
@@ -834,6 +849,7 @@ export function GradeBookCard() {
           </div>
         </>
       )}
+      <SubjectComboManagerModal open={comboManagerOpen} onOpenChange={setComboManagerOpen} />
     </section>
   );
 }

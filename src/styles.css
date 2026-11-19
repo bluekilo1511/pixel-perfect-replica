@@ -1777,3 +1777,21 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   opacity: 0.55;
   color: var(--muted-foreground);
 }
+
+/* Keep the V4 feature cards in the app's active theme. Their inner dark-mode
+   styling remains intact; this adapts only the three fixed dark shells in light mode. */
+[data-theme="light"] .alchemy-forge-shell {
+  background: linear-gradient(to bottom, oklch(0.98 0.07 85), oklch(0.97 0.04 80), oklch(0.98 0.01 250));
+  color: var(--foreground);
+  box-shadow: var(--glass-shadow);
+}
+[data-theme="light"] .astral-observatory-shell {
+  background: linear-gradient(to bottom, oklch(0.97 0.05 280), oklch(0.97 0.03 260), oklch(0.98 0.01 250));
+  color: var(--foreground);
+  box-shadow: var(--glass-shadow);
+}
+[data-theme="light"] .data-vault-shell {
+  background: linear-gradient(to bottom, oklch(0.96 0.05 205), oklch(0.97 0.03 220), oklch(0.98 0.01 250));
+  color: var(--foreground);
+  box-shadow: var(--glass-shadow);
+}

@@ -1,6 +1,6 @@
 /** "Sức khỏe dữ liệu": a read-only report of how big/heavy the save file is plus
  * a conservative one-click cleanup. Pure functions, no browser APIs. */
-import { dateStr, type AppData } from "./model";
+import { dateStr, migrate, type AppData } from "./model";
 import { shiftDate } from "./gamify";
 
 export interface DataHealth {
@@ -99,5 +99,40 @@ export function cleanupData(data: AppData, today = dateStr()): CleanupResult {
     removedTasks,
     removedSessions,
     removedStatsDays,
+  };
+}
+
+
+/** Versioned portable backup used by the Data Vault screen. */
+export const VAULT_VERSION = 1;
+
+export function exportDataVault(data: AppData): string {
+  return JSON.stringify({ format: "pixel-perfect-vault", vaultVersion: VAULT_VERSION, exportedAt: new Date().toISOString(), data }, null, 2);
+}
+
+export function importDataVault(text: string): AppData | null {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!parsed || typeof parsed !== "object") return null;
+    const record = parsed as Record<string, unknown>;
+    if (record.format === "pixel-perfect-vault") {
+      if (!record.data || typeof record.data !== "object") return null;
+      const normalized = migrate(record.data);
+      return normalized.app === "local-task-tracker-pro" ? normalized : null;
+    }
+    // Accept legacy exports containing the AppData object directly.
+    const normalized = migrate(parsed);
+    return normalized.app === "local-task-tracker-pro" ? normalized : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getVaultTelemetry(data: AppData) {
+  return {
+    taskCount: data.tasks.length,
+    sessionCount: data.sessionLog.length,
+    ownedAccessoryCount: data.petState.ownedAccessories.length,
+    achievementCount: Object.keys(data.claimedAchievements).length,
   };
 }

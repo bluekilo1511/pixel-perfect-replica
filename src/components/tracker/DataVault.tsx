@@ -91,7 +91,7 @@ export function DataVault() {
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-[#04121a] via-[#020b12] to-[#01060a] p-6 text-white shadow-2xl backdrop-blur-2xl">
+    <section className="relative overflow-hidden data-vault-shell rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-[#04121a] via-[#020b12] to-[#01060a] p-6 text-white shadow-2xl backdrop-blur-2xl">
       {/* Neon Security Seal Glow */}
       <div
         aria-hidden
