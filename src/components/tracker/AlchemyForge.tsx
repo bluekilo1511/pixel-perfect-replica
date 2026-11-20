@@ -123,14 +123,14 @@ export function AlchemyForge() {
   };
 
   return (
-    <section className="relative overflow-hidden alchemy-forge-shell rounded-3xl border border-amber-500/30 bg-gradient-to-b from-[#1c1305] via-[#120b02] to-[#0a0601] p-6 text-white shadow-2xl">
+    <section className="relative overflow-hidden alchemy-forge-shell rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-50/90 via-orange-50/50 to-amber-100/30 dark:from-[#1c1305] dark:via-[#120b02] dark:to-[#0a0601] p-6 text-foreground dark:text-white shadow-2xl transition-colors">
       {/* Golden Blast Ambient Glow */}
       <div
         aria-hidden
         className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl transition-all duration-700 ${
           isBlasting
             ? "h-96 w-96 bg-amber-400/40 animate-pulse scale-125"
-            : "h-64 w-64 bg-amber-600/10"
+            : "h-64 w-64 bg-amber-500/10 dark:bg-amber-600/10"
         }`}
       />
 
@@ -138,28 +138,28 @@ export function AlchemyForge() {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-400/40 bg-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.35)]">
-              <Hammer className={`h-6 w-6 text-amber-300 ${isBlasting ? "animate-bounce" : ""}`} />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-400/40 bg-amber-100/80 dark:bg-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+              <Hammer className={`h-6 w-6 text-amber-700 dark:text-amber-300 ${isBlasting ? "animate-bounce" : ""}`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold tracking-tight text-white">Lò Luyện Kim 3x3 (Alchemy Forge)</h2>
-                <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-200">
+                <h2 className="text-xl font-bold tracking-tight text-foreground dark:text-white">Lò Luyện Kim 3x3 (Alchemy Forge)</h2>
+                <span className="rounded-full border border-amber-400/30 bg-amber-500/15 dark:bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">
                   Golden Blast
                 </span>
               </div>
-              <p className="text-xs text-amber-200/60">
+              <p className="text-xs text-amber-950/75 dark:text-amber-200/60">
                 Sắp xếp nguyên liệu vào ma trận 3×3 để rèn giáp bảo vệ và trang bị thần thoại cho thú cưng.
               </p>
             </div>
           </div>
 
           {/* Current Materials Wallet */}
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs">
+          <div className="flex items-center gap-2 rounded-2xl border border-amber-900/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-4 py-2 text-xs shadow-sm">
             {MATERIAL_IDS.map((m) => (
               <div key={m} className="flex items-center gap-1">
                 <span>{MATERIALS[m].emoji}</span>
-                <span className="font-semibold text-white/90">{materials[m] || 0}</span>
+                <span className="font-bold text-foreground dark:text-white/90">{materials[m] || 0}</span>
               </div>
             ))}
           </div>
@@ -169,7 +169,7 @@ export function AlchemyForge() {
         <div className="mt-6 grid gap-6 lg:grid-cols-12 items-center">
           {/* Left Column: Recipe Selection */}
           <div className="lg:col-span-5 space-y-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-300/70">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300/80">
               Công thức rèn ({RECIPES.length})
             </span>
 
@@ -186,22 +186,22 @@ export function AlchemyForge() {
                     onClick={() => setSelectedRecipeId(r.id)}
                     className={`w-full text-left rounded-2xl border p-3.5 transition-all flex items-center justify-between gap-3 ${
                       active
-                        ? "border-amber-400 bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
-                        : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                        ? "border-amber-500 bg-amber-100/90 dark:border-amber-400 dark:bg-amber-500/20 shadow-md"
+                        : "border-amber-900/10 dark:border-white/10 bg-white/70 dark:bg-white/5 hover:border-amber-300 dark:hover:border-white/20 hover:bg-white dark:hover:bg-white/10"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-3xl">{r.emoji}</span>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-white">{r.name}</span>
+                          <span className="font-semibold text-sm text-foreground dark:text-white">{r.name}</span>
                           {owned && (
-                            <span className="rounded bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 text-[10px] font-bold">
+                            <span className="rounded bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 px-1.5 py-0.2 text-[10px] font-bold">
                               Đã có
                             </span>
                           )}
                         </div>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-white/60">
+                        <div className="mt-1 flex items-center gap-2 text-xs">
                           {Object.entries(r.cost).map(([k, count]) => {
                             if (!count) return null;
                             const have = materials[k as MaterialId] || 0;
@@ -209,7 +209,7 @@ export function AlchemyForge() {
                             return (
                               <span
                                 key={k}
-                                className={enough ? "text-amber-200" : "text-destructive font-medium"}
+                                className={enough ? "text-amber-900 dark:text-amber-200 font-medium" : "text-destructive font-medium"}
                               >
                                 {MATERIALS[k as MaterialId].emoji} {have}/{count}
                               </span>
@@ -221,11 +221,11 @@ export function AlchemyForge() {
 
                     <div className="flex items-center">
                       {owned ? (
-                        <Check className="h-4 w-4 text-emerald-400" />
+                        <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       ) : can ? (
-                        <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
+                        <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-pulse" />
                       ) : (
-                        <Lock className="h-4 w-4 text-white/30" />
+                        <Lock className="h-4 w-4 text-muted-foreground dark:text-white/30" />
                       )}
                     </div>
                   </button>
@@ -235,13 +235,13 @@ export function AlchemyForge() {
           </div>
 
           {/* Right Column: 3x3 Alchemy Matrix & Transmute Action */}
-          <div className="lg:col-span-7 flex flex-col items-center justify-center p-4 rounded-3xl border border-amber-500/20 bg-amber-950/20 backdrop-blur-sm">
+          <div className="lg:col-span-7 flex flex-col items-center justify-center p-4 rounded-3xl border border-amber-500/20 bg-amber-50/60 dark:bg-amber-950/20 backdrop-blur-sm">
             <div className="relative mb-6">
               {/* Central Alchemical Runes Ring */}
               <div
                 aria-hidden
-                className={`absolute inset-0 -m-6 rounded-full border border-dashed border-amber-400/30 transition-transform duration-1000 ${
-                  isBlasting ? "animate-spin scale-110 border-amber-400" : ""
+                className={`absolute inset-0 -m-6 rounded-full border border-dashed border-amber-400/40 dark:border-amber-400/30 transition-transform duration-1000 ${
+                  isBlasting ? "animate-spin scale-110 border-amber-500" : ""
                 }`}
               />
 
@@ -257,22 +257,22 @@ export function AlchemyForge() {
                       className={`relative flex h-20 w-20 sm:h-24 sm:w-24 flex-col items-center justify-center rounded-2xl border transition-all duration-300 ${
                         mat
                           ? hasSlotMat
-                            ? "border-amber-400/60 bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)] scale-100"
+                            ? "border-amber-400/80 bg-amber-100/90 dark:bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)] scale-100"
                             : "border-destructive/40 bg-destructive/10"
-                          : "border-white/5 bg-black/30"
-                      } ${isBlasting && mat ? "animate-pulse border-amber-300 scale-105" : ""}`}
+                          : "border-amber-900/10 dark:border-white/5 bg-amber-900/5 dark:bg-black/30"
+                      } ${isBlasting && mat ? "animate-pulse border-amber-400 scale-105" : ""}`}
                     >
                       {mat ? (
                         <>
                           <span className="text-3xl sm:text-4xl drop-shadow">
                             {MATERIALS[mat].emoji}
                           </span>
-                          <span className="mt-1 text-[10px] font-medium text-amber-200/80">
+                          <span className="mt-1 text-[10px] font-bold text-amber-950 dark:text-amber-200/90">
                             {MATERIALS[mat].name}
                           </span>
                         </>
                       ) : (
-                        <div className="h-2 w-2 rounded-full bg-white/10" />
+                        <div className="h-2 w-2 rounded-full bg-amber-950/20 dark:bg-white/10" />
                       )}
                     </div>
                   );
@@ -288,8 +288,8 @@ export function AlchemyForge() {
                 onClick={handleTransmute}
                 className={`h-12 rounded-full px-8 text-sm font-bold shadow-xl transition-all duration-300 ${
                   hasMaterials && !alreadyOwned
-                    ? "border border-amber-300 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-black hover:from-amber-400 hover:to-yellow-400 shadow-amber-500/30 hover:scale-105"
-                    : "border-white/10 bg-white/10 text-white/40 cursor-not-allowed"
+                    ? "border border-amber-400 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-amber-950 hover:from-amber-400 hover:to-yellow-400 shadow-amber-500/30 hover:scale-105"
+                    : "border-amber-900/10 dark:border-white/10 bg-amber-900/5 dark:bg-white/10 text-muted-foreground dark:text-white/40 cursor-not-allowed"
                 }`}
               >
                 <Flame className="mr-2 h-4 w-4 fill-current" />
@@ -299,7 +299,7 @@ export function AlchemyForge() {
                     ? `Kích hoạt Luyện Kim: ${selectedRecipe.name}`
                     : "Thiếu nguyên liệu"}
               </Button>
-              <p className="text-[11px] text-amber-200/50">
+              <p className="text-[11px] text-amber-950/70 dark:text-amber-200/50">
                 Hiệu ứng ánh vàng (Golden Blast) sẽ kích hoạt khi hoàn thành công thức.
               </p>
             </div>

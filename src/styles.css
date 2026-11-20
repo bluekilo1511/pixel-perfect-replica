@@ -1778,40 +1778,24 @@ html.fx-lite button.bg-primary:not(:disabled)::after {
   color: var(--muted-foreground);
 }
 
-/* Keep the V4 feature cards in the app's active theme. Their inner dark-mode
-   styling remains intact; this adapts only the three fixed dark shells in light mode. */
+/* Keep the V4 feature cards in the app's active theme. */
 [data-theme="light"] .alchemy-forge-shell {
-  background: linear-gradient(to bottom, oklch(0.98 0.07 85), oklch(0.97 0.04 80), oklch(0.98 0.01 250));
-  color: var(--foreground);
+  background: linear-gradient(to bottom, oklch(0.985 0.035 85), oklch(0.975 0.02 80), oklch(0.98 0.01 250));
+  border-color: oklch(0.78 0.12 75 / 0.4);
   box-shadow: var(--glass-shadow);
 }
 [data-theme="light"] .astral-observatory-shell {
-  background: linear-gradient(to bottom, oklch(0.97 0.05 280), oklch(0.97 0.03 260), oklch(0.98 0.01 250));
-  color: var(--foreground);
+  background: linear-gradient(to bottom, oklch(0.98 0.03 275), oklch(0.97 0.02 260), oklch(0.98 0.01 250));
+  border-color: oklch(0.7 0.12 275 / 0.35);
   box-shadow: var(--glass-shadow);
 }
 [data-theme="light"] .data-vault-shell {
-  background: linear-gradient(to bottom, oklch(0.96 0.05 205), oklch(0.97 0.03 220), oklch(0.98 0.01 250));
-  color: var(--foreground);
+  background: linear-gradient(to bottom, oklch(0.98 0.03 210), oklch(0.97 0.02 220), oklch(0.98 0.01 250));
+  border-color: oklch(0.7 0.12 210 / 0.35);
   box-shadow: var(--glass-shadow);
 }
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="text-white"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="text-white/90"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="text-white/80"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="text-white/70"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="text-white/60"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="text-white/50"] {
-  color: var(--foreground) !important;
-}
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="bg-white/5"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="bg-white/10"] {
-  background-color: oklch(1 0 0 / 0.68) !important;
-}
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="bg-black/30"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="bg-black/40"] {
-  background-color: oklch(0.82 0.03 245 / 0.18) !important;
-}
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="border-white/10"],
-[data-theme="light"] :is(.alchemy-forge-shell, .astral-observatory-shell, .data-vault-shell) [class~="border-white/5"] {
-  border-color: var(--border) !important;
+[data-theme="light"] .void-market-shell {
+  background: linear-gradient(to bottom, oklch(0.98 0.03 300), oklch(0.97 0.02 290), oklch(0.98 0.01 250));
+  border-color: oklch(0.7 0.14 300 / 0.35);
+  box-shadow: var(--glass-shadow);
 }
