@@ -29,11 +29,12 @@ const PRIORITIES: PriorityLevel[] = ["p1", "p2", "p3", "p4"];
 const QUADRANTS: EisenhowerQuadrant[] = ["do_first", "schedule", "delegate", "dont_do"];
 
 export function TaskDetailInspector({ taskId, onClose }: Props) {
-  const { data, update, timer, startTimer, pauseTimer, finish } = useTracker();
+  const { data, update, timer, startTimer, pauseTimer, finish, adjustCompletedTaskMinutes } = useTracker();
   const activeTaskId = timer?.taskId ?? null;
   const task = data.tasks.find((t) => t.id === taskId);
   const [subtaskInput, setSubtaskInput] = useState("");
   const [notesInput, setNotesInput] = useState(task?.notes ?? "");
+  const [editMinutes, setEditMinutes] = useState(task?.minutes ?? 25);
 
   if (!task) {
     return (
@@ -285,6 +286,44 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
             className="w-full rounded-lg border border-input bg-background/80 p-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
+
+        {/* Completed Task Duration Adjustment */}
+        {task.minutes > 0 && locked && (
+          <div className="rounded-xl border border-border/80 bg-secondary/20 p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-foreground">Thời gian tập trung ghi nhận</span>
+              <span className="font-mono text-sm font-bold text-primary">
+                {task.minutes} phút {task.plannedMinutes && task.plannedMinutes !== task.minutes ? `(kế hoạch ${task.plannedMinutes}p)` : ""}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Bạn có thể điều chỉnh lại số phút thực tế đã học để thống kê biểu đồ & báo cáo chuẩn xác.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <Input
+                type="number"
+                min={1}
+                max={600}
+                value={editMinutes}
+                onChange={(e) => setEditMinutes(Number(e.target.value))}
+                className="h-8 w-24 text-xs font-mono"
+              />
+              <span className="text-xs text-muted-foreground">phút</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs font-medium ml-auto"
+                onClick={() => {
+                  if (editMinutes > 0) {
+                    adjustCompletedTaskMinutes(task.id, editMinutes);
+                  }
+                }}
+              >
+                Lưu số phút
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Timer Controls */}
         {task.minutes > 0 && !locked && (

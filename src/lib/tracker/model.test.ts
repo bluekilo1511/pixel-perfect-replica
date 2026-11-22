@@ -6,6 +6,7 @@ import {
   addXp,
   completePomodoroSession,
   completeTask,
+  adjustCompletedTaskMinutes,
   defaultData,
   editTask,
   ensureDailyPins,
@@ -60,6 +61,48 @@ describe("tracker rules", () => {
     const b = completeTask(a.data, t.id);
     expect(b.rewarded).toBe(false);
     expect(b.data.game.xp).toBe(a.data.game.xp);
+  });
+
+  it("records actual focus minutes when a 45m pomodoro finishes in 15m", () => {
+    const t = makeTask("Toán", "pomodoro", 45, "2026-10-18");
+    const d = { ...defaultData(), tasks: [t] };
+    const res = completeTask(d, t.id, new Date(2026, 9, 18, 10, 15), Math.random, 1, 15);
+    expect(res.rewarded).toBe(true);
+    expect(res.data.dailyStats["2026-10-18"]?.focusMin).toBe(15);
+    const completedTask = res.data.tasks.find((x) => x.id === t.id);
+    expect(completedTask?.minutes).toBe(15);
+    expect(completedTask?.plannedMinutes).toBe(45);
+    expect(completedTask?.completed).toBe(true);
+    expect(res.data.sessionLog[res.data.sessionLog.length - 1]?.minutes).toBe(15);
+  });
+
+  it("infers elapsed minutes from remainingSeconds when paused early", () => {
+    const t = makeTask("Lý", "pomodoro", 45, "2026-10-18");
+    // 45m = 2700s; 1800s remaining = 900s elapsed (15 min)
+    t.remainingSeconds = 1800;
+    const d = { ...defaultData(), tasks: [t] };
+    const res = completeTask(d, t.id, new Date(2026, 9, 18, 10, 15));
+    expect(res.data.dailyStats["2026-10-18"]?.focusMin).toBe(15);
+    const completedTask = res.data.tasks.find((x) => x.id === t.id);
+    expect(completedTask?.minutes).toBe(15);
+    expect(completedTask?.plannedMinutes).toBe(45);
+  });
+
+  it("adjustCompletedTaskMinutes adjusts stats, sessionLog and task minutes", () => {
+    const t = makeTask("Hóa", "pomodoro", 45, "2026-10-18");
+    const d = { ...defaultData(), tasks: [t] };
+    // Complete with 45 minutes
+    const completed = completeTask(d, t.id, new Date(2026, 9, 18, 10, 45)).data;
+    expect(completed.dailyStats["2026-10-18"]?.focusMin).toBe(45);
+
+    // Adjust to 15 minutes
+    const adjusted = adjustCompletedTaskMinutes(completed, t.id, 15);
+    expect(adjusted.dailyStats["2026-10-18"]?.focusMin).toBe(15);
+    const updatedTask = adjusted.tasks.find((x) => x.id === t.id);
+    expect(updatedTask?.minutes).toBe(15);
+    expect(updatedTask?.plannedMinutes).toBe(45);
+    const log = adjusted.sessionLog.find((s) => s.at === updatedTask?.completedAt);
+    expect(log?.minutes).toBe(15);
   });
 
   it("levels up when XP bar is full", () => {

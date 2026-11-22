@@ -334,7 +334,7 @@ function TaskRow({ task }: { task: Task }) {
           )}
           {task.pinned ? "📌 Ghim hằng ngày · " : ""}
           {task.fromSlotId ? "🗓️ Từ thời khóa biểu · " : ""}
-          {task.minutes > 0 ? `${task.minutes} phút` : "Không hẹn giờ"}
+          {task.minutes > 0 ? (task.plannedMinutes && task.plannedMinutes !== task.minutes ? `${task.minutes} phút (kế hoạch ${task.plannedMinutes}p)` : `${task.minutes} phút`) : "Không hẹn giờ"}
         </p>
       </div>
       {task.minutes > 0 && !locked && (
@@ -390,6 +390,16 @@ function TaskRow({ task }: { task: Task }) {
             ✓ Đã hoàn thành
           </span>
           {task.minutes > 0 && (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition"
+              title="Nhấn để chỉnh sửa lại số phút thực tế đã học"
+              onClick={openEditor}
+            >
+              ✎ {task.minutes}p
+            </button>
+          )}
+          {task.minutes > 0 && (
             <span
               className="flex items-center gap-0.5"
               role="group"
@@ -430,6 +440,14 @@ function TaskRow({ task }: { task: Task }) {
                 </Button>
                 <Button
                   size="sm"
+                  data-ocean
+                  onClick={() => finish(task.id, true)}
+                  title="Hoàn thành sớm & ghi nhận thời gian thực tế"
+                >
+                  ✓ Xong
+                </Button>
+                <Button
+                  size="sm"
                   variant="ghost"
                   aria-label="Phóng to toàn màn hình"
                   title="Ghim đồng hồ lên toàn màn hình — vòng tiến độ + pet canh chừng"
@@ -439,9 +457,21 @@ function TaskRow({ task }: { task: Task }) {
                 </Button>
               </>
             ) : (
-              <Button size="sm" onClick={() => startTimer(task.id)}>
-                ▶ Bắt đầu
-              </Button>
+              <>
+                <Button size="sm" onClick={() => startTimer(task.id)}>
+                  ▶ Bắt đầu
+                </Button>
+                {task.remainingSeconds > 0 && task.remainingSeconds < task.minutes * 60 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => finish(task.id, false)}
+                    title="Hoàn thành sớm nhiệm vụ đang tạm dừng"
+                  >
+                    ✓ Xong
+                  </Button>
+                )}
+              </>
             ))}
           {task.minutes === 0 && (
             <Button size="sm" data-ocean onClick={() => finish(task.id)}>

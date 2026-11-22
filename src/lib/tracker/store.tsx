@@ -17,6 +17,7 @@ import {
   claimAchievementReward,
   completePomodoroSession,
   completeTask,
+  adjustCompletedTaskMinutes,
   dateStr,
   defaultData,
   claimDailySalary,
@@ -32,6 +33,7 @@ import {
   JACKPOT_TICKETS,
   upcomingSlots,
   type AppData,
+  type Task,
   type SpinMode,
 } from "./model";
 import { applyAdminBoost, type AdminBoostKind } from "./model";
@@ -110,7 +112,8 @@ interface Store {
   startTimer: (id: string) => void;
   pauseTimer: () => void;
   resetTimer: (id?: string) => void;
-  finish: (id: string, fromTimer?: boolean) => void;
+  finish: (id: string, fromTimer?: boolean, customMinutes?: number) => void;
+  adjustCompletedTaskMinutes: (taskId: string, newMinutes: number) => void;
   drinkWater: () => void;
   spin: (mode?: SpinMode) => string | null;
   dismissLevelUp: () => void;
@@ -178,6 +181,8 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SaveStatus>("none");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [timer, setTimer] = useState<Timer | null>(null);
+  const timerRef = useRef<Timer | null>(null);
+  timerRef.current = timer;
   const runPauses = useRef(0); // pauses inside the current running session (see finishPomodoro)
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [evolution, setEvolution] = useState<{
@@ -373,6 +378,18 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     return ok;
   };
 
+    const adjustTaskMinutes = useCallback(
+    (taskId: string, newMinutes: number) => {
+      setData((prev) => {
+        const next = adjustCompletedTaskMinutes(prev, taskId, newMinutes);
+        void saveSnapshot(next);
+        return next;
+      });
+      toast.success(`Đã cập nhật lại thời lượng thực tế thành ${newMinutes} phút ✨`);
+    },
+    [setData],
+  );
+
   const claimChallenge = () => {
     let ok = false;
     setData((d) => {
@@ -389,7 +406,27 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   };
 
   const finish = useCallback(
-    (id: string, fromTimer = false) => {
+    (id: string, fromTimer = false, customMinutes?: number) => {
+      let resolvedMinutes = customMinutes;
+      if (resolvedMinutes === undefined) {
+        const curTimer = timerRef.current;
+        const task = dataRef.current.tasks.find((t) => t.id === id);
+        if (task && task.minutes > 0) {
+          if (curTimer && curTimer.taskId === id) {
+            // Timer was actively running when finished
+            const remaining = Math.max(0, Math.ceil((curTimer.endAt - Date.now()) / 1000));
+            const elapsedSec = Math.max(0, task.minutes * 60 - remaining);
+            resolvedMinutes = Math.max(1, Math.round(elapsedSec / 60));
+          } else if (
+            task.remainingSeconds > 0 &&
+            task.remainingSeconds < task.minutes * 60
+          ) {
+            // Timer was paused early
+            const elapsedSec = task.minutes * 60 - task.remainingSeconds;
+            resolvedMinutes = Math.max(1, Math.round(elapsedSec / 60));
+          }
+        }
+      }
       setTimer((t) => (t?.taskId === id ? null : t));
       let rewarded = false;
       let rData: AppData | null = null;
@@ -406,7 +443,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       setData((prev) => {
         const xpMult = weatherEffect(weatherFromData(prev)).xpMult;
         const prevFormEmoji = petEmoji(prev.petState);
-        const r = completeTask(prev, id, new Date(), Math.random, xpMult);
+        const r = completeTask(prev, id, new Date(), Math.random, xpMult, resolvedMinutes);
         if (!r.rewarded) return prev; // anti-spam
         rewarded = true;
         rData = r.data;
@@ -437,7 +474,17 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         window.dispatchEvent(new CustomEvent("pp-auto-break"));
       }
       const undoTask = prevTask;
-      toast.success("Hoàn thành! +XP, +1 😺, +1 🎡", {
+      const finalTask = prevTask as Task | null;
+      const isEarly =
+        resolvedMinutes !== undefined &&
+        finalTask !== null &&
+        finalTask.minutes > 0 &&
+        resolvedMinutes < finalTask.minutes;
+      toast.success(
+        isEarly && finalTask
+          ? `Hoàn thành sớm! Đã ghi nhận ${resolvedMinutes}p tập trung thực tế (kế hoạch ${finalTask.minutes}p). +XP, +1 😺, +1 🎡`
+          : "Hoàn thành! +XP, +1 😺, +1 🎡",
+        {
         action: {
           label: "Hoàn tác",
           onClick: () => {
@@ -867,6 +914,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
         claimQuest,
         claimRaid,
         claimChallenge,
+        adjustCompletedTaskMinutes: adjustTaskMinutes,
       }}
     >
       {children}

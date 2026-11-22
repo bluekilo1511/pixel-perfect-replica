@@ -162,7 +162,9 @@ export function TimerFullscreen() {
     } catch {
       /* ignore */
     }
-    finish(task.id, true);
+    const elapsedSec = Math.max(0, total - left);
+    const elapsedMin = Math.max(1, Math.round(elapsedSec / 60));
+    finish(task.id, true, elapsedMin);
     setOpen(false);
   };
 

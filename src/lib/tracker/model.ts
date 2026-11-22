@@ -192,6 +192,7 @@ export interface Task {
   title: string;
   kind: TaskKind;
   minutes: number; // 0 = no timer
+  plannedMinutes?: number; // original planned minutes if finished early
   remainingSeconds: number;
   date: string; // YYYY-MM-DD
   completed: boolean;
@@ -256,6 +257,7 @@ export interface SessionEntry {
   interruptions?: number; // pause/tab-escape count for this session (unbroken challenge)
   mood?: number; // mirrored from the related task when the user picks a mood
   subject?: string; // study subject tag for the per-subject chart
+  taskId?: string;
 }
 
 export type ChimeKind = "soft" | "bowl" | "retro" | "birds";
@@ -299,6 +301,7 @@ export interface ExtraScheduleItem {
   title: string;
   time: string | null; // "HH:MM" or null for all-day
   minutes: number; // 0 = no timer
+  plannedMinutes?: number; // original planned minutes if finished early
   createdAt: string;
 }
 
@@ -1181,6 +1184,7 @@ export function completeTask(
   now = new Date(),
   rng: () => number = Math.random,
   xpMult = 1,
+  actualMinutes?: number,
 ): CompleteResult {
   const task = data.tasks.find((t) => t.id === taskId);
   if (!task || task.completed || task.rewardClaimed)
@@ -1194,6 +1198,25 @@ export function completeTask(
       fresh: [],
       bossDefeated: false,
     };
+
+  // Determine actual focus minutes spent:
+  // 1. If explicitly passed (e.g. from early finish or custom override), use it.
+  // 2. If task was paused early (task.remainingSeconds < task.minutes * 60 and remainingSeconds > 0),
+  //    compute the elapsed minutes = (task.minutes * 60 - task.remainingSeconds) / 60.
+  // 3. Otherwise default to task.minutes (e.g. natural finish at 0s or offline completion).
+  let effectiveMinutes = task.minutes;
+  if (typeof actualMinutes === "number" && actualMinutes >= 0) {
+    effectiveMinutes = Math.round(actualMinutes);
+  } else if (
+    task.minutes > 0 &&
+    typeof task.remainingSeconds === "number" &&
+    task.remainingSeconds > 0 &&
+    task.remainingSeconds < task.minutes * 60
+  ) {
+    const elapsedSec = task.minutes * 60 - task.remainingSeconds;
+    effectiveMinutes = Math.max(1, Math.round(elapsedSec / 60));
+  }
+
   const r = rewardFor(task.kind);
   const today = dateStr(now);
   const mult = streakMultiplier(data.streak.count);
@@ -1211,7 +1234,10 @@ export function completeTask(
   const gameBoss = bossDefeated ? defeatBoss(game) : game;
   const pet = addPetXp(bumpPet(data.petState, 0, 5), earned);
   const drop = rollDrop(rng);
-  const pomodoroPatch = task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {};
+  const pomodoroPatch =
+    task.kind === "pomodoro"
+      ? { focusMin: effectiveMinutes, ...(effectiveMinutes > 0 ? { pomodoros: 1 } : {}) }
+      : {};
   const achievements = bumpLifetime(data.achievements, {
     tasks: 1,
     ...pomodoroPatch,
@@ -1230,7 +1256,9 @@ export function completeTask(
     claimedAchievements: { ...achievements.claimed },
     dailyStats: bumpStats(data.dailyStats, today, {
       tasks: 1,
-      ...(task.kind === "pomodoro" ? { focusMin: task.minutes, pomodoros: 1 } : {}),
+      ...(task.kind === "pomodoro"
+        ? { focusMin: effectiveMinutes, ...(effectiveMinutes > 0 ? { pomodoros: 1 } : {}) }
+        : {}),
     }),
     dailyBoss,
     game: {
@@ -1247,17 +1275,20 @@ export function completeTask(
             rewardClaimed: true,
             remainingSeconds: 0,
             completedAt: now.toISOString(),
+            minutes: effectiveMinutes,
+            plannedMinutes: t.plannedMinutes ?? t.minutes,
           }
         : t,
     ),
     sessionLog:
-      task.kind === "pomodoro"
+      task.kind === "pomodoro" && effectiveMinutes > 0
         ? [
             ...data.sessionLog,
             {
               at: now.toISOString(),
-              minutes: task.minutes,
+              minutes: effectiveMinutes,
               kind: "pomodoro" as const,
+              taskId: task.id,
               ...(task.subject ? { subject: task.subject } : {}),
             },
           ].slice(-400)
@@ -1273,6 +1304,73 @@ export function completeTask(
     fresh: ach.fresh,
     bossDefeated,
     data: ach.data,
+  };
+}
+
+/**
+ * Adjusts the recorded focus minutes of an already-completed task.
+ * Updates task.minutes, dailyStats[date].focusMin, sessionLog, and achievements.
+ */
+export function adjustCompletedTaskMinutes(
+  data: AppData,
+  taskId: string,
+  newMinutes: number,
+): AppData {
+  const task = data.tasks.find((t) => t.id === taskId);
+  if (!task || !task.completed) return data;
+
+  const safeNewMinutes = Math.max(1, Math.min(600, Math.round(newMinutes)));
+  const oldMinutes = task.minutes;
+  const diff = safeNewMinutes - oldMinutes;
+  if (diff === 0) return data;
+
+  const today = task.date;
+  const currentDayStats = data.dailyStats[today];
+  const nextDailyStats = currentDayStats
+    ? {
+        ...data.dailyStats,
+        [today]: {
+          ...currentDayStats,
+          focusMin: Math.max(0, (currentDayStats.focusMin ?? 0) + diff),
+        },
+      }
+    : data.dailyStats;
+
+  // Update sessionLog entry matching this task
+  const nextSessionLog = data.sessionLog.map((s) => {
+    if (s.taskId === taskId || (task.completedAt && s.at === task.completedAt)) {
+      return { ...s, minutes: safeNewMinutes };
+    }
+    return s;
+  });
+
+  // Update lifetime achievements
+  const lifetime = data.achievements.lifetime;
+  const nextAchievements = {
+    ...data.achievements,
+    lifetime: {
+      ...lifetime,
+      focusMin: Math.max(0, (lifetime.focusMin ?? 0) + diff),
+    },
+  };
+
+  const nextTasks = data.tasks.map((t) => {
+    if (t.id === taskId) {
+      return {
+        ...t,
+        minutes: safeNewMinutes,
+        plannedMinutes: t.plannedMinutes ?? oldMinutes,
+      };
+    }
+    return t;
+  });
+
+  return {
+    ...data,
+    tasks: nextTasks,
+    dailyStats: nextDailyStats,
+    sessionLog: nextSessionLog,
+    achievements: nextAchievements,
   };
 }
 
