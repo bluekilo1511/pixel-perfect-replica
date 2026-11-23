@@ -1,3 +1,4 @@
+import { CompleteTaskDialog } from "./CompleteTaskDialog";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -151,7 +152,13 @@ export function TimerFullscreen() {
     toast(`Đã ${delta > 0 ? "thêm" : "bớt"} ${Math.abs(delta)} phút`);
   };
 
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+
   const handleFinishEarly = () => {
+    setConfirmModalOpen(true);
+  };
+
+  const onConfirmEarly = (actualMin: number) => {
     try {
       void confetti({
         particleCount: 70,
@@ -162,9 +169,7 @@ export function TimerFullscreen() {
     } catch {
       /* ignore */
     }
-    const elapsedSec = Math.max(0, total - left);
-    const elapsedMin = Math.max(1, Math.round(elapsedSec / 60));
-    finish(task.id, true, elapsedMin);
+    finish(task.id, true, actualMin);
     setOpen(false);
   };
 
@@ -562,6 +567,14 @@ export function TimerFullscreen() {
         open={manifestoOpen}
         onClose={() => setManifestoOpen(false)}
         petName={pet.petName || SPECIES[pet.species].name}
+      />
+
+      <CompleteTaskDialog
+        open={confirmModalOpen}
+        onOpenChange={setConfirmModalOpen}
+        task={task}
+        timerElapsedSeconds={Math.max(0, total - left)}
+        onConfirm={onConfirmEarly}
       />
     </div>
   );

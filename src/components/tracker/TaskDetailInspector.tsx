@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { CompleteTaskDialog } from "./CompleteTaskDialog";
+import { useState, useEffect } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
 import {
@@ -35,6 +36,14 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
   const [subtaskInput, setSubtaskInput] = useState("");
   const [notesInput, setNotesInput] = useState(task?.notes ?? "");
   const [editMinutes, setEditMinutes] = useState(task?.minutes ?? 25);
+  const [finishModalOpen, setFinishModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (task) {
+      setEditMinutes(task.minutes);
+      setNotesInput(task.notes ?? "");
+    }
+  }, [task?.id, task?.minutes, task?.notes]);
 
   if (!task) {
     return (
@@ -407,7 +416,13 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
               size="sm"
               variant="default"
               className="h-8 px-2.5 text-xs"
-              onClick={() => finish(task.id)}
+              onClick={() => {
+                if (task.minutes > 0) {
+                  setFinishModalOpen(true);
+                } else {
+                  finish(task.id);
+                }
+              }}
             >
               ✓ Xong
             </Button>
@@ -422,6 +437,20 @@ export function TaskDetailInspector({ taskId, onClose }: Props) {
           </Button>
         </div>
       </div>
+
+      <CompleteTaskDialog
+        open={finishModalOpen}
+        onOpenChange={setFinishModalOpen}
+        task={task}
+        timerElapsedSeconds={
+          isRunning
+            ? Math.max(0, task.minutes * 60 - remainingSecs)
+            : task.remainingSeconds && task.remainingSeconds < task.minutes * 60
+              ? Math.max(0, task.minutes * 60 - task.remainingSeconds)
+              : undefined
+        }
+        onConfirm={(actualMin) => finish(task.id, true, actualMin)}
+      />
     </aside>
   );
 }

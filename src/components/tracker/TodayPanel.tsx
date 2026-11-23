@@ -1,3 +1,5 @@
+import { CompleteTaskDialog } from "./CompleteTaskDialog";
+import { AdjustDurationDialog } from "./AdjustDurationDialog";
 import { useState } from "react";
 import { useTracker } from "@/lib/tracker/store";
 import { toast } from "sonner";
@@ -146,11 +148,13 @@ function ScratchCard() {
 }
 
 function TaskRow({ task }: { task: Task }) {
-  const { data, timer, startTimer, pauseTimer, finish, update } = useTracker();
+  const { data, timer, startTimer, pauseTimer, finish, update, adjustCompletedTaskMinutes } = useTracker();
   const running = timer?.taskId === task.id;
   const secs = running ? timer.remaining : task.remainingSeconds || task.minutes * 60;
   const locked = task.completed || task.rewardClaimed;
   const [editing, setEditing] = useState(false);
+  const [finishModalOpen, setFinishModalOpen] = useState(false);
+  const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [draft, setDraft] = useState({
     title: task.title,
     kind: task.kind,
@@ -172,6 +176,31 @@ function TaskRow({ task }: { task: Task }) {
   };
   const saveEdit = () => {
     if (running) pauseTimer();
+    if (locked) {
+      if (draft.minutes !== task.minutes && draft.minutes > 0) {
+        adjustCompletedTaskMinutes(task.id, draft.minutes);
+      }
+      update((d) => {
+        const nextTasks = d.tasks.map((t) => {
+          if (t.id !== task.id) return t;
+          const updated = {
+            ...t,
+            title: draft.title.trim() || t.title,
+            date: draft.date || t.date,
+          };
+          if (draft.subject) updated.subject = draft.subject;
+          else delete updated.subject;
+          if (draft.remindAt) updated.remindAt = draft.remindAt;
+          else delete updated.remindAt;
+          return updated;
+        });
+        const updatedData = { ...d, tasks: nextTasks };
+        return setTaskSubject(updatedData, task.id, draft.subject || null) ?? updatedData;
+      });
+      setEditing(false);
+      toast.success("Đã cập nhật số phút & thông tin nhiệm vụ ✏️");
+      return;
+    }
     update((d) => {
       const edited = editTask(d, task.id, { ...draft, remindAt: draft.remindAt || null }) ?? d;
       return setTaskSubject(edited, task.id, draft.subject || null) ?? edited;
@@ -392,9 +421,9 @@ function TaskRow({ task }: { task: Task }) {
           {task.minutes > 0 && (
             <button
               type="button"
-              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition"
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition cursor-pointer"
               title="Nhấn để chỉnh sửa lại số phút thực tế đã học"
-              onClick={openEditor}
+              onClick={() => setAdjustModalOpen(true)}
             >
               ✎ {task.minutes}p
             </button>
@@ -441,8 +470,8 @@ function TaskRow({ task }: { task: Task }) {
                 <Button
                   size="sm"
                   data-ocean
-                  onClick={() => finish(task.id, true)}
-                  title="Hoàn thành sớm & ghi nhận thời gian thực tế"
+                  onClick={() => setFinishModalOpen(true)}
+                  title="Hoàn thành & nhập số phút học thực tế"
                 >
                   ✓ Xong
                 </Button>
@@ -461,16 +490,14 @@ function TaskRow({ task }: { task: Task }) {
                 <Button size="sm" onClick={() => startTimer(task.id)}>
                   ▶ Bắt đầu
                 </Button>
-                {task.remainingSeconds > 0 && task.remainingSeconds < task.minutes * 60 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => finish(task.id, false)}
-                    title="Hoàn thành sớm nhiệm vụ đang tạm dừng"
-                  >
-                    ✓ Xong
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setFinishModalOpen(true)}
+                  title="Hoàn thành & nhập số phút học thực tế"
+                >
+                  ✓ Xong
+                </Button>
               </>
             ))}
           {task.minutes === 0 && (
@@ -499,6 +526,25 @@ function TaskRow({ task }: { task: Task }) {
           )}
         </div>
       )}
+      <CompleteTaskDialog
+        open={finishModalOpen}
+        onOpenChange={setFinishModalOpen}
+        task={task}
+        timerElapsedSeconds={
+          running
+            ? Math.max(0, task.minutes * 60 - secs)
+            : task.remainingSeconds && task.remainingSeconds < task.minutes * 60
+              ? Math.max(0, task.minutes * 60 - task.remainingSeconds)
+              : undefined
+        }
+        onConfirm={(actualMin) => finish(task.id, true, actualMin)}
+      />
+      <AdjustDurationDialog
+        open={adjustModalOpen}
+        onOpenChange={setAdjustModalOpen}
+        task={task}
+        onConfirm={(newMin) => adjustCompletedTaskMinutes(task.id, newMin)}
+      />
     </li>
   );
 }

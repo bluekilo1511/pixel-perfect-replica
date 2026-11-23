@@ -1,3 +1,12 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Clock, Sparkles } from "lucide-react";
 import { BreathWidget } from "@/components/tracker/BreathWidget";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -221,6 +230,45 @@ export function PetWidget() {
   const [petLogOpen, setPetLogOpen] = useState(false);
   const [bossActive, setBossActive] = useState(false);
   const [zen, setZen] = useState(false);
+  const [earlyFinishOpen, setEarlyFinishOpen] = useState(false);
+  const [earlyMinutesInput, setEarlyMinutesInput] = useState(15);
+
+  const handleEarlyFinishClick = () => {
+    const planned = sessionMinRef.current ?? (warmup ? 5 : pomodoroMinutes);
+    const remaining = Math.max(0, Math.ceil(((endAt ?? Date.now()) - Date.now()) / 1000));
+    const elapsedSec = Math.max(0, planned * 60 - remaining);
+    const elapsedMin = Math.max(1, Math.round(elapsedSec / 60));
+    setEarlyMinutesInput(elapsedMin);
+    setEarlyFinishOpen(true);
+  };
+
+  const confirmPetEarlyFinish = () => {
+    const planned = sessionMinRef.current ?? (warmup ? 5 : pomodoroMinutes);
+    const actualMin = Math.max(1, Math.min(600, Math.round(Number(earlyMinutesInput) || 1)));
+    const boss = bossRef.current && !warmup;
+    const res = finishPomodoro(
+      boss,
+      actualMin,
+      warmup ? "warmup" : "pomodoro",
+      strikesRef.current,
+    );
+    celebrate();
+    fireFlashbang("done");
+    if (boss && res.bossDue) {
+      toast.success(
+        `⚔️ Hoàn thành sớm ${actualMin}p & đã hạ Boss! +${BOSS_REWARD.catCoins} 😺 +${BOSS_REWARD.lizardGems} 🦎`,
+      );
+    } else {
+      toast.success(`🍅 Hoàn thành sớm ${actualMin} phút (kế hoạch ${planned}p)! +XP, +😺`);
+    }
+    say(`Hoàn thành xuất sắc ${actualMin} phút tập trung! 🎉`);
+    setEndAt(null);
+    setLeft(pomodoroMinutes * 60);
+    setWarmup(false);
+    sessionMinRef.current = null;
+    setEarlyFinishOpen(false);
+    if (autoBreak && breakMinutes > 0) setBreakEndAt(Date.now() + breakMinutes * 60_000);
+  };
   const [warmup, setWarmup] = useState(restored.warmup); // 5-minute anti-procrastination session
   const warmupRef = useRef(false);
   warmupRef.current = warmup;
@@ -548,10 +596,19 @@ export function PetWidget() {
               </Button>
             )}
             {endAt ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
+              <>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                  title="Hoàn thành sớm phiên tập trung và tính điểm theo số phút thực tế"
+                  onClick={handleEarlyFinishClick}
+                >
+                  ✓ Xong sớm
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
                   if (bossActive) {
                     bossCancel();
                     setHit(true);
@@ -566,6 +623,7 @@ export function PetWidget() {
               >
                 ⏹ Hủy
               </Button>
+              </>
             ) : breakEndAt ? (
               <Button
                 size="sm"
@@ -836,6 +894,98 @@ export function PetWidget() {
         breakLeft={breakLeft}
         onClose={() => setZen(false)}
       />
+      <Dialog open={earlyFinishOpen} onOpenChange={setEarlyFinishOpen}>
+        <DialogContent className="sm:max-w-md border-border/80 bg-background/95 backdrop-blur-md">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-base sm:text-lg font-bold">
+              Hoàn thành sớm cùng thú cưng 🍅
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm text-muted-foreground text-left">
+              Ghi nhận phiên tập trung theo thời gian thực tế bạn đã học để nhận thưởng và cộng kinh nghiệm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-3 space-y-1">
+              <span className="font-semibold text-sm text-foreground">
+                Kế hoạch ban đầu: {sessionMinRef.current ?? (warmup ? 5 : pomodoroMinutes)} phút
+              </span>
+              <p className="text-xs text-muted-foreground">
+                Số phút thực tế sẽ được cộng vào điểm kinh nghiệm cho bạn và thú cưng!
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="pet-actual-minutes" className="block text-xs font-semibold text-foreground">
+                Số phút thực tế bạn đã học:
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="pet-actual-minutes"
+                    type="number"
+                    min={1}
+                    max={600}
+                    value={earlyMinutesInput}
+                    onChange={(e) => setEarlyMinutesInput(Number(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        confirmPetEarlyFinish();
+                      }
+                    }}
+                    className="pl-9 font-mono text-base font-bold"
+                    autoFocus
+                  />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground">phút</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-medium text-muted-foreground">Mốc phút nhanh:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[10, 15, 20, 25, 30, 45].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setEarlyMinutesInput(val)}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition cursor-pointer border ${
+                      earlyMinutesInput === val
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                        : "border-border/70 bg-secondary/50 text-secondary-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {val}p
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setEarlyFinishOpen(false)}
+              className="text-xs"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={confirmPetEarlyFinish}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Xác nhận ({earlyMinutesInput}p)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
