@@ -68,30 +68,19 @@ export function SubjectsCard() {
         Bấm vào một môn để ghi chú, đánh dấu chủ điểm cần học lại / yếu / tốt. Đối với Cấp 2, các môn tích hợp như KHTN hay LS&ĐL đã tích hợp sẵn 4 cột Thường xuyên trong Sổ điểm.
       </p>
 
-      {cap2Merges.length > 0 && (
-        <div className="mb-3 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-900 dark:text-sky-200">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="font-semibold flex items-center gap-1.5">
-                <span>🏫</span> Phát hiện môn Cấp 2 chưa gộp chuẩn
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Các phân môn lẻ ({cap2Merges.flatMap((m) => m.orphanSubjects).join(", ")}) nên được gộp vào KHTN / LS&ĐL.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              className="h-7 text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
-              onClick={() => {
-                update((d) => mergeAllCap2(d, d.subjects));
-                toast.success("Đã gộp vào môn tích hợp Cấp 2 và dọn dẹp các môn con! 🎉");
-              }}
-            >
-              ⚡ Gộp chuẩn Cấp 2
-            </Button>
+      <div className="mb-3 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-900 dark:text-sky-200 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🧬</span>
+          <div>
+            <p className="font-semibold text-xs">
+              Môn học Cấp 2 (THCS): Học môn lẻ, Sổ điểm & Thống kê tự gom tổ hợp
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Bạn cứ giữ đầy đủ các môn lẻ (Lí, Hóa, Sinh, Sử, Địa) để gắn vào task và đếm giờ riêng. Trong Sổ điểm và Thống kê, app sẽ tự động tổng hợp vào KHTN và LS&ĐL.
+            </p>
           </div>
         </div>
-      )}
+      </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">
         {data.subjects.map((s) => {

@@ -64,7 +64,7 @@ export function SubjectComboManagerModal({
 
   const handleMergeAll = () => {
     const names = cap2Merges.flatMap((merge) => merge.orphanSubjects);
-    if (!window.confirm(`Gộp ${names.join(", ")} vào môn tích hợp? Các môn con sẽ bị gỡ khỏi danh sách, nhưng điểm và ghi chú được giữ và chuyển sang môn tích hợp.`)) return;
+    if (!window.confirm(`Gộp điểm của ${names.join(", ")} vào bảng môn tổ hợp? Điểm sẽ được gom vào 4 cột TX của môn tổ hợp, còn các môn lẻ vẫn được giữ lại để bạn học và đếm giờ.`)) return;
     update((d) => mergeAllCap2(d, subjects));
     toast.success("Đã gộp toàn bộ phân môn Cấp 2 vào môn tích hợp! 🎉");
   };
@@ -114,8 +114,7 @@ export function SubjectComboManagerModal({
             <span className="text-xl">🧩</span> Quản lý Môn tổ hợp & Cấp 2 (THCS)
           </DialogTitle>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Hỗ trợ cấu hình môn tích hợp Cấp 2 (KHTN: Lý-Hóa-Sinh; LS&ĐL: Sử-Địa) theo Thông tư 22,
-            hoặc ghép tổ hợp môn tự do.
+            Hỗ trợ cấu hình môn tích hợp Cấp 2 (KHTN: Lý-Hóa-Sinh; LS&ĐL: Sử-Địa) theo Thông tư 22: học và đếm giờ theo môn lẻ, sổ điểm gom về 1 bảng tổ hợp, thống kê hiển thị cả hai.
           </p>
         </DialogHeader>
 
@@ -266,7 +265,7 @@ export function SubjectComboManagerModal({
                               config: cfg,
                               orphanSubjects: orphans,
                             };
-                            if (!window.confirm(`Gộp ${orphans.join(", ")} vào ${existing || cfg.name}? Các môn con sẽ bị gỡ khỏi danh sách, nhưng điểm và ghi chú được giữ và chuyển sang môn tích hợp.`)) return;
+                            if (!window.confirm(`Gộp điểm của ${orphans.join(", ")} vào bảng tổ hợp ${existing || cfg.name}? Điểm sẽ được gom vào bảng tổ hợp, còn các môn lẻ vẫn được giữ lại để bạn học và đếm giờ.`)) return;
                             update((d) => mergeCap2Integrated(d, merge));
                             toast.success(`Đã gộp [${orphans.join(", ")}] vào ${existing || cfg.name}! 🎉`);
                           }}

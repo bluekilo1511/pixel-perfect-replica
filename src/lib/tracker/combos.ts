@@ -239,18 +239,63 @@ export function matchCap2Config(subjectName: string): Cap2SubjectConfig | null {
 }
 
 /** Detects which subdiscipline a text label (column title or note) refers to. */
+/** Detects which subdiscipline a text label (column title, note or subject name) refers to. */
 export function detectSubDiscipline(
   cfg: Cap2SubjectConfig,
   text: string,
 ): SubDisciplineConfig | null {
   if (!text) return null;
   const t = text.trim().toLowerCase();
+
+  // 1. Exact match against any alias
   for (const sub of cfg.subDisciplines) {
-    if (sub.aliases.some((a) => t === a.toLowerCase() || t.includes(a.toLowerCase()))) {
+    if (sub.aliases.some((a) => t === a.toLowerCase())) {
       return sub;
     }
   }
+
+  // 2. Token / word boundary match
+  const tokens = t.split(/[\s()[\]:,_\-]+/).filter(Boolean);
+  for (const sub of cfg.subDisciplines) {
+    for (const a of sub.aliases) {
+      const aLower = a.toLowerCase();
+      if (aLower.includes(" ")) {
+        if (t.includes(aLower)) return sub;
+      } else {
+        if (tokens.includes(aLower)) {
+          // If checking KHTN, avoid matching "lí" in "địa lí" or "địa lý"
+          if (cfg.key === "KHTN" && (tokens.includes("địa") || t.includes("địa lí") || t.includes("địa lý"))) {
+            continue;
+          }
+          return sub;
+        }
+      }
+    }
+  }
+
   return null;
+}
+
+/** Checks if a subject name corresponds to a Cấp 2 subdiscipline of KHTN or LS&ĐL (excluding the combo itself). */
+export function getCap2ParentConfig(
+  subjectName: string,
+): { config: Cap2SubjectConfig; sub: SubDisciplineConfig } | null {
+  if (!subjectName) return null;
+  // If it matches the combo itself, it is NOT a subdiscipline
+  if (matchCap2Config(subjectName)) return null;
+
+  for (const cfg of Object.values(CAP2_SUBJECT_CONFIGS)) {
+    const sub = detectSubDiscipline(cfg, subjectName);
+    if (sub) {
+      return { config: cfg, sub };
+    }
+  }
+  return null;
+}
+
+/** True when subjectName is an individual subdiscipline of KHTN or LS&ĐL (e.g. Lí, Hóa, Sinh, Sử, Địa). */
+export function isCap2Subdiscipline(subjectName: string): boolean {
+  return getCap2ParentConfig(subjectName) !== null;
 }
 
 export interface DetectedCap2Merge {
@@ -319,17 +364,24 @@ export function detectCap2Merges(
 }
 
 /** Merges orphan sub-discipline subjects into their Cấp 2 integrated target subject. */
-export function mergeCap2Integrated(data: AppData, merge: DetectedCap2Merge): AppData {
+export function mergeCap2Integrated(
+  data: AppData,
+  merge: DetectedCap2Merge,
+  options: { keepSubdisciplines?: boolean } = {},
+): AppData {
   const { targetSubject, config, orphanSubjects } = merge;
   const orphanLowers = orphanSubjects.map((s) => s.trim().toLowerCase());
   const targetLower = targetSubject.trim().toLowerCase();
+  const keep = !!options.keepSubdisciplines;
 
-  // Ensure target is in subjects, remove orphans
-  const nextSubjects = data.subjects
-    .filter((s) => !orphanLowers.includes(s.trim().toLowerCase()))
-    .concat(
-      data.subjects.some((s) => s.trim().toLowerCase() === targetLower) ? [] : [targetSubject],
-    );
+  // Ensure target is in subjects. If keepSubdisciplines is true, keep orphans for learning & timers!
+  const filteredSubjects = keep
+    ? data.subjects
+    : data.subjects.filter((s) => !orphanLowers.includes(s.trim().toLowerCase()));
+
+  const nextSubjects = filteredSubjects.concat(
+    filteredSubjects.some((s) => s.trim().toLowerCase() === targetLower) ? [] : [targetSubject],
+  );
 
   // Migrate gradeBook entries
   const nextGradeBook = data.gradeBook.map((entry) => {
@@ -378,14 +430,16 @@ export function mergeCap2Integrated(data: AppData, merge: DetectedCap2Merge): Ap
     };
   });
 
-  // Migrate tasks
-  const nextTasks = data.tasks.map((task) => {
-    if (!task.subject) return task;
-    if (orphanLowers.includes(task.subject.trim().toLowerCase())) {
-      return { ...task, subject: targetSubject };
-    }
-    return task;
-  });
+  // Migrate tasks only if keepSubdisciplines is false
+  const nextTasks = keep
+    ? data.tasks
+    : data.tasks.map((task) => {
+        if (!task.subject) return task;
+        if (orphanLowers.includes(task.subject.trim().toLowerCase())) {
+          return { ...task, subject: targetSubject };
+        }
+        return task;
+      });
 
   // Clean subjectCombos: remove orphan subjects, and remove target from combos if it was one
   const nextCombos = { ...(data.subjectCombos ?? {}) };
@@ -449,11 +503,15 @@ export function mergeCap2Integrated(data: AppData, merge: DetectedCap2Merge): Ap
 }
 
 /** Merges all detected Cấp 2 combination subjects in one step. */
-export function mergeAllCap2(data: AppData, allSubjectNames: string[] = []): AppData {
+export function mergeAllCap2(
+  data: AppData,
+  allSubjectNames: string[] = [],
+  options: { keepSubdisciplines?: boolean } = {},
+): AppData {
   let current = data;
   const merges = detectCap2Merges(current, allSubjectNames);
   for (const m of merges) {
-    current = mergeCap2Integrated(current, m);
+    current = mergeCap2Integrated(current, m, options);
   }
   return current;
 }

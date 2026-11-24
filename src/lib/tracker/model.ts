@@ -2236,7 +2236,7 @@ export function nextSlotToday(data: AppData, now = new Date()): Slot | null {
 
 // ---- Study subjects & per-subject chart ----
 
-export const SUBJECTS_MAX = 12;
+export const SUBJECTS_MAX = 24;
 export const SUBJECT_MAX_LEN = 24;
 export const UNTAGGED_LABEL = "Chưa gán";
 

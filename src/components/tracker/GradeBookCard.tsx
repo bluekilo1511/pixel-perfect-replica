@@ -17,6 +17,8 @@ import {
   comboMembers,
   detectCap2Merges,
   detectSubDiscipline,
+  getCap2ParentConfig,
+  isCap2Subdiscipline,
   matchCap2Config,
   mergeAllCap2,
 } from "@/lib/tracker/combos";
@@ -49,13 +51,33 @@ const TYPE_BUTTONS: { type: GradeType; label: string }[] = [
 /** Sổ điểm kiểu giáo viên: cột TX / giữa kỳ / cuối kỳ theo từng môn, kỳ 1 – kỳ 2 riêng, cộng "điểm dư" ở bên. */
 export function GradeBookCard() {
   const { data, update } = useTracker();
-  const chips = Array.from(
+  const rawSubjects = Array.from(
     new Set([
       ...data.subjects,
       ...data.gradeBook.map((e) => e.subject),
       ...data.gradeExtras.map((e) => e.subject),
     ]),
   );
+
+  // In the Gradebook: ONLY use the integrated combo table for KHTN & LS&ĐL!
+  const hasKhtn = rawSubjects.some(
+    (s) => matchCap2Config(s)?.key === "KHTN" || getCap2ParentConfig(s)?.config.key === "KHTN",
+  );
+  const hasLsdl = rawSubjects.some(
+    (s) => matchCap2Config(s)?.key === "LSDL" || getCap2ParentConfig(s)?.config.key === "LSDL",
+  );
+
+  const chips: string[] = [];
+  if (hasKhtn) chips.push("KHTN");
+  if (hasLsdl) chips.push("LS&ĐL");
+
+  for (const s of rawSubjects) {
+    if (matchCap2Config(s)?.key === "KHTN" || matchCap2Config(s)?.key === "LSDL") continue;
+    // Subdisciplines (Lí, Hóa, Sinh, Sử, Địa) are kept for tasks/timers, but hidden from gradebook tabs!
+    if (isCap2Subdiscipline(s)) continue;
+    if (!chips.includes(s)) chips.push(s);
+  }
+
   const [sel, setSel] = useState("");
   const active = chips.find((c) => c === sel) ?? chips[0] ?? "";
   const [semester, setSemester] = useState<Semester>(() => guessSemester(dateStr()));
@@ -70,28 +92,67 @@ export function GradeBookCard() {
   const [simCk, setSimCk] = useState("");
   const [comboManagerOpen, setComboManagerOpen] = useState(false);
 
-  const entries = active ? semesterEntries(data.gradeBook, active, semester) : [];
+  const cap2Config = matchCap2Config(active);
+
+  const matchesActive = (subName: string) => {
+    if (!subName) return false;
+    if (subName.toLowerCase() === active.toLowerCase()) return true;
+    if (cap2Config) {
+      const parent = getCap2ParentConfig(subName);
+      return parent?.config.key === cap2Config.key;
+    }
+    return false;
+  };
+
+  const rawEntries = active
+    ? data.gradeBook.filter((e) => matchesActive(e.subject) && e.semester === semester)
+    : [];
+
+  const entries = rawEntries.map((e) => {
+    if (cap2Config && e.subject.toLowerCase() !== active.toLowerCase()) {
+      const sub = detectSubDiscipline(cap2Config, e.subject);
+      const subTitle = sub ? sub.name : e.subject;
+      return {
+        ...e,
+        title: e.title ? `${e.title} (${sub?.short || subTitle})` : subTitle,
+      };
+    }
+    return e;
+  });
+
   const tx = entries.filter((e) => e.type === "tx");
   const gk = entries.filter((e) => e.type === "gk");
   const ck = entries.filter((e) => e.type === "ck");
+
   const extras = active
-    ? data.gradeExtras.filter((e) => e.subject === active && e.semester === semester)
+    ? data.gradeExtras
+        .filter((e) => matchesActive(e.subject) && e.semester === semester)
+        .map((e) => {
+          if (cap2Config && e.subject.toLowerCase() !== active.toLowerCase()) {
+            return {
+              ...e,
+              label: e.label ? `${e.label} (${e.subject})` : e.subject,
+            };
+          }
+          return e;
+        })
     : [];
-  const directGrade = active ? subjectGrade(data.gradeBook, active, semester) : null;
+
+  const mappedEntriesForGrade = rawEntries.map((e) => ({ ...e, subject: active }));
+  const directGrade = active ? subjectGrade(mappedEntriesForGrade, active, semester) : null;
   const comboMembersList = active ? comboMembers(data, active) : undefined;
   const comboAvg = comboMembersList ? comboGrade(data.gradeBook, comboMembersList, semester) : null;
   const grade = directGrade !== null ? directGrade : comboAvg;
   const targetNum = active ? gradeTarget(data.gradeTargets, active) : 8;
-  const advice = active ? gradeAdvice(data.gradeBook, active, semester, targetNum) : null;
+  const advice = active ? gradeAdvice(mappedEntriesForGrade, active, semester, targetNum) : null;
   const legacyCount = data.examScores.length;
   const whatIf = active
-    ? gradeWhatIf(data.gradeBook, active, semester, {
+    ? gradeWhatIf(mappedEntriesForGrade, active, semester, {
         gk: simGk.trim() === "" ? undefined : Number(simGk),
         ck: simCk.trim() === "" ? undefined : Number(simCk),
       })
     : null;
 
-  const cap2Config = matchCap2Config(active);
   const cap2Merges = detectCap2Merges(data, chips);
 
   const addSubjectChip = () => {
@@ -291,40 +352,27 @@ export function GradeBookCard() {
         chắc.
       </p>
 
-      {cap2Merges.length > 0 && (
-        <div className="mb-3 rounded-xl border border-sky-500/40 bg-sky-500/10 p-3 text-xs text-sky-900 dark:text-sky-200">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="space-y-0.5">
-              <p className="font-semibold flex items-center gap-1.5 text-sm">
-                <span>🏫</span> Cấu trúc môn Cấp 2 (THCS — Thông tư 22)
-              </p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Phát hiện phân môn lẻ:{" "}
-                {cap2Merges.map((m) => (
-                  <span key={m.targetSubject} className="font-semibold text-foreground">
-                    [{m.orphanSubjects.join(", ")} → {m.targetSubject}]{" "}
-                  </span>
-                ))}
-                . Ở Cấp 2, <strong>KHTN</strong> và <strong>LS&ĐL</strong> là môn tích hợp có 4 cột TX cho các phân môn gộp chung trong 1 môn duy nhất.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              className="h-8 text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
-              onClick={() => {
-                const orphanNames = cap2Merges.flatMap((merge) => merge.orphanSubjects);
-                if (!window.confirm(`Gộp ${orphanNames.join(", ")} vào môn tích hợp? Các môn con sẽ bị gỡ khỏi danh sách, nhưng điểm và ghi chú sẽ được giữ và chuyển sang môn tích hợp.`)) return;
-                update((d) => mergeAllCap2(d, chips));
-                const firstTarget = cap2Merges[0]?.targetSubject;
-                if (firstTarget) setSel(firstTarget);
-                toast.success("Đã gộp toàn bộ điểm vào 4 cột môn tích hợp Cấp 2 và dọn dẹp các môn con! 🎉");
-              }}
-            >
-              ⚡ Gộp chuẩn Cấp 2 & dọn môn lẻ
-            </Button>
+      <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-900 dark:text-sky-200 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🧬</span>
+          <div>
+            <p className="font-semibold text-xs">
+              Quy chuẩn Sổ điểm Cấp 2: Chỉ sử dụng bảng môn tổ hợp (KHTN & LS&ĐL)
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Các phân môn lẻ (Lí, Hóa, Sinh, Sử, Địa) dùng để bạn đặt nhiệm vụ & đếm giờ học ở tab Hôm nay. Trong Sổ điểm, tất cả tự động gom về 1 bảng duy nhất.
+            </p>
           </div>
         </div>
-      )}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs font-semibold bg-background shrink-0"
+          onClick={() => setComboManagerOpen(true)}
+        >
+          🧩 Quản lý tổ hợp
+        </Button>
+      </div>
 
       {detectedDups.map(([shortName, fullName]) => {
         const actualShort =
@@ -374,7 +422,18 @@ export function GradeBookCard() {
         {chips.map((c) => {
           const isCap2 = matchCap2Config(c) !== null;
           const members = comboMembers(data, c);
-          const directG = subjectGrade(data.gradeBook, c, semester);
+          const cCap2 = matchCap2Config(c);
+          const cEntries = cCap2
+            ? data.gradeBook
+                .filter(
+                  (e) =>
+                    (e.subject.toLowerCase() === c.toLowerCase() ||
+                      getCap2ParentConfig(e.subject)?.config.key === cCap2.key) &&
+                    e.semester === semester,
+                )
+                .map((e) => ({ ...e, subject: c }))
+            : semesterEntries(data.gradeBook, c, semester);
+          const directG = subjectGrade(cEntries, c, semester);
           const g =
             directG !== null
               ? directG

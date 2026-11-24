@@ -1,6 +1,7 @@
+import type { AppData } from "./model";
 import { describe, expect, it } from "vitest";
 import { defaultData, addSubject, makeTask, UNTAGGED_LABEL } from "./model";
-import { subjectChartRows, subjectMinutes } from "./subjectStats";
+import { enrichedSubjectChartRows, subjectChartRows, subjectMinutes } from "./subjectStats";
 import { mondayOf } from "./weeklyReport";
 
 const now = new Date(2026, 9, 21, 12, 0); // Wednesday
@@ -56,5 +57,52 @@ describe("subject stats", () => {
     const r = completeTask(d, t.id, now);
     const last = r.data.sessionLog.at(-1)!;
     expect(last).toMatchObject({ minutes: 25, kind: "pomodoro", subject: "Sử" });
+  });
+});
+
+describe("enrichedSubjectChartRows", () => {
+  const cap2Data = (): AppData => ({
+    ...defaultData(),
+    sessionLog: [
+      { at: "2026-10-20T08:00:00.000Z", minutes: 60, kind: "pomodoro", subject: "Toán" },
+      { at: "2026-10-20T09:00:00.000Z", minutes: 45, kind: "pomodoro", subject: "Hóa" },
+      { at: "2026-10-20T10:00:00.000Z", minutes: 30, kind: "pomodoro", subject: "Lí" },
+      { at: "2026-10-20T11:00:00.000Z", minutes: 15, kind: "pomodoro", subject: "Sinh" },
+      { at: "2026-10-20T13:00:00.000Z", minutes: 25, kind: "pomodoro", subject: "Sử" },
+      { at: "2026-10-20T14:00:00.000Z", minutes: 35, kind: "pomodoro", subject: "Địa lí" },
+    ],
+  });
+
+  it("calculates combo totals from member subdisciplines (KHTN = 90p, LS&ĐL = 60p)", () => {
+    const rows = enrichedSubjectChartRows(cap2Data(), "all", mondayOf, "all", now);
+    const khtn = rows.find((r: any) => r.label === "KHTN");
+    expect(khtn).toBeDefined();
+    expect(khtn?.minutes).toBe(90); // 45 + 30 + 15
+    expect(khtn?.isCombo).toBe(true);
+    expect(khtn?.subBreakdown?.length).toBe(3);
+
+    const lsdl = rows.find((r: any) => r.label === "LS&ĐL");
+    expect(lsdl).toBeDefined();
+    expect(lsdl?.minutes).toBe(60); // 25 + 35
+    expect(lsdl?.isCombo).toBe(true);
+  });
+
+  it("mode 'all' includes both combo rows and individual subdisciplines", () => {
+    const rows = enrichedSubjectChartRows(cap2Data(), "all", mondayOf, "all", now);
+    const labels = rows.map((r: any) => r.label);
+    expect(labels).toContain("KHTN");
+    expect(labels).toContain("LS&ĐL");
+    expect(labels).toContain("Hóa");
+    expect(labels).toContain("Lí");
+    expect(labels).toContain("Sinh");
+    expect(labels).toContain("Sử");
+    expect(labels).toContain("Địa lí");
+    expect(labels).toContain("Toán");
+  });
+
+  it("mode 'combos' rolls up subdisciplines into KHTN and LS&ĐL", () => {
+    const rows = enrichedSubjectChartRows(cap2Data(), "all", mondayOf, "combos", now);
+    const labels = rows.map((r: any) => r.label);
+    expect(labels).toEqual(["KHTN", "LS&ĐL", "Toán"]);
   });
 });
